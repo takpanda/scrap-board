@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Scrap-Board - ウェブコンテンツ収集・管理システム{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <div class="hero">
+        <h1>
+            Webコンテンツを<span class="highlight">スマートに</span>収集・管理
+        </h1>
+        <p>
+            URLやPDFから自動でコンテンツを抽出し、AIで分類・要約。
+            Reader Modeで快適な読書体験を提供します。
+        </p>
+        
+        <div class="hero-actions">
+            <button 
+                onclick="showModal()"
+                class="btn btn-primary"
+            >
+                + コンテンツを追加
+            </button>
+            
+            <a href="/documents" class="btn btn-secondary">
+                📄 ドキュメント一覧
+            </a>
+        </div>
+    </div>
+    
+    <!-- Features -->
+    <div class="features">
+        <div class="feature-card">
+            <div class="feature-icon">
+                🌐
+            </div>
+            <h3>自動コンテンツ抽出</h3>
+            <p>URLやPDFから本文を自動抽出。Trafilatura＋Doclingで高精度な処理を実現。</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">
+                🧠
+            </div>
+            <h3>AI自動分類</h3>
+            <p>LLMを活用した自動カテゴリ分類＋タグ付け。手動整理の手間を大幅削減。</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">
+                📖
+            </div>
+            <h3>Reader Mode</h3>
+            <p>可読性を最優先した表示モード。フォント・サイズ・テーマを自由にカスタマイズ。</p>
+        </div>
+    </div>
+    
+    <!-- Recent Documents Preview -->
+    <div class="recent-docs">
+        <h2>
+            最近のドキュメント
+            <a href="/documents">すべて見る →</a>
+        </h2>
+        
+        <div id="recent-documents">
+            <!-- ドキュメントがない場合の表示 -->
+            <div style="text-align: center; padding: 2rem; color: var(--graphite);">
+                <p>まだドキュメントがありません</p>
+                <p>URLやPDFを追加して、コンテンツの収集を始めましょう</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-value">0</div>
+            <div class="stat-label">ドキュメント</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">13</div>
+            <div class="stat-label">カテゴリ</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">0</div>
+            <div class="stat-label">コレクション</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">0</div>
+            <div class="stat-label">今日追加</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

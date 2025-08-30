@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}{{ document.title }} - Reader Mode - Scrap-Board{% endblock %}
+
+{% block content %}
+<!-- Reader Mode Controls -->
+<div class="fixed top-16 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-mist z-40 px-4 py-3">
+    <div class="max-w-4xl mx-auto flex justify-between items-center">
+        <!-- Back Button -->
+        <a href="/documents/{{ document.id }}" class="flex items-center space-x-2 text-graphite hover:text-ink transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <span>戻る</span>
+        </a>
+        
+        <!-- Reader Controls -->
+        <div class="flex items-center space-x-4">
+            <!-- Font Size -->
+            <div class="flex items-center space-x-2">
+                <button onclick="decreaseFontSize()" class="p-2 hover:bg-mist rounded-lg transition-colors" title="文字サイズを小さく (Ctrl+-)">
+                    <span class="text-lg font-bold">A-</span>
+                </button>
+                <span id="font-size-indicator" class="text-sm text-graphite px-2">16px</span>
+                <button onclick="increaseFontSize()" class="p-2 hover:bg-mist rounded-lg transition-colors" title="文字サイズを大きく (Ctrl++)">
+                    <span class="text-lg font-bold">A+</span>
+                </button>
+            </div>
+            
+            <!-- Font Family -->
+            <select id="font-family" onchange="changeFontFamily()" class="px-3 py-1 border border-mist rounded-lg text-sm">
+                <option value="sans">Sans Serif</option>
+                <option value="serif">Serif</option>
+            </select>
+            
+            <!-- Theme -->
+            <div class="flex bg-mist rounded-lg p-1">
+                <button onclick="setTheme('light')" id="theme-light" class="px-3 py-1 rounded bg-white shadow-sm text-xs">
+                    ライト
+                </button>
+                <button onclick="setTheme('dark')" id="theme-dark" class="px-3 py-1 text-graphite text-xs">
+                    ダーク
+                </button>
+                <button onclick="setTheme('sepia')" id="theme-sepia" class="px-3 py-1 text-graphite text-xs">
+                    セピア
+                </button>
+            </div>
+            
+            <!-- Original Link -->
+            {% if document.url %}
+            <a href="{{ document.url }}" target="_blank" class="flex items-center space-x-1 text-emerald hover:text-emerald/80 transition-colors">
+                <i data-lucide="external-link" class="w-4 h-4"></i>
+                <span class="text-sm">元記事</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Reader Content -->
+<article id="reader-content" class="pt-28 pb-16 px-4 transition-all duration-200">
+    <div class="max-w-4xl mx-auto">
+        <!-- Document Header -->
+        <header class="mb-8 pb-6 border-b border-current/10">
+            <h1 class="text-3xl font-bold leading-tight mb-4">{{ document.title }}</h1>
+            
+            <div class="flex flex-wrap items-center gap-4 text-sm opacity-70 mb-4">
+                {% if document.author %}
+                <span class="flex items-center space-x-1">
+                    <i data-lucide="user" class="w-4 h-4"></i>
+                    <span>{{ document.author }}</span>
+                </span>
+                {% endif %}
+                
+                {% if document.published_at %}
+                <span class="flex items-center space-x-1">
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                    <span>{{ document.published_at.strftime('%Y年%m月%d日') }}</span>
+                </span>
+                {% endif %}
+                
+                {% if document.domain %}
+                <span class="flex items-center space-x-1">
+                    <i data-lucide="globe" class="w-4 h-4"></i>
+                    <span>{{ document.domain }}</span>
+                </span>
+                {% endif %}
+                
+                <!-- Reading Time -->
+                <span class="flex items-center space-x-1">
+                    <i data-lucide="clock" class="w-4 h-4"></i>
+                    <span id="reading-time">計算中...</span>
+                </span>
+            </div>
+            
+            <!-- Categories and Tags -->
+            {% if document.classifications %}
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="bg-current/10 px-3 py-1 rounded-full text-sm font-medium">
+                    {{ document.classifications[0].primary_category }}
+                </span>
+                
+                {% if document.classifications[0].tags %}
+                {% for tag in document.classifications[0].tags %}
+                <span class="bg-current/5 px-2 py-1 rounded-full text-xs">
+                    {{ tag }}
+                </span>
+                {% endfor %}
+                {% endif %}
+            </div>
+            {% endif %}
+        </header>
+        
+        <!-- Document Content -->
+        <div id="article-content" class="prose max-w-none">
+            {{ document.content_md | safe }}
+        </div>
+        
+        <!-- Document Footer -->
+        <footer class="mt-12 pt-6 border-t border-current/10">
+            <div class="flex justify-between items-center">
+                <div class="text-sm opacity-70">
+                    <span>取得日時: {{ document.fetched_at.strftime('%Y年%m月%d日 %H:%M') }}</span>
+                </div>
+                
+                <div class="flex space-x-4">
+                    <!-- Feedback Buttons -->
+                    <button 
+                        onclick="submitFeedback('correct')"
+                        class="flex items-center space-x-1 text-emerald hover:text-emerald/80 transition-colors"
+                    >
+                        <i data-lucide="thumbs-up" class="w-4 h-4"></i>
+                        <span class="text-sm">分類が正確</span>
+                    </button>
+                    
+                    <button 
+                        onclick="submitFeedback('incorrect')"
+                        class="flex items-center space-x-1 text-orange-500 hover:text-orange-400 transition-colors"
+                    >
+                        <i data-lucide="thumbs-down" class="w-4 h-4"></i>
+                        <span class="text-sm">分類を修正</span>
+                    </button>
+                </div>
+            </div>
+        </footer>
+    </div>
+</article>
+
+<!-- Navigation Footer -->
+<div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-mist p-4">
+    <div class="max-w-4xl mx-auto flex justify-between items-center">
+        <span class="text-sm text-graphite">
+            Reader Mode - ショートカット: A+/A- (文字サイズ), R (モード切替)
+        </span>
+        
+        <div class="flex space-x-2">
+            <button onclick="scrollToTop()" class="p-2 hover:bg-mist rounded-lg transition-colors" title="ページトップへ">
+                <i data-lucide="arrow-up" class="w-4 h-4"></i>
+            </button>
+            
+            <button onclick="window.print()" class="p-2 hover:bg-mist rounded-lg transition-colors" title="印刷">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Base Reader Styles */
+    #reader-content {
+        line-height: 1.8;
+        word-spacing: 0.1em;
+    }
+    
+    #article-content {
+        font-size: var(--reader-font-size, 16px);
+        font-family: var(--reader-font-family, 'Inter', 'Noto Sans JP', system-ui, sans-serif);
+        max-width: 38em;
+        margin: 0 auto;
+    }
+    
+    #article-content h1, #article-content h2, #article-content h3,
+    #article-content h4, #article-content h5, #article-content h6 {
+        line-height: 1.4;
+        margin-top: 2em;
+        margin-bottom: 0.8em;
+        font-weight: 600;
+    }
+    
+    #article-content p {
+        margin-bottom: 1.2em;
+        line-height: 1.8;
+    }
+    
+    #article-content blockquote {
+        border-left: 4px solid currentColor;
+        padding-left: 1em;
+        margin-left: 0;
+        opacity: 0.8;
+        font-style: italic;
+    }
+    
+    #article-content pre {
+        background: currentColor/5;
+        padding: 1em;
+        border-radius: 0.5em;
+        overflow-x: auto;
+    }
+    
+    #article-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.5em 0;
+    }
+    
+    #article-content th, #article-content td {
+        border: 1px solid currentColor/20;
+        padding: 0.75em;
+        text-align: left;
+    }
+    
+    #article-content th {
+        background: currentColor/5;
+        font-weight: 600;
+    }
+    
+    /* Theme Styles */
+    .theme-light {
+        background: #F9FAFB;
+        color: #0B1221;
+    }
+    
+    .theme-dark {
+        background: #0E1116;
+        color: #E6EAF0;
+    }
+    
+    .theme-sepia {
+        background: #F4F1EA;
+        color: #3D3D3D;
+    }
+    
+    /* Font Family Styles */
+    .font-serif #article-content {
+        font-family: 'Noto Serif JP', Georgia, serif;
+    }
+</style>
+
+<script>
+    let currentFontSize = 16;
+    let currentTheme = 'light';
+    let currentFontFamily = 'sans';
+    
+    // Load saved preferences
+    function loadPreferences() {
+        const savedFontSize = localStorage.getItem('reader-font-size') || '16';
+        const savedTheme = localStorage.getItem('reader-theme') || 'light';
+        const savedFontFamily = localStorage.getItem('reader-font-family') || 'sans';
+        
+        currentFontSize = parseInt(savedFontSize);
+        currentTheme = savedTheme;
+        currentFontFamily = savedFontFamily;
+        
+        applySettings();
+    }
+    
+    // Apply current settings
+    function applySettings() {
+        // Font size
+        document.documentElement.style.setProperty('--reader-font-size', currentFontSize + 'px');
+        document.getElementById('font-size-indicator').textContent = currentFontSize + 'px';
+        
+        // Theme
+        document.body.className = document.body.className.replace(/theme-\w+/g, '');
+        document.body.classList.add('theme-' + currentTheme);
+        
+        // Update theme buttons
+        document.querySelectorAll('[id^="theme-"]').forEach(btn => {
+            btn.classList.remove('bg-white', 'shadow-sm');
+            btn.classList.add('text-graphite');
+        });
+        document.getElementById('theme-' + currentTheme).classList.add('bg-white', 'shadow-sm');
+        document.getElementById('theme-' + currentTheme).classList.remove('text-graphite');
+        
+        // Font family
+        document.body.className = document.body.className.replace(/font-\w+/g, '');
+        document.body.classList.add('font-' + currentFontFamily);
+        document.getElementById('font-family').value = currentFontFamily;
+        
+        // Save preferences
+        localStorage.setItem('reader-font-size', currentFontSize.toString());
+        localStorage.setItem('reader-theme', currentTheme);
+        localStorage.setItem('reader-font-family', currentFontFamily);
+    }
+    
+    // Font size controls
+    function increaseFontSize() {
+        if (currentFontSize < 24) {
+            currentFontSize += 2;
+            applySettings();
+        }
+    }
+    
+    function decreaseFontSize() {
+        if (currentFontSize > 12) {
+            currentFontSize -= 2;
+            applySettings();
+        }
+    }
+    
+    // Theme controls
+    function setTheme(theme) {
+        currentTheme = theme;
+        applySettings();
+    }
+    
+    // Font family controls
+    function changeFontFamily() {
+        currentFontFamily = document.getElementById('font-family').value;
+        applySettings();
+    }
+    
+    // Utility functions
+    function scrollToTop() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    // Calculate reading time
+    function calculateReadingTime() {
+        const content = document.getElementById('article-content').textContent;
+        const wordsPerMinute = 300; // Japanese reading speed
+        const words = content.length / 2; // Rough estimate for Japanese
+        const minutes = Math.ceil(words / wordsPerMinute);
+        document.getElementById('reading-time').textContent = minutes + '分で読了';
+    }
+    
+    // Feedback submission
+    function submitFeedback(label) {
+        fetch(`/api/documents/{{ document.id }}/feedback`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ label: label })
+        }).then(response => {
+            if (response.ok) {
+                alert(label === 'correct' ? 'フィードバックありがとうございます！' : '修正のご指摘ありがとうございます。');
+            }
+        });
+    }
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === '=' || e.key === '+') {
+                e.preventDefault();
+                increaseFontSize();
+            } else if (e.key === '-') {
+                e.preventDefault();
+                decreaseFontSize();
+            }
+        }
+        
+        if (e.key === 'r' || e.key === 'R') {
+            if (!e.ctrlKey && !e.metaKey && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                window.location.href = '/documents/{{ document.id }}';
+            }
+        }
+    });
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        loadPreferences();
+        calculateReadingTime();
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

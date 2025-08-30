@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Scrap-Board{% endblock %}</title>
+    
+    <!-- Local CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="flex items-center space-x-4">
+                <a href="/" class="logo">
+                    Scrap-Board
+                </a>
+                
+                <!-- Navigation -->
+                <nav class="nav">
+                    <a href="/documents">ドキュメント</a>
+                    <a href="/collections">コレクション</a>
+                </nav>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    placeholder="検索..."
+                    class="search-input"
+                >
+            </div>
+            
+            <!-- Actions -->
+            <div class="flex items-center space-x-4">
+                <button 
+                    onclick="showModal()"
+                    class="btn btn-primary"
+                >
+                    + 追加
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Add Content Modal -->
+    <div id="add-content-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">コンテンツを追加</h3>
+                <button onclick="hideModal()" class="close-btn">×</button>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- URL入力 -->
+                <div class="form-group">
+                    <label class="form-label">URL</label>
+                    <form method="post" action="/api/ingest/url">
+                        <div class="form-actions">
+                            <input 
+                                type="url" 
+                                name="url"
+                                placeholder="https://example.com/article"
+                                class="form-input"
+                                required
+                            >
+                            <button type="submit" class="btn btn-primary">追加</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- PDF Upload -->
+                <div class="form-group">
+                    <label class="form-label">PDF ファイル</label>
+                    <form method="post" action="/api/ingest/pdf" enctype="multipart/form-data">
+                        <div class="form-actions">
+                            <input 
+                                type="file" 
+                                name="file"
+                                accept=".pdf"
+                                class="form-input"
+                                required
+                            >
+                            <button type="submit" class="btn btn-primary">アップロード</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function showModal() {
+            document.getElementById('add-content-modal').classList.add('show');
+        }
+        
+        function hideModal() {
+            document.getElementById('add-content-modal').classList.remove('show');
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                document.querySelector('.search-input').focus();
+            }
+            
+            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                e.preventDefault();
+                showModal();
+            }
+            
+            if (e.key === 'Escape') {
+                hideModal();
+            }
+        });
+    </script>
+</body>
+</html>

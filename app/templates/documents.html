@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}ドキュメント一覧 - Scrap-Board{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-bold text-ink">ドキュメント一覧</h1>
+        
+        <div class="flex items-center space-x-4">
+            <!-- Sort Options -->
+            <select class="px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald">
+                <option value="created_desc">作成日時（新しい順）</option>
+                <option value="created_asc">作成日時（古い順）</option>
+                <option value="title_asc">タイトル（A-Z）</option>
+            </select>
+            
+            <!-- View Toggle -->
+            <div class="flex bg-mist rounded-lg p-1">
+                <button class="px-3 py-1 bg-white rounded shadow-sm text-sm">
+                    <i data-lucide="list" class="w-4 h-4"></i>
+                </button>
+                <button class="px-3 py-1 text-graphite text-sm">
+                    <i data-lucide="grid" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="bg-white rounded-xl border border-mist p-4 mb-6">
+        <div class="grid md:grid-cols-4 gap-4">
+            <!-- Search -->
+            <div>
+                <label class="block text-sm font-medium text-graphite mb-1">検索</label>
+                <input 
+                    type="text" 
+                    name="q"
+                    value="{{ q }}"
+                    placeholder="キーワードで検索..."
+                    class="w-full px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald"
+                    hx-get="/documents"
+                    hx-trigger="keyup changed delay:500ms"
+                    hx-include="[name='category'], [name='domain'], [name='from'], [name='to']"
+                    hx-target="#documents-container"
+                    hx-push-url="true"
+                >
+            </div>
+            
+            <!-- Category Filter -->
+            <div>
+                <label class="block text-sm font-medium text-graphite mb-1">カテゴリ</label>
+                <select 
+                    name="category"
+                    class="w-full px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald"
+                    hx-get="/documents"
+                    hx-trigger="change"
+                    hx-include="[name='q'], [name='domain'], [name='from'], [name='to']"
+                    hx-target="#documents-container"
+                    hx-push-url="true"
+                >
+                    <option value="">すべてのカテゴリ</option>
+                    <option value="テック/AI" {% if category == "テック/AI" %}selected{% endif %}>テック/AI</option>
+                    <option value="ソフトウェア開発" {% if category == "ソフトウェア開発" %}selected{% endif %}>ソフトウェア開発</option>
+                    <option value="ビジネス" {% if category == "ビジネス" %}selected{% endif %}>ビジネス</option>
+                    <option value="セキュリティ" {% if category == "セキュリティ" %}selected{% endif %}>セキュリティ</option>
+                    <option value="研究" {% if category == "研究" %}selected{% endif %}>研究</option>
+                    <option value="その他" {% if category == "その他" %}selected{% endif %}>その他</option>
+                </select>
+            </div>
+            
+            <!-- Domain Filter -->
+            <div>
+                <label class="block text-sm font-medium text-graphite mb-1">ドメイン</label>
+                <input 
+                    type="text" 
+                    name="domain"
+                    placeholder="example.com"
+                    class="w-full px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald"
+                    hx-get="/documents"
+                    hx-trigger="keyup changed delay:500ms"
+                    hx-include="[name='q'], [name='category'], [name='from'], [name='to']"
+                    hx-target="#documents-container"
+                    hx-push-url="true"
+                >
+            </div>
+            
+            <!-- Date Range -->
+            <div>
+                <label class="block text-sm font-medium text-graphite mb-1">期間</label>
+                <div class="flex space-x-2">
+                    <input 
+                        type="date" 
+                        name="from"
+                        class="flex-1 px-2 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald text-sm"
+                        hx-get="/documents"
+                        hx-trigger="change"
+                        hx-include="[name='q'], [name='category'], [name='domain'], [name='to']"
+                        hx-target="#documents-container"
+                        hx-push-url="true"
+                    >
+                    <input 
+                        type="date" 
+                        name="to"
+                        class="flex-1 px-2 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald text-sm"
+                        hx-get="/documents"
+                        hx-trigger="change"
+                        hx-include="[name='q'], [name='category'], [name='domain'], [name='from']"
+                        hx-target="#documents-container"
+                        hx-push-url="true"
+                    >
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Documents List -->
+    <div id="documents-container">
+        {% if documents %}
+        <div class="space-y-4">
+            {% for document in documents %}
+            <div class="bg-white rounded-xl border border-mist p-6 hover:shadow-md transition-shadow">
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-ink mb-1">
+                            <a href="/documents/{{ document.id }}" class="hover:text-emerald transition-colors">
+                                {{ document.title }}
+                            </a>
+                        </h3>
+                        
+                        <div class="flex items-center space-x-4 text-sm text-graphite mb-2">
+                            {% if document.url %}
+                            <span class="flex items-center space-x-1">
+                                <i data-lucide="external-link" class="w-3 h-3"></i>
+                                <span>{{ document.domain }}</span>
+                            </span>
+                            {% else %}
+                            <span class="flex items-center space-x-1">
+                                <i data-lucide="file-text" class="w-3 h-3"></i>
+                                <span>PDF</span>
+                            </span>
+                            {% endif %}
+                            
+                            <span>{{ document.created_at.strftime('%Y年%m月%d日') }}</span>
+                            
+                            {% if document.author %}
+                            <span>{{ document.author }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Categories and Tags -->
+                        {% if document.classifications %}
+                        <div class="flex items-center space-x-2 mb-3">
+                            <span class="bg-emerald/10 text-emerald px-2 py-1 rounded-full text-xs font-medium">
+                                {{ document.classifications[0].primary_category }}
+                            </span>
+                            
+                            {% if document.classifications[0].tags %}
+                            {% for tag in document.classifications[0].tags[:3] %}
+                            <span class="bg-mist text-graphite px-2 py-1 rounded-full text-xs">
+                                {{ tag }}
+                            </span>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Content Preview -->
+                        <p class="text-graphite leading-relaxed">
+                            {{ document.content_text[:200] }}{% if document.content_text|length > 200 %}...{% endif %}
+                        </p>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="flex flex-col space-y-2 ml-4">
+                        <a href="/reader/{{ document.id }}" 
+                           class="bg-emerald text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald/90 transition-colors flex items-center space-x-1">
+                            <i data-lucide="book-open" class="w-4 h-4"></i>
+                            <span>Reader</span>
+                        </a>
+                        
+                        {% if document.url %}
+                        <a href="{{ document.url }}" target="_blank"
+                           class="border border-mist text-graphite px-3 py-2 rounded-lg text-sm hover:bg-mist transition-colors flex items-center space-x-1">
+                            <i data-lucide="external-link" class="w-4 h-4"></i>
+                            <span>元記事</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        <div class="mt-8 flex justify-center">
+            <div class="flex space-x-2">
+                <button class="px-4 py-2 bg-white border border-mist rounded-lg hover:bg-mist transition-colors">
+                    前へ
+                </button>
+                <button class="px-4 py-2 bg-emerald text-white rounded-lg">1</button>
+                <button class="px-4 py-2 bg-white border border-mist rounded-lg hover:bg-mist transition-colors">2</button>
+                <button class="px-4 py-2 bg-white border border-mist rounded-lg hover:bg-mist transition-colors">3</button>
+                <button class="px-4 py-2 bg-white border border-mist rounded-lg hover:bg-mist transition-colors">
+                    次へ
+                </button>
+            </div>
+        </div>
+        
+        {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-12">
+            <div class="w-16 h-16 bg-mist rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="file-text" class="w-8 h-8 text-graphite"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-ink mb-2">ドキュメントがありません</h3>
+            <p class="text-graphite mb-4">URLやPDFを追加して、コンテンツの収集を始めましょう。</p>
+            <button 
+                onclick="document.getElementById('add-content-modal').classList.remove('hidden')"
+                class="bg-emerald text-white px-6 py-3 rounded-lg hover:bg-emerald/90 transition-colors"
+            >
+                最初のコンテンツを追加
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    lucide.createIcons();
+</script>
+{% endblock %}
