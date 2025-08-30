@@ -388,3 +388,16 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* Text color utilities for status messages */
+.text-green-600 {
+    color: #059669;
+}
+
+.text-red-600 {
+    color: #DC2626;
+}
+
+.text-blue-600 {
+    color: #2563EB;
+}
