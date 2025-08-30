@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import get_db, create_tables
-from app.api.routes import documents, ingest, collections
+from app.api.routes import documents, ingest, collections, utils
 
 # ログ設定
 logging.basicConfig(level=getattr(logging, settings.log_level))
@@ -48,6 +48,7 @@ templates = Jinja2Templates(directory="app/templates")
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
 app.include_router(ingest.router, prefix="/api/ingest", tags=["ingest"])
 app.include_router(collections.router, prefix="/api/collections", tags=["collections"])
+app.include_router(utils.router, prefix="/api", tags=["utils"])
 
 
 @app.get("/", response_class=HTMLResponse)
