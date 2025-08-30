@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 一般的な質問や議論
+    url: https://github.com/takpanda/scrap-board/discussions
+    about: 機能に関する質問や議論はDiscussionsをご利用ください
