@@ -177,3 +177,41 @@ docker-compose up -d
 - `GET /health` - アプリケーション状態確認
 - データベース接続確認
 - 外部サービス依存関係チェック
+
+## テスト
+
+### 単体テスト
+```bash
+# API とサービステストの実行
+pytest tests/test_basic.py -v -m unit
+```
+
+### ブラウザテスト（日本語対応）
+```bash
+# Playwright のインストール
+pip install playwright pytest-playwright
+playwright install chromium
+
+# 日本語フォントサポートのインストール（Ubuntu/Debian）
+sudo apt-get update
+sudo apt-get install -y fonts-noto-cjk fonts-liberation
+
+# ブラウザテストの実行
+pytest tests/test_browser.py -v -m browser
+
+# すべてのテストを実行
+pytest -v
+```
+
+### テスト設定
+- **Playwright設定**: 日本語ロケール（ja-JP）、UTF-8エンコーディング対応
+- **フォントレンダリング**: 日本語文字の適切な表示を保証
+- **ブラウザ引数**: `--lang=ja-JP`, `--accept-lang=ja,ja-JP,en` で日本語優先設定
+- **文字化け防止**: UTF-8エンコーディングとフォントヒンティング最適化
+
+### テストカバレッジ
+- 日本語テキストの適切なレンダリング
+- フォーム入力での日本語文字サポート
+- 検索機能での日本語クエリ処理
+- カテゴリ名など UI 要素の日本語表示
+- Reader Mode での日本語フォント最適化

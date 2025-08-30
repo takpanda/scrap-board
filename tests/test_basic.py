@@ -7,6 +7,9 @@ from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.core.database import Base, get_db
 
+# Mark all tests in this file as unit tests
+pytestmark = pytest.mark.unit
+
 # テスト用インメモリデータベース
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
