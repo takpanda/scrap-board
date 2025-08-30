@@ -15,7 +15,7 @@ Scrap-Board is a Japanese web application for collecting, processing, and managi
 - **PDF Processing**: Docling (primary) with pdfminer.six fallback
 - **Content Extraction**: Trafilatura for HTML
 - **Deployment**: Docker with single container architecture
-- **Language**: Japanese language support required
+- **Language**: Japanese language support required for all user-facing content, articles, and chat interactions
 
 ## Validated Commands & Timing
 
@@ -99,6 +99,7 @@ When development begins, use these commands:
    EMBED_API_BASE=http://localhost:1234/v1  
    EMBED_MODEL=your-local-embed-model
    TIMEOUT_SEC=30
+   # Ensure LLM models support Japanese language for chat and content processing
    ```
 
 4. **Run Development Server**:
@@ -283,7 +284,16 @@ requirements.txt          # Python dependencies
 ```
 
 ## Development Guidelines
-- **Language Support**: All UI text in Japanese, code comments in English
+
+### Language Usage Requirements
+- **UI Text**: All user interface text must be in Japanese
+- **Articles & Content**: All processed articles and content should be displayed in Japanese
+- **Chat Functionality**: LLM chat interactions and responses must be in Japanese
+- **User Communications**: All user-facing messages, notifications, and feedback should be in Japanese
+- **Code Comments**: Internal code comments should be in English for developer clarity
+- **API Documentation**: Technical documentation can be in English
+
+### Other Guidelines
 - **Error Handling**: Graceful degradation when LLM services unavailable
 - **Logging**: Comprehensive operation logs for debugging
 - **Testing**: Focus on content processing pipeline reliability
