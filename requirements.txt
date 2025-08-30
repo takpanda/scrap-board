@@ -1,0 +1,47 @@
+# Core FastAPI dependencies
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+jinja2>=3.1.0
+python-multipart>=0.0.6
+
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.12.0
+
+# Content extraction
+trafilatura>=1.6.0
+docling>=2.0.0
+pdfminer.six>=20221105
+
+# LLM and embeddings
+httpx>=0.25.0
+openai>=1.0.0
+
+# Data processing
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# Background jobs
+apscheduler>=3.10.0
+
+# Language detection
+langdetect>=1.0.9
+
+# RSS/Feed parsing
+feedparser>=6.0.0
+
+# File handling
+aiofiles>=23.0.0
+
+# Development dependencies
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+playwright>=1.40.0
+pytest-playwright>=0.4.0
+black>=23.0.0
+isort>=5.12.0

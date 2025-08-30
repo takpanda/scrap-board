@@ -1,0 +1,141 @@
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from sqlalchemy.orm import Session
+from typing import Optional, List
+import json
+import tempfile
+import os
+import logging
+
+from app.core.database import get_db, Document, Classification, Embedding
+from app.services.extractor import content_extractor
+from app.services.llm_client import llm_client
+
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+@router.post("/url")
+async def ingest_url(
+    url: str = Form(...),
+    force: bool = Form(False),
+    db: Session = Depends(get_db)
+):
+    """URLからコンテンツを取り込み"""
+    
+    # 重複チェック
+    if not force:
+        existing = db.query(Document).filter(Document.url == url).first()
+        if existing:
+            return {"message": "URL already exists", "document_id": existing.id}
+    
+    # コンテンツ抽出
+    content_data = await content_extractor.extract_from_url(url)
+    if not content_data:
+        raise HTTPException(status_code=400, detail="Failed to extract content")
+    
+    # ドキュメント保存
+    document = Document(**content_data)
+    db.add(document)
+    db.commit()
+    db.refresh(document)
+    
+    # 非同期でバックグラウンド処理（分類・要約・埋め込み）
+    await _process_document_async(document.id, content_data, db)
+    
+    return {
+        "message": "Content ingested successfully",
+        "document_id": document.id,
+        "title": document.title
+    }
+
+
+@router.post("/pdf")
+async def ingest_pdf(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """PDFファイルを取り込み"""
+    
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="PDF file required")
+    
+    # 一時ファイルに保存
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+        content = await file.read()
+        tmp_file.write(content)
+        tmp_file_path = tmp_file.name
+    
+    try:
+        # PDF抽出
+        content_data = await content_extractor.extract_from_pdf(tmp_file_path, file.filename)
+        if not content_data:
+            raise HTTPException(status_code=400, detail="Failed to extract PDF content")
+        
+        # ドキュメント保存
+        document = Document(**content_data)
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+        
+        # 非同期でバックグラウンド処理
+        await _process_document_async(document.id, content_data, db)
+        
+        return {
+            "message": "PDF ingested successfully",
+            "document_id": document.id,
+            "title": document.title
+        }
+        
+    finally:
+        # 一時ファイル削除
+        os.unlink(tmp_file_path)
+
+
+@router.post("/rss")
+async def ingest_rss(
+    feed_url: str = Form(...),
+    schedule: bool = Form(False),
+    db: Session = Depends(get_db)
+):
+    """RSSフィードを取り込み"""
+    # TODO: RSSフィード処理実装
+    raise HTTPException(status_code=501, detail="RSS ingestion not implemented yet")
+
+
+async def _process_document_async(document_id: str, content_data: dict, db: Session):
+    """ドキュメントの非同期処理（分類・要約・埋め込み）"""
+    try:
+        # 分類実行
+        classification_result = await llm_client.classify_content(
+            content_data["title"],
+            content_data["content_text"][:2000]  # 最初の2000文字
+        )
+        
+        if classification_result:
+            classification = Classification(
+                document_id=document_id,
+                primary_category=classification_result.get("primary_category", "その他"),
+                topics=None,
+                tags=classification_result.get("tags", []),
+                confidence=classification_result.get("confidence", 0.5),
+                method="llm"
+            )
+            db.add(classification)
+        
+        # 埋め込み生成
+        embedding_vector = await llm_client.create_embedding(content_data["content_text"][:1000])
+        if embedding_vector:
+            embedding = Embedding(
+                document_id=document_id,
+                chunk_id=0,
+                vec=json.dumps(embedding_vector),
+                chunk_text=content_data["content_text"][:1000]
+            )
+            db.add(embedding)
+        
+        db.commit()
+        logger.info(f"Document {document_id} processed successfully")
+        
+    except Exception as e:
+        logger.error(f"Document processing error for {document_id}: {e}")
+        db.rollback()
