@@ -1,59 +1,59 @@
-# Scrap-Board - Web Content Collection & Management System
+# Scrap-Board - ウェブコンテンツ収集・管理システム
 
-Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
+まずこの指示書を参照し、ここに記載されていない予期しない情報に遭遇した場合のみ検索やbashコマンドを使用してください。
 
-## Project Overview
-Scrap-Board is a Japanese web application for collecting, processing, and managing web content and PDFs. It features automatic content classification, search capabilities, and a Reader Mode for optimal content consumption. The system uses FastAPI with HTMX frontend, SQLite database, and integrates with LM Studio or Ollama for LLM functionality.
+## プロジェクト概要
+Scrap-Boardは、ウェブコンテンツとPDFの収集、処理、管理を行う日本語ウェブアプリケーションです。自動コンテンツ分類、検索機能、最適なコンテンツ消費のためのリーダーモードを備えています。システムはHTMXフロントエンドを持つFastAPI、SQLiteデータベースを使用し、LLM機能のためにLM StudioまたはOllamaと統合されています。
 
-**Current Status**: Early development stage - repository contains only basic README.md. Full implementation planned based on detailed requirements in issue #1.
+**現在の状況**: 開発初期段階 - リポジトリには基本的なREADME.mdのみが含まれています。issue #1の詳細要件に基づく完全な実装が計画されています。
 
-## Technology Stack & Architecture
-- **Backend**: Python 3.11+ with FastAPI
-- **Frontend**: HTMX + Jinja2 templates with Tailwind CSS
-- **Database**: SQLite (development/personal use)
-- **LLM Integration**: LM Studio (default) or Ollama via OpenAI-compatible API
-- **PDF Processing**: Docling (primary) with pdfminer.six fallback
-- **Content Extraction**: Trafilatura for HTML
-- **Deployment**: Docker with single container architecture
-- **Language**: Japanese language support required for all user-facing content, articles, and chat interactions
+## 技術スタック・アーキテクチャ
+- **バックエンド**: Python 3.11+ with FastAPI
+- **フロントエンド**: HTMX + Jinja2テンプレート with Tailwind CSS
+- **データベース**: SQLite (開発/個人使用)
+- **LLM統合**: LM Studio (デフォルト) または OpenAI互換API経由のOllama
+- **PDF処理**: Docling (プライマリ) with pdfminer.six フォールバック
+- **コンテンツ抽出**: HTMLのTrafilatura
+- **デプロイメント**: 単一コンテナアーキテクチャのDocker
+- **言語**: 全てのユーザー向けコンテンツ、記事、チャット機能で日本語サポートが必要
 
-## Validated Commands & Timing
+## 検証済みコマンド・タイミング
 
-The following commands have been tested and validated to work correctly:
+以下のコマンドはテスト済みで正常に動作することが確認されています：
 
-### Environment Verification (Tested)
-- **Python**: 3.12.3 available (compatible with 3.11+ requirement)
-- **Docker**: 28.0.4 available for containerization
-- **Git**: 2.51.0 available for version control
-- **Curl**: 8.5.0 available for API testing
+### 環境検証 (テスト済み)
+- **Python**: 3.12.3 利用可能 (3.11+要件と互換性あり)
+- **Docker**: 28.0.4 コンテナ化で利用可能
+- **Git**: 2.51.0 バージョン管理で利用可能
+- **Curl**: 8.5.0 APIテストで利用可能
 
-### Package Installation Timing (Measured)
-- **FastAPI core packages**: ~10 seconds (fastapi, uvicorn, httpx)
-- **Content extraction packages**: ~7 seconds (trafilatura with dependencies)
-- **Complete dependency set**: Estimated 15-20 minutes with ML packages
-- **FastAPI startup**: ~2-3 seconds for basic application
+### パッケージインストール時間 (測定済み)
+- **FastAPIコアパッケージ**: ~10秒 (fastapi, uvicorn, httpx)
+- **コンテンツ抽出パッケージ**: ~7秒 (trafilatura with dependencies)
+- **完全な依存関係セット**: MLパッケージ込みで推定15-20分
+- **FastAPI起動**: 基本アプリケーションで~2-3秒
 
-### Tested Commands
+### テスト済みコマンド
 ```bash
-# Basic dependency installation (validated)
+# 基本依存関係インストール (検証済み)
 pip install fastapi uvicorn[standard] httpx trafilatura
 
-# FastAPI test server startup (validated)
+# FastAPIテストサーバー起動 (検証済み)
 uvicorn app:app --host 0.0.0.0 --port 8000
-# Expected startup time: 2-3 seconds
+# 予想起動時間: 2-3秒
 
-# LLM service connectivity tests (validated commands)
+# LLMサービス接続テスト (検証済みコマンド)
 curl http://localhost:1234/v1/models  # LM Studio
 curl http://localhost:11434/api/tags  # Ollama
 
-# File operations (validated)
+# ファイル操作 (検証済み)
 mkdir -p data && ls -la data
 ```
 
-## Working Effectively
+## 効果的な作業方法
 
-### Initial Repository Setup
-Currently the repository contains:
+### 初期リポジトリセットアップ
+現在リポジトリには以下が含まれています：
 ```
 .
 ├── README.md
@@ -63,138 +63,138 @@ Currently the repository contains:
 └── .git/
 ```
 
-### Expected Development Environment Setup
-When development begins, use these commands:
+### 予想開発環境セットアップ
+開発開始時は、以下のコマンドを使用してください：
 
-1. **Install Python dependencies**:
+1. **Python依存関係のインストール**:
    ```bash
    pip install fastapi uvicorn[standard] httpx sqlalchemy trafilatura docling pdfminer.six numpy pandas jinja2
-   # NEVER CANCEL: Core dependencies take ~10-20 seconds, ML packages may take 5-10 minutes total
-   # Set timeout to 15+ minutes for complete installation
+   # 絶対にキャンセルしないこと: コア依存関係は~10-20秒、MLパッケージ全体で5-10分かかる場合があります
+   # 完全インストールには15分以上のタイムアウトを設定してください
    ```
 
-2. **Set up external LLM service** (choose one):
+2. **外部LLMサービスのセットアップ** (どちらか一つを選択):
    
-   **LM Studio (Recommended)**:
+   **LM Studio (推奨)**:
    ```bash
-   # Download and run LM Studio separately
-   # Configure API endpoint: http://localhost:1234/v1
-   # Load compatible models for chat and embeddings
+   # LM Studioを別途ダウンロードして実行
+   # APIエンドポイント設定: http://localhost:1234/v1
+   # チャットと埋め込み用の互換モデルをロード
    ```
    
-   **Ollama Alternative**:
+   **Ollama代替案**:
    ```bash
    curl -fsSL https://ollama.ai/install.sh | sh
    ollama pull llama3.1:8b-instruct
    ollama pull nomic-embed-text
-   ollama serve  # Runs on http://localhost:11434
+   ollama serve  # http://localhost:11434で実行
    ```
 
-3. **Environment Configuration**:
+3. **環境設定**:
    ```bash
-   # Create .env file with:
+   # .envファイルを作成:
    DB_URL=sqlite:///./data/scraps.db
    CHAT_API_BASE=http://localhost:1234/v1
    CHAT_MODEL=your-local-chat-model
    EMBED_API_BASE=http://localhost:1234/v1  
    EMBED_MODEL=your-local-embed-model
    TIMEOUT_SEC=30
-   # Ensure LLM models support Japanese language for chat and content processing
+   # LLMモデルがチャットとコンテンツ処理で日本語をサポートすることを確認
    ```
 
-4. **Run Development Server**:
+4. **開発サーバーの実行**:
    ```bash
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-   # NEVER CANCEL: Initial startup may take 2-3 minutes to load models
+   # 絶対にキャンセルしないこと: 初期起動時はモデルロードに2-3分かかる場合があります
    ```
 
-### Docker Development (Planned)
+### Docker開発 (計画中)
 ```bash
-# Build container
+# コンテナビルド
 docker build -t scrap-board .
-# NEVER CANCEL: Docker build takes 10-15 minutes due to ML dependencies
+# 絶対にキャンセルしないこと: ML依存関係により10-15分かかります
 
-# Run with docker-compose
+# docker-composeで実行
 docker-compose up -d
-# NEVER CANCEL: First run takes 5-8 minutes to initialize database and load models
+# 絶対にキャンセルしないこと: 初回実行時はデータベース初期化とモデルロードに5-8分かかります
 ```
 
-## Testing & Validation
+## テスト・検証
 
-### Manual Validation Scenarios
-After making changes, ALWAYS test these core workflows:
+### 手動検証シナリオ
+変更後は、必ずこれらのコアワークフローをテストしてください：
 
-1. **Content Ingestion Test**:
+1. **コンテンツ取り込みテスト**:
    ```bash
    curl -X POST http://localhost:8000/ingest/url \
      -H "Content-Type: application/json" \
      -d '{"url": "https://example.com/article"}'
-   # Expected: 200 response with document ID within 8 seconds
+   # 期待値: 8秒以内にドキュメントIDを含む200レスポンス
    ```
 
-2. **PDF Processing Test**:
+2. **PDF処理テスト**:
    ```bash
    curl -X POST http://localhost:8000/ingest/pdf \
      -F "file=@sample.pdf"
-   # Expected: Successful extraction with Markdown formatting
+   # 期待値: Markdownフォーマットでの抽出成功
    ```
 
-3. **Search Functionality Test**:
+3. **検索機能テスト**:
    ```bash
    curl "http://localhost:8000/documents?q=test&category=テック/AI"
-   # Expected: JSON response with filtered results
+   # 期待値: フィルタリングされた結果のJSONレスポンス
    ```
 
-4. **Web UI Test**:
-   - Navigate to http://localhost:8000
-   - Test URL input and content ingestion
-   - Verify Reader Mode toggle and text size controls
-   - Test search with Japanese keywords
-   - Validate category filtering works
+4. **Web UIテスト**:
+   - http://localhost:8000にナビゲート
+   - URL入力とコンテンツ取り込みテスト
+   - リーダーモード切り替えとテキストサイズコントロールの確認
+   - 日本語キーワードでの検索テスト
+   - カテゴリフィルタリング動作確認
 
-### Build & Test Commands
+### ビルド・テストコマンド
 ```bash
-# Run tests (when test suite exists)
+# テスト実行 (テストスイートが存在する場合)
 pytest tests/ -v
-# NEVER CANCEL: Test suite may take 10-15 minutes due to ML model loading
+# 絶対にキャンセルしないこと: MLモデルロードによりテストスイートは10-15分かかる場合があります
 
-# Code quality checks
+# コード品質チェック
 black app/ --check
 flake8 app/
 mypy app/
-# NEVER CANCEL: First run of mypy may take 3-5 minutes
+# 絶対にキャンセルしないこと: mypyの初回実行は3-5分かかる場合があります
 ```
 
-## Key Features & Components
+## 主要機能・コンポーネント
 
-### Content Processing Pipeline
-1. **Input Acceptance**: URL, RSS feeds, PDF upload
-2. **Content Extraction**: HTML (Trafilatura) + PDF (Docling)
-3. **Normalization**: Convert to Markdown, language detection
-4. **Embedding Generation**: Via LM Studio/Ollama API
-5. **Classification**: Rules → kNN → LLM voting system
-6. **Summarization**: Short/medium summaries via LLM
-7. **Storage**: SQLite with full-text search index
+### コンテンツ処理パイプライン
+1. **入力受け入れ**: URL、RSSフィード、PDFアップロード
+2. **コンテンツ抽出**: HTML (Trafilatura) + PDF (Docling)
+3. **正規化**: Markdownへの変換、言語検出
+4. **埋め込み生成**: LM Studio/Ollama API経由
+5. **分類**: ルール → kNN → LLM投票システム
+6. **要約**: LLM経由の短/中要約
+7. **保存**: 全文検索インデックス付きSQLite
 
-### Database Schema (Planned)
-- `documents`: Core content storage
-- `classifications`: Category/tag assignments  
-- `embeddings`: Vector representations for similarity search
-- `collections`: User-organized content groups
-- `feedbacks`: Correction data for improving classification
+### データベーススキーマ (計画中)
+- `documents`: コアコンテンツ保存
+- `classifications`: カテゴリ/タグ割り当て
+- `embeddings`: 類似検索用ベクトル表現
+- `collections`: ユーザー組織化コンテンツグループ
+- `feedbacks`: 分類改善用修正データ
 
-### UI Components & Styling
-- **Design**: Modern, minimalist Japanese UI
-- **Colors**: Ink/Charcoal base with Emerald or Indigo accents
-- **Typography**: Inter + Noto Sans JP
-- **Layout**: Fixed header (64px), collapsible sidebar (264px)
-- **Reader Mode**: Optimized typography with multiple themes
+### UIコンポーネント・スタイリング
+- **デザイン**: モダンでミニマルな日本語UI
+- **カラー**: Ink/Charcoalベース with Emerald or Indigo アクセント
+- **タイポグラフィ**: Inter + Noto Sans JP
+- **レイアウト**: 固定ヘッダー (64px)、折りたたみ可能サイドバー (264px)
+- **リーダーモード**: 複数テーマ付き最適化タイポグラフィ
 
-## Common Development Tasks
+## 共通開発タスク
 
-### Adding New Classification Rules
+### 新規分類ルール追加
 ```python
-# Edit app/core/classification.py
+# app/core/classification.pyを編集
 rules = [
     {
         "name": "ai-content",
@@ -204,105 +204,105 @@ rules = [
 ]
 ```
 
-### Updating Content Extraction
+### コンテンツ抽出更新
 ```python
-# Modify app/services/extractor.py
-# Always test with both HTML and PDF samples
-# Ensure Japanese text handling works correctly
+# app/services/extractor.pyを変更
+# 常にHTMLとPDFサンプル両方でテスト
+# 日本語テキスト処理が正しく動作することを確認
 ```
 
-### Database Migrations
+### データベースマイグレーション
 ```bash
-# Run Alembic migrations (when implemented)
+# Alembicマイグレーション実行 (実装時)
 alembic upgrade head
-# NEVER CANCEL: Migration may take 5-10 minutes for large datasets
+# 絶対にキャンセルしないこと: 大きなデータセットではマイグレーションに5-10分かかる場合があります
 ```
 
-## Performance & Timing Expectations
+## パフォーマンス・タイミング期待値
 
-### Response Time Targets
-- **Single URL ingestion**: P50 < 8 seconds (including LLM processing)
-- **Search queries**: P95 < 300ms (indexed data)
-- **PDF processing**: Varies by size, 30 seconds for 50-page documents
-- **Bulk ingestion**: 100 URLs may take 45-60 minutes
+### レスポンス時間目標
+- **単一URL取り込み**: P50 < 8秒 (LLM処理含む)
+- **検索クエリ**: P95 < 300ms (インデックス化データ)
+- **PDF処理**: サイズにより異なる、50ページドキュメントで30秒
+- **バルク取り込み**: 100 URLで45-60分かかる場合があります
 
-### Resource Requirements
-- **Memory**: 4GB minimum (8GB recommended for larger models)
-- **Storage**: SQLite + assets directory
-- **CPU**: Model inference is CPU-intensive, expect high usage during processing
+### リソース要件
+- **メモリ**: 最小4GB (大きなモデルには8GB推奨)
+- **ストレージ**: SQLite + アセットディレクトリ
+- **CPU**: モデル推論はCPU集約的、処理中は高使用率が予想されます
 
-## Troubleshooting & Common Issues
+## トラブルシューティング・よくある問題
 
-### LLM Connection Issues
+### LLM接続問題
 ```bash
-# Test LM Studio connection
+# LM Studio接続テスト
 curl http://localhost:1234/v1/models
-# Should return available models list
+# 利用可能モデルリストが返されるはずです
 
-# Test Ollama connection  
+# Ollama接続テスト
 curl http://localhost:11434/api/tags
-# Should return installed models
+# インストール済みモデルが返されるはずです
 ```
 
-### PDF Processing Failures
-- Docling primary extraction, pdfminer.six fallback
-- Image-only PDFs will be skipped with warning
-- Check logs for detailed error messages
+### PDF処理失敗
+- Doclingプライマリ抽出、pdfminer.sixフォールバック
+- 画像のみPDFは警告とともにスキップされます
+- 詳細なエラーメッセージはログを確認してください
 
-### Classification Accuracy
-- Monitor feedback collection in UI
-- Adjust rule thresholds in configuration
-- Retrain kNN classifier with accumulated feedback
+### 分類精度
+- UIでフィードバック収集をモニター
+- 設定でルール閾値を調整
+- 蓄積されたフィードバックでkNN分類器を再訓練
 
-## Security & Compliance
-- **robots.txt compliance**: Always respected during crawling
-- **Rate limiting**: Implemented to prevent overloading target sites
-- **Data privacy**: No external data transmission except to configured LLM endpoints
-- **Domain filtering**: Maintain allow/block lists for content sources
+## セキュリティ・コンプライアンス
+- **robots.txt遵守**: クローリング中は常に尊重
+- **レート制限**: ターゲットサイトの過負荷防止のため実装
+- **データプライバシー**: 設定されたLLMエンドポイント以外への外部データ送信なし
+- **ドメインフィルタリング**: コンテンツソースの許可/ブロックリスト維持
 
-## File Structure (Expected)
+## ファイル構造 (予想)
 ```
 app/
-├── main.py                 # FastAPI application entry
+├── main.py                 # FastAPIアプリケーションエントリー
 ├── core/
-│   ├── config.py          # Environment configuration
-│   ├── database.py        # SQLite connection
-│   └── classification.py  # ML classification logic
+│   ├── config.py          # 環境設定
+│   ├── database.py        # SQLite接続
+│   └── classification.py  # ML分類ロジック
 ├── services/
-│   ├── extractor.py       # Content extraction
-│   ├── llm_client.py      # LM Studio/Ollama integration
-│   └── search.py          # Search functionality
+│   ├── extractor.py       # コンテンツ抽出
+│   ├── llm_client.py      # LM Studio/Ollama統合
+│   └── search.py          # 検索機能
 ├── api/
-│   └── routes/            # API endpoints
-├── templates/             # Jinja2 HTML templates
-└── static/               # CSS, JS, images
-tests/                    # Test suite
-data/                     # SQLite database storage
-docker-compose.yml        # Container orchestration
-requirements.txt          # Python dependencies
-.env                      # Environment variables
+│   └── routes/            # APIエンドポイント
+├── templates/             # Jinja2 HTMLテンプレート
+└── static/               # CSS、JS、画像
+tests/                    # テストスイート
+data/                     # SQLiteデータベース保存
+docker-compose.yml        # コンテナオーケストレーション
+requirements.txt          # Python依存関係
+.env                      # 環境変数
 ```
 
-## Development Guidelines
+## 開発ガイドライン
 
-### Language Usage Requirements
-- **UI Text**: All user interface text must be in Japanese
-- **Articles & Content**: All processed articles and content should be displayed in Japanese
-- **Chat Functionality**: LLM chat interactions and responses must be in Japanese
-- **User Communications**: All user-facing messages, notifications, and feedback should be in Japanese
-- **Code Comments**: Internal code comments should be in English for developer clarity
-- **API Documentation**: Technical documentation can be in English
+### 言語使用要件
+- **UIテキスト**: すべてのユーザーインターフェーステキストは日本語である必要があります
+- **記事・コンテンツ**: 処理されたすべての記事とコンテンツは日本語で表示されるべきです
+- **チャット機能**: LLMチャット相互作用と応答は日本語である必要があります
+- **ユーザーコミュニケーション**: すべてのユーザー向けメッセージ、通知、フィードバックは日本語であるべきです
+- **コードコメント**: 内部コードコメントは開発者の明確性のため英語であるべきです
+- **APIドキュメント**: 技術ドキュメントは英語でも構いません
 
-### Other Guidelines
-- **Error Handling**: Graceful degradation when LLM services unavailable
-- **Logging**: Comprehensive operation logs for debugging
-- **Testing**: Focus on content processing pipeline reliability
-- **Documentation**: Maintain API documentation as code evolves
+### その他のガイドライン
+- **エラーハンドリング**: LLMサービス利用不可時の優雅な機能低下
+- **ロギング**: デバッグ用の包括的操作ログ
+- **テスト**: コンテンツ処理パイプラインの信頼性に焦点
+- **ドキュメント**: コード進化に合わせてAPIドキュメントを維持
 
-## External Dependencies
-- **LM Studio**: Primary LLM service (recommended)
-- **Ollama**: Alternative LLM service 
-- **Internet Connection**: Required for content crawling
-- **Storage**: Local filesystem for SQLite and extracted assets
+## 外部依存関係
+- **LM Studio**: プライマリLLMサービス (推奨)
+- **Ollama**: 代替LLMサービス
+- **インターネット接続**: コンテンツクローリングに必要
+- **ストレージ**: SQLiteと抽出アセット用のローカルファイルシステム
 
-Always ensure external LLM services are running before starting the application. The system cannot function without access to embedding and chat completion APIs.
+アプリケーション開始前に外部LLMサービスが実行されていることを常に確認してください。システムは埋め込みとチャット完了APIへのアクセスなしには機能できません。
