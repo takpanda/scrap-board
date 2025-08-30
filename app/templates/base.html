@@ -62,17 +62,19 @@
                 <!-- URL入力 -->
                 <div class="form-group">
                     <label class="form-label">URL</label>
-                    <form method="post" action="/api/ingest/url">
+                    <form id="url-form">
                         <div class="form-actions">
                             <input 
                                 type="url" 
                                 name="url"
+                                id="url-input"
                                 placeholder="https://example.com/article"
                                 class="form-input"
                                 required
                             >
-                            <button type="submit" class="btn btn-primary">追加</button>
+                            <button type="submit" class="btn btn-primary" id="url-submit-btn">追加</button>
                         </div>
+                        <div id="url-status" class="mt-2 hidden"></div>
                     </form>
                 </div>
                 
@@ -119,6 +121,67 @@
             
             if (e.key === 'Escape') {
                 hideModal();
+            }
+        });
+
+        // URL form submission handler
+        document.getElementById('url-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const urlInput = document.getElementById('url-input');
+            const submitBtn = document.getElementById('url-submit-btn');
+            const statusDiv = document.getElementById('url-status');
+            
+            const url = urlInput.value.trim();
+            if (!url) return;
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.textContent = '処理中...';
+            statusDiv.className = 'mt-2 text-blue-600';
+            statusDiv.textContent = 'URLからコンテンツを取得しています...';
+            statusDiv.classList.remove('hidden');
+            
+            try {
+                const formData = new FormData();
+                formData.append('url', url);
+                
+                const response = await fetch('/api/ingest/url', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Success - show success message and redirect
+                    statusDiv.className = 'mt-2 text-green-600';
+                    statusDiv.textContent = 'コンテンツを正常に追加しました！';
+                    
+                    // Clear form
+                    urlInput.value = '';
+                    
+                    // Close modal after a short delay and redirect
+                    setTimeout(() => {
+                        hideModal();
+                        window.location.href = `/documents/${data.document_id}`;
+                    }, 1000);
+                    
+                } else {
+                    // Error - show error message
+                    statusDiv.className = 'mt-2 text-red-600';
+                    statusDiv.textContent = data.detail || 'エラーが発生しました';
+                }
+                
+            } catch (error) {
+                // Network or other error
+                statusDiv.className = 'mt-2 text-red-600';
+                statusDiv.textContent = 'ネットワークエラーが発生しました';
+                console.error('URL ingestion error:', error);
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.textContent = '追加';
             }
         });
     </script>
