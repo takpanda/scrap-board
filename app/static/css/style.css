@@ -1,18 +1,7 @@
-/* Basic reset and base styles */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+/* Custom styles for Scrap-Board */
+/* Note: This file works alongside Tailwind CSS */
 
-body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #F9FAFB;
-    color: #0B1221;
-    line-height: 1.6;
-}
-
-/* Color system */
+/* Color system - defining custom colors that extend Tailwind */
 :root {
     --ink: #0B1221;
     --charcoal: #1C2430;
@@ -23,46 +12,7 @@ body {
     --indigo: #5A6FF0;
 }
 
-/* Layout utilities */
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 1rem;
-}
-
-.flex {
-    display: flex;
-}
-
-.items-center {
-    align-items: center;
-}
-
-.justify-between {
-    justify-content: space-between;
-}
-
-.justify-center {
-    justify-content: center;
-}
-
-.space-x-2 > * + * {
-    margin-left: 0.5rem;
-}
-
-.space-x-4 > * + * {
-    margin-left: 1rem;
-}
-
-.space-y-4 > * + * {
-    margin-top: 1rem;
-}
-
-.space-y-8 > * + * {
-    margin-top: 2rem;
-}
-
-/* Header */
+/* Header custom styles */
 .header {
     position: fixed;
     top: 0;
@@ -133,164 +83,13 @@ body {
     box-shadow: 0 0 0 3px rgba(43, 182, 115, 0.1);
 }
 
-/* Buttons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    text-decoration: none;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-primary {
-    background: var(--emerald);
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #249760;
-}
-
-.btn-secondary {
-    background: white;
-    color: var(--emerald);
-    border: 1px solid var(--emerald);
-}
-
-.btn-secondary:hover {
-    background: var(--emerald);
-    color: white;
-}
-
-/* Main content */
+/* Main content with padding for fixed header */
 .main {
     padding-top: 64px;
     min-height: 100vh;
 }
 
-.hero {
-    text-align: center;
-    padding: 4rem 1rem;
-}
-
-.hero h1 {
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin-bottom: 1rem;
-}
-
-.hero .highlight {
-    color: var(--emerald);
-}
-
-.hero p {
-    font-size: 1.25rem;
-    color: var(--graphite);
-    margin-bottom: 2rem;
-    max-width: 800px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.hero-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    margin-bottom: 3rem;
-}
-
-/* Feature cards */
-.features {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-    margin: 3rem 0;
-}
-
-.feature-card {
-    background: white;
-    padding: 2rem;
-    border-radius: 1rem;
-    border: 1px solid var(--mist);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.feature-icon {
-    width: 3rem;
-    height: 3rem;
-    background: rgba(43, 182, 115, 0.1);
-    border-radius: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1rem;
-}
-
-.feature-card h3 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-
-.feature-card p {
-    color: var(--graphite);
-}
-
-/* Recent documents */
-.recent-docs {
-    background: white;
-    border-radius: 1rem;
-    border: 1px solid var(--mist);
-    padding: 2rem;
-    margin: 2rem 0;
-}
-
-.recent-docs h2 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.recent-docs a {
-    color: var(--emerald);
-    text-decoration: none;
-}
-
-/* Stats cards */
-.stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin: 3rem 0;
-}
-
-.stat-card {
-    background: white;
-    border: 1px solid var(--mist);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    text-align: center;
-}
-
-.stat-value {
-    font-size: 2rem;
-    font-weight: bold;
-    color: var(--emerald);
-}
-
-.stat-label {
-    font-size: 0.875rem;
-    color: var(--graphite);
-}
-
-/* Modal */
+/* Modal styles */
 .modal {
     position: fixed;
     inset: 0;
@@ -365,39 +164,68 @@ body {
     gap: 0.5rem;
 }
 
+/* Button styles for compatibility with base.html */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: var(--emerald);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #249760;
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--emerald);
+    border: 1px solid var(--emerald);
+}
+
+.btn-secondary:hover {
+    background: var(--emerald);
+    color: white;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .nav {
         display: none;
     }
     
-    .hero h1 {
-        font-size: 2rem;
-    }
-    
-    .hero p {
-        font-size: 1rem;
-    }
-    
-    .hero-actions {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .features {
-        grid-template-columns: 1fr;
+    .search-container {
+        margin: 0 0.5rem;
+        max-width: 200px;
     }
 }
 
-/* Text color utilities for status messages */
+/* Additional status text colors for compatibility */
 .text-green-600 {
-    color: #059669;
+    color: #059669 !important;
 }
 
 .text-red-600 {
-    color: #DC2626;
+    color: #DC2626 !important;
 }
 
 .text-blue-600 {
-    color: #2563EB;
+    color: #2563EB !important;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.mt-2 {
+    margin-top: 0.5rem;
 }
