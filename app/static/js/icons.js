@@ -22,7 +22,9 @@ function createIcons() {
     document.querySelectorAll('[data-lucide]').forEach(element => {
         const iconName = element.getAttribute('data-lucide');
         if (icons[iconName]) {
-            element.innerHTML = icons[iconName];
+            // Create SVG with explicit size attributes
+            const svg = icons[iconName].replace('<svg ', '<svg width="16" height="16" ');
+            element.innerHTML = svg;
         }
     });
 }
