@@ -4,7 +4,7 @@
 
 {% block content %}
 <!-- Reader Mode Controls -->
-<div class="fixed top-16 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-mist z-40 px-4 py-3">
+<div class="fixed top-16 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-mist z-50 px-4 py-3">
     <div class="max-w-4xl mx-auto flex justify-between items-center">
         <!-- Back Button -->
         <a href="/documents/{{ document.id }}" class="flex items-center space-x-2 text-graphite hover:text-ink transition-colors">
@@ -56,7 +56,7 @@
 </div>
 
 <!-- Reader Content -->
-<article id="reader-content" class="pt-28 pb-16 px-4 transition-all duration-200">
+<article id="reader-content" class="pt-32 pb-16 px-4 transition-all duration-200">
     <div class="max-w-4xl mx-auto">
         <!-- Document Header -->
         <header class="mb-8 pb-6 border-b border-current/10">
@@ -228,14 +228,26 @@
         color: #0B1221;
     }
     
+    .theme-light .fixed {
+        background: rgba(249, 250, 251, 0.95);
+    }
+    
     .theme-dark {
         background: #0E1116;
         color: #E6EAF0;
     }
     
+    .theme-dark .fixed {
+        background: rgba(14, 17, 22, 0.95);
+    }
+    
     .theme-sepia {
         background: #F4F1EA;
         color: #3D3D3D;
+    }
+    
+    .theme-sepia .fixed {
+        background: rgba(244, 241, 234, 0.95);
     }
     
     /* Font Family Styles */
