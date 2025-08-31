@@ -5,31 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Scrap-Board{% endblock %}</title>
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'ink': '#0B1221',
-                        'charcoal': '#1C2430',
-                        'graphite': '#2E3642',
-                        'mist': '#E8ECF2',
-                        'ivory': '#F9FAFB',
-                        'emerald': '#2BB673',
-                        'indigo': '#5A6FF0'
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Tailwind CSS (local) -->
+    <link rel="stylesheet" href="/static/css/tailwind.min.css">
     
     <!-- Local CSS -->
     <link rel="stylesheet" href="/static/css/style.css">
     
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <!-- Local Icons -->
+    <script src="/static/js/icons.js"></script>
 </head>
 <body>
     <!-- Header -->
