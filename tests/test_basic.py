@@ -89,6 +89,23 @@ def test_search_short_query(client):
     assert data["results"] == []
     assert data["total"] == 0
 
+def test_environment_configuration():
+    """環境変数設定のテスト"""
+    from app.core.config import settings
+    
+    # 設定が正しく読み込まれることを確認
+    assert settings.db_url is not None
+    assert settings.chat_api_base is not None
+    assert settings.chat_model is not None
+    assert settings.embed_api_base is not None
+    assert settings.embed_model is not None
+    assert settings.timeout_sec > 0
+    
+    # デフォルト値の確認
+    assert "sqlite:///" in settings.db_url
+    assert "v1" in settings.chat_api_base
+    assert "v1" in settings.embed_api_base
+
 # 実際のURL取り込みテストは外部依存があるため、モックまたはローカルファイルでテスト
 @pytest.mark.skip(reason="Requires external dependencies and LLM service")
 def test_url_ingestion(client):
