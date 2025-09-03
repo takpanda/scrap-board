@@ -167,22 +167,24 @@
     border: 1px solid rgba(232, 236, 242, 0.6);
 }
 
-/* Enhanced similar documents */
+/* Enhanced similar documents with improved card design */
 .similar-doc-enhanced {
-    background: white;
-    border: 1px solid rgba(232, 236, 242, 0.8);
+    background: linear-gradient(135deg, white 0%, #fafbfc 100%);
+    border: 1px solid rgba(232, 236, 242, 1);
     border-radius: 1rem;
     padding: 1.5rem;
     margin-bottom: 1rem;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    box-shadow: 0 2px 8px rgba(11, 18, 33, 0.04), 0 1px 3px rgba(11, 18, 33, 0.03);
 }
 
 .similar-doc-enhanced:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(11, 18, 33, 0.08);
-    border-color: rgba(43, 182, 115, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(11, 18, 33, 0.12), 0 4px 16px rgba(43, 182, 115, 0.08);
+    border-color: rgba(43, 182, 115, 0.3);
+    background: linear-gradient(135deg, white 0%, #f9fafb 100%);
 }
 
 .similar-doc-enhanced::before {
@@ -192,29 +194,43 @@
     top: 0;
     width: 4px;
     height: 100%;
-    background: linear-gradient(135deg, var(--emerald), #22c55e);
+    background: linear-gradient(135deg, var(--emerald) 0%, #22c55e 100%);
     border-radius: 0 2px 2px 0;
+    box-shadow: 0 0 8px rgba(43, 182, 115, 0.2);
 }
 
 .similar-doc-enhanced .similar-doc-title {
-    font-weight: 500;
+    font-weight: 600;
     margin-bottom: 0.75rem;
-    font-size: 0.925rem;
-    line-height: 1.4;
+    font-size: 1rem;
+    line-height: 1.5;
     padding-left: 1rem;
+    color: var(--ink);
+}
+
+.similar-doc-enhanced .similar-doc-title a {
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.similar-doc-enhanced .similar-doc-title a:hover {
+    color: var(--emerald);
 }
 
 .similar-doc-enhanced .similar-doc-meta {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: var(--graphite);
     display: flex;
     gap: 1rem;
     padding-left: 1rem;
+    align-items: center;
 }
 
 .similar-doc-enhanced .similarity-score {
     color: var(--emerald);
-    font-weight: 500;
+    font-weight: 600;
+    background: rgba(43, 182, 115, 0.08);
+    border: 1px solid rgba(43, 182, 115, 0.15);
 }
 
 /* Header custom styles */
