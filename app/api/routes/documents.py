@@ -7,6 +7,7 @@ from datetime import datetime
 
 from app.core.database import get_db, Document, Classification
 from app.services.llm_client import LLMClient
+from app.services.similarity import calculate_document_similarity
 
 router = APIRouter()
 
@@ -207,8 +208,8 @@ async def get_similar_documents(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # TODO: 埋め込みベースの類似度計算実装
-    # 現在は同じカテゴリの他のドキュメントを返す簡易実装
+    # 埋め込みベースの類似度計算実装
+    # 同じカテゴリの他のドキュメントを取得して類似度を計算
     
     similar_docs = []
     if document.classifications:
@@ -216,20 +217,26 @@ async def get_similar_documents(
         similar_query = db.query(Document).join(Classification).filter(
             Classification.primary_category == category,
             Document.id != document_id
-        ).limit(limit)
+        ).limit(limit * 2)  # 類似度計算後にソートするため、多めに取得
         
-        similar_docs = similar_query.all()
+        candidate_docs = similar_query.all()
+        
+        # 類似度を計算
+        docs_with_similarity = calculate_document_similarity(document_id, candidate_docs, db)
+        
+        # 上位limit件を取得
+        similar_docs = docs_with_similarity[:limit]
     
     # Format the documents for template
     formatted_docs = []
-    for doc in similar_docs:
+    for doc, similarity_score in similar_docs:
         formatted_docs.append({
             "id": doc.id,
             "title": doc.title,
             "url": doc.url,
             "domain": doc.domain,
             "created_at": doc.created_at.strftime('%Y年%m月%d日'),
-            "similarity_score": 0.7  # プレースホルダー
+            "similarity_score": similarity_score
         })
     
     # Check if this is an HTMX request
