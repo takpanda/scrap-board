@@ -203,6 +203,38 @@
     let summaryLoaded = false;
     let fullContentVisible = false;
     
+    // Simple Markdown to HTML converter for AI summaries
+    function markdownToHtml(text) {
+        if (!text) return '';
+        
+        return text
+            // Headers (支持# ## ###)
+            .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>')
+            .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-4 mb-2">$1</h2>')
+            .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-4 mb-2">$1</h1>')
+            
+            // Bold text (**bold** や __bold__)
+            .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
+            .replace(/__(.*?)__/g, '<strong class="font-semibold">$1</strong>')
+            
+            // Italic text (*italic* や _italic_)
+            .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+            .replace(/_(.*?)_/g, '<em class="italic">$1</em>')
+            
+            // Code blocks (```code```)
+            .replace(/```(.*?)```/gs, '<code class="bg-gray-100 px-2 py-1 rounded text-sm font-mono">$1</code>')
+            
+            // Inline code (`code`)
+            .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 rounded text-sm font-mono">$1</code>')
+            
+            // Lists (- item や * item)
+            .replace(/^[\-\*] (.*$)/gim, '<li class="ml-4">• $1</li>')
+            
+            // Line breaks (double newlines become <br>)
+            .replace(/\n\n/g, '<br><br>')
+            .replace(/\n/g, '<br>');
+    }
+    
     function toggleSummary() {
         const section = document.getElementById('summary-section');
         const content = document.getElementById('summary-content');
@@ -217,10 +249,11 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    const summaryHtml = markdownToHtml(data.short_summary || '要約の生成に失敗しました。');
                     content.innerHTML = `
                         <div class="bg-emerald/5 border border-emerald/20 rounded-lg p-4">
                             <h4 class="font-medium text-emerald mb-2">短要約</h4>
-                            <p class="text-graphite leading-relaxed">${data.short_summary || '要約の生成に失敗しました。'}</p>
+                            <div class="text-graphite leading-relaxed prose prose-sm max-w-none">${summaryHtml}</div>
                         </div>
                     `;
                     summaryLoaded = true;
