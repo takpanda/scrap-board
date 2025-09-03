@@ -4,8 +4,12 @@ from typing import Optional, List
 from datetime import datetime
 
 from app.core.database import get_db, Document, Classification
+from app.services.llm_client import LLMClient
 
 router = APIRouter()
+
+# LLMクライアントのインスタンス化
+llm_client = LLMClient()
 
 
 @router.get("")
@@ -154,6 +158,35 @@ async def submit_feedback(
     db.commit()
     
     return {"message": "Feedback submitted successfully"}
+
+
+@router.post("/{document_id}/summarize")
+async def summarize_document(
+    document_id: str,
+    db: Session = Depends(get_db)
+):
+    """ドキュメント要約生成"""
+    
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    try:
+        # LLMクライアントを使用して要約を生成
+        summary = await llm_client.summarize_text(document.content_text, "short")
+        
+        if summary:
+            return {"short_summary": summary}
+        else:
+            return {"short_summary": "要約の生成に失敗しました。LLMサービスに接続できませんでした。"}
+    
+    except Exception as e:
+        # エラーが発生した場合はログに記録してユーザーフレンドリーなメッセージを返す
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Summary generation error for document {document_id}: {e}")
+        
+        return {"short_summary": "要約の生成中にエラーが発生しました。"}
 
 
 @router.get("/{document_id}/similar")
