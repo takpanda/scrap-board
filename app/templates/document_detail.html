@@ -127,9 +127,9 @@
         </div>
         
         <div id="content-preview" class="prose max-w-none">
-            <!-- Show first 500 characters -->
+            <!-- Show first 500 characters of markdown content, rendered as HTML -->
             <div class="leading-relaxed text-graphite">
-                {{ document.content_text[:500] }}{% if document.content_text|length > 500 %}...{% endif %}
+                {{ document.content_md[:500] | markdown | safe }}{% if document.content_md|length > 500 %}<span class="text-gray-400">...</span>{% endif %}
             </div>
         </div>
         
