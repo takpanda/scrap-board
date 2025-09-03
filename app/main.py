@@ -52,9 +52,28 @@ app.include_router(utils.router, prefix="/api", tags=["utils"])
 
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
+async def home(request: Request, db: Session = Depends(get_db)):
     """ホームページ"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    from app.core.database import Document
+    from datetime import datetime, timedelta
+    
+    # 最近のドキュメント（最新5件）を取得
+    recent_documents = db.query(Document).order_by(Document.created_at.desc()).limit(5).all()
+    
+    # 統計情報の取得
+    total_documents = db.query(Document).count()
+    
+    # 今日追加されたドキュメント数
+    today = datetime.now().date()
+    today_start = datetime.combine(today, datetime.min.time())
+    today_documents = db.query(Document).filter(Document.created_at >= today_start).count()
+    
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "recent_documents": recent_documents,
+        "total_documents": total_documents,
+        "today_documents": today_documents
+    })
 
 
 @app.get("/documents", response_class=HTMLResponse)
