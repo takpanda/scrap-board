@@ -145,19 +145,22 @@
     </div>
     
     <!-- Similar Documents -->
-    <div class="mt-8">
+    <div class="mt-8 section-secondary bg-white rounded-2xl border border-mist p-6">
         <div class="section-header">
-            <h2 class="text-xl font-semibold mb-4">関連ドキュメント</h2>
+            <h2 class="text-xl font-semibold mb-6 flex items-center space-x-2">
+                <i data-lucide="link" class="w-5 h-5"></i>
+                <span>関連ドキュメント</span>
+            </h2>
         </div>
         <div 
             hx-get="/api/documents/{{ document.id }}/similar"
             hx-trigger="load"
             hx-target="#similar-documents"
-            class="grid md:grid-cols-2 gap-4"
+            class="grid md:grid-cols-2 gap-6"
         >
             <div id="similar-documents">
                 <!-- Loading state -->
-                <div class="animate-pulse space-y-4">
+                <div class="animate-pulse space-y-6">
                     <div class="similar-doc-enhanced">
                         <div class="h-4 bg-mist rounded w-3/4 mb-2"></div>
                         <div class="h-3 bg-mist rounded w-1/2"></div>

@@ -1,7 +1,7 @@
 {% if similar_documents %}
     {% for doc in similar_documents %}
     <div class="similar-doc-enhanced">
-        <div class="flex items-start justify-between mb-2">
+        <div class="flex items-start justify-between mb-3">
             <h4 class="similar-doc-title">
                 <a href="/documents/{{ doc.id }}" class="hover:text-emerald transition-colors">
                     {{ doc.title }}
@@ -27,8 +27,9 @@
     </div>
     {% endfor %}
 {% else %}
-    <div class="text-center py-8 text-graphite">
-        <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
-        <p class="text-sm">関連するドキュメントが見つかりませんでした</p>
+    <div class="col-span-2 text-center py-12 text-graphite bg-white rounded-2xl border border-mist">
+        <i data-lucide="search-x" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
+        <p class="text-base font-medium mb-2">関連するドキュメントが見つかりませんでした</p>
+        <p class="text-sm opacity-75">このドキュメントと類似したコンテンツはまだ収集されていません</p>
     </div>
 {% endif %}
