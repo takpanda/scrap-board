@@ -7,6 +7,7 @@ import os
 import logging
 import asyncio
 from contextlib import asynccontextmanager
+from markdown_it import MarkdownIt
 
 from app.core.config import settings
 from app.core.database import get_db, create_tables
@@ -43,6 +44,17 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # テンプレート
 templates = Jinja2Templates(directory="app/templates")
+
+# Markdownフィルタを追加
+md = MarkdownIt()
+
+def markdown_filter(text):
+    """MarkdownテキストをHTMLに変換するJinja2フィルタ"""
+    if not text:
+        return ""
+    return md.render(text)
+
+templates.env.filters["markdown"] = markdown_filter
 
 # APIルーター
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
