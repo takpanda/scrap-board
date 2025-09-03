@@ -92,17 +92,18 @@
             {% endif %}
             
             <button 
-                onclick="toggleSummary()"
+                id="content-view-toggle"
+                onclick="toggleContentView()"
                 class="border border-mist text-graphite px-6 py-3 rounded-lg hover:bg-mist transition-colors flex items-center space-x-2"
             >
                 <i data-lucide="file-text" class="w-5 h-5"></i>
-                <span>要約を表示</span>
+                <span>全文を表示</span>
             </button>
         </div>
     </div>
     
-    <!-- Summary Section (Hidden by default) -->
-    <div id="summary-section" class="hidden section-secondary bg-white rounded-2xl border border-mist p-6 mb-6">
+    <!-- Summary Section (Auto-loaded on page load) -->
+    <div id="summary-section" class="section-secondary bg-white rounded-2xl border border-mist p-6 mb-6">
         <div class="section-header">
             <h2 class="text-xl font-semibold flex items-center space-x-2">
                 <i data-lucide="file-text" class="w-5 h-5"></i>
@@ -119,8 +120,8 @@
         </div>
     </div>
     
-    <!-- Content Preview -->
-    <div class="section-content bg-white rounded-2xl border border-mist p-8 mb-8">
+    <!-- Content Preview (Hidden by default - summary shown first) -->
+    <div id="content-section" class="hidden section-content bg-white rounded-2xl border border-mist p-8 mb-8">
         <div class="content-header-enhanced">
             <h2 class="section-header text-xl font-semibold">コンテンツプレビュー</h2>
             <button 
@@ -202,6 +203,7 @@
 <script>
     let summaryLoaded = false;
     let fullContentVisible = false;
+    let showingSummary = true; // Track current view state - start with summary view
     
     // Simple Markdown to HTML converter for AI summaries
     function markdownToHtml(text) {
@@ -235,39 +237,63 @@
             .replace(/\n/g, '<br>');
     }
     
-    function toggleSummary() {
-        const section = document.getElementById('summary-section');
+    // Auto-load summary on page load
+    function autoLoadSummary() {
         const content = document.getElementById('summary-content');
         
-        if (section.classList.contains('hidden')) {
-            section.classList.remove('hidden');
-            
-            if (!summaryLoaded) {
-                // Load summary via AI
-                fetch(`/api/documents/{{ document.id }}/summarize`, {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    const summaryHtml = markdownToHtml(data.short_summary || '要約の生成に失敗しました。');
-                    content.innerHTML = `
-                        <div class="bg-emerald/5 border border-emerald/20 rounded-lg p-4">
-                            <h4 class="font-medium text-emerald mb-2">短要約</h4>
-                            <div class="text-graphite leading-relaxed prose prose-sm max-w-none">${summaryHtml}</div>
-                        </div>
-                    `;
-                    summaryLoaded = true;
-                })
-                .catch(error => {
-                    content.innerHTML = `
-                        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                            <p class="text-orange-700">要約の生成中にエラーが発生しました。</p>
-                        </div>
-                    `;
-                });
-            }
+        if (!summaryLoaded) {
+            // Load summary via AI
+            fetch(`/api/documents/{{ document.id }}/summarize`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                const summaryHtml = markdownToHtml(data.short_summary || '要約の生成に失敗しました。');
+                content.innerHTML = `
+                    <div class="bg-emerald/5 border border-emerald/20 rounded-lg p-4">
+                        <h4 class="font-medium text-emerald mb-2">短要約</h4>
+                        <div class="text-graphite leading-relaxed prose prose-sm max-w-none">${summaryHtml}</div>
+                    </div>
+                `;
+                summaryLoaded = true;
+            })
+            .catch(error => {
+                content.innerHTML = `
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                        <p class="text-orange-700">要約の生成中にエラーが発生しました。</p>
+                    </div>
+                `;
+            });
+        }
+    }
+    
+    // Toggle between summary view and full content view
+    function toggleContentView() {
+        const summarySection = document.getElementById('summary-section');
+        const contentSection = document.getElementById('content-section');
+        const toggleButton = document.getElementById('content-view-toggle');
+        const toggleIcon = toggleButton.querySelector('i');
+        const toggleText = toggleButton.querySelector('span');
+        
+        if (showingSummary) {
+            // Switch to full content view
+            summarySection.classList.add('hidden');
+            contentSection.classList.remove('hidden');
+            toggleText.textContent = '要約に戻る';
+            toggleIcon.setAttribute('data-lucide', 'arrow-left');
+            showingSummary = false;
         } else {
-            section.classList.add('hidden');
+            // Switch to summary view
+            summarySection.classList.remove('hidden');
+            contentSection.classList.add('hidden');
+            toggleText.textContent = '全文を表示';
+            toggleIcon.setAttribute('data-lucide', 'file-text');
+            showingSummary = true;
+        }
+        
+        // Re-initialize lucide icons after changing them
+        if (window.lucide) {
+            window.lucide.createIcons();
         }
     }
     
@@ -306,9 +332,10 @@
         });
     }
     
-    // Initialize icons
+    // Initialize icons and auto-load summary
     document.addEventListener('DOMContentLoaded', function() {
         lucide.createIcons();
+        autoLoadSummary(); // Auto-load summary on page load
     });
 </script>
 {% endblock %}
