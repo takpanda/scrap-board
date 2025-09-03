@@ -129,6 +129,8 @@ select {
 .bg-mist { background-color: var(--mist); }
 .bg-emerald { background-color: var(--emerald); }
 .bg-emerald\/10 { background-color: rgb(43 182 115 / 0.1); }
+.bg-orange-500 { background-color: #f97316; }
+.bg-orange-400 { background-color: #fb923c; }
 
 /* Text utilities */
 .text-xs { font-size: 0.75rem; line-height: 1rem; }
@@ -168,6 +170,7 @@ select {
 .hover\:text-emerald:hover { color: var(--emerald); }
 .hover\:bg-mist:hover { background-color: var(--mist); }
 .hover\:bg-emerald\/90:hover { background-color: rgb(43 182 115 / 0.9); }
+.hover\:bg-orange-400:hover { background-color: #fb923c; }
 .hover\:shadow-md:hover { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
 
 /* Focus utilities */
