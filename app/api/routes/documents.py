@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from datetime import datetime
@@ -10,6 +12,9 @@ router = APIRouter()
 
 # LLMクライアントのインスタンス化
 llm_client = LLMClient()
+
+# テンプレート
+templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("")
@@ -191,6 +196,7 @@ async def summarize_document(
 
 @router.get("/{document_id}/similar")
 async def get_similar_documents(
+    request: Request,
     document_id: str,
     limit: int = Query(5, le=20),
     db: Session = Depends(get_db)
@@ -214,15 +220,28 @@ async def get_similar_documents(
         
         similar_docs = similar_query.all()
     
-    result = []
+    # Format the documents for template
+    formatted_docs = []
     for doc in similar_docs:
-        result.append({
+        formatted_docs.append({
             "id": doc.id,
             "title": doc.title,
             "url": doc.url,
             "domain": doc.domain,
-            "created_at": doc.created_at.isoformat(),
+            "created_at": doc.created_at.strftime('%Y年%m月%d日'),
             "similarity_score": 0.7  # プレースホルダー
         })
     
-    return {"similar_documents": result}
+    # Check if this is an HTMX request
+    if request.headers.get("HX-Request"):
+        # Return HTML partial for HTMX
+        return templates.TemplateResponse(
+            "partials/similar_documents.html",
+            {
+                "request": request,
+                "similar_documents": formatted_docs
+            }
+        )
+    else:
+        # Return JSON for API calls
+        return {"similar_documents": formatted_docs}
