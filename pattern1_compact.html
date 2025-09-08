@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pattern 1: コンパクトビュー - Scrap-Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ink: '#0B1221',
+                        charcoal: '#1C2430',
+                        graphite: '#2E3642',
+                        mist: '#E8ECF2',
+                        ivory: '#F9FAFB',
+                        emerald: '#2BB673',
+                        indigo: '#5A6FF0'
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .text-ink { color: #0B1221 !important; }
+        .text-graphite { color: #2E3642 !important; }
+        .text-emerald { color: #2BB673 !important; }
+        .bg-emerald { background-color: #2BB673 !important; }
+        .bg-emerald\/10 { background-color: rgba(43, 182, 115, 0.1) !important; }
+        .bg-emerald\/15 { background-color: rgba(43, 182, 115, 0.15) !important; }
+        .bg-mist { background-color: #E8ECF2 !important; }
+        .bg-ivory { background-color: #F9FAFB !important; }
+        .border-mist { border-color: #E8ECF2 !important; }
+        .hover\:bg-emerald\/10:hover { background-color: rgba(43, 182, 115, 0.1) !important; }
+        .hover\:text-emerald:hover { color: #2BB673 !important; }
+        .focus\:ring-emerald:focus { --tw-ring-color: #2BB673 !important; }
+        .line-clamp-2 { 
+            overflow: hidden; 
+            display: -webkit-box; 
+            -webkit-box-orient: vertical; 
+            -webkit-line-clamp: 2; 
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white border-b border-mist shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-xl font-bold text-ink">Scrap-Board</h1>
+                <nav class="flex items-center space-x-4">
+                    <a href="#" class="text-graphite hover:text-emerald">ドキュメント</a>
+                    <a href="#" class="text-graphite hover:text-emerald">コレクション</a>
+                    <a href="#" class="text-graphite hover:text-emerald">設定</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-ink">ドキュメント一覧</h1>
+                <p class="text-sm text-graphite mt-1">Pattern 1: コンパクトビュー - 情報密度を高めた効率的なレイアウト</p>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <!-- Sort Options -->
+                <select class="px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald text-sm">
+                    <option value="created_desc">作成日時（新しい順）</option>
+                    <option value="created_asc">作成日時（古い順）</option>
+                    <option value="title_asc">タイトル（A-Z）</option>
+                </select>
+                
+                <!-- View Toggle -->
+                <div class="flex bg-mist rounded-lg p-1">
+                    <button class="px-3 py-1 bg-emerald text-white rounded shadow-sm text-sm">
+                        <i data-lucide="list" class="w-4 h-4"></i>
+                    </button>
+                    <button class="px-3 py-1 text-graphite text-sm">
+                        <i data-lucide="grid" class="w-4 h-4"></i>
+                    </button>
+                    <button class="px-3 py-1 text-graphite text-sm">
+                        <i data-lucide="table" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Compact Filters -->
+        <div class="bg-white rounded-lg border border-mist p-3 mb-4">
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- Compact Search -->
+                <div class="flex-1 min-w-64">
+                    <input 
+                        type="text" 
+                        placeholder="キーワードで検索..."
+                        class="w-full px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald text-sm"
+                    >
+                </div>
+                
+                <!-- Compact Category Filter -->
+                <select class="px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald text-sm min-w-32">
+                    <option value="">カテゴリ</option>
+                    <option value="テック/AI">テック/AI</option>
+                    <option value="ソフトウェア開発">ソフトウェア開発</option>
+                    <option value="ビジネス">ビジネス</option>
+                </select>
+                
+                <!-- Compact Domain Filter -->
+                <input 
+                    type="text" 
+                    placeholder="ドメイン"
+                    class="px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald text-sm w-32"
+                >
+                
+                <!-- Filter Toggle -->
+                <button class="px-3 py-2 border border-mist rounded-lg text-sm hover:bg-mist transition-colors">
+                    <i data-lucide="filter" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Compact Documents List -->
+        <div id="documents-container" class="bg-white rounded-lg border border-mist">
+            <div class="divide-y divide-mist">
+                <!-- Document Item 1 -->
+                <div class="p-4 hover:bg-ivory/50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center space-x-3">
+                                <!-- Icon -->
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-emerald/10 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="external-link" class="w-4 h-4 text-emerald"></i>
+                                    </div>
+                                </div>
+                                
+                                <!-- Content -->
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <h3 class="text-sm font-semibold text-ink truncate">
+                                            <a href="#" class="hover:text-emerald transition-colors">
+                                                AIを活用した次世代のWebアプリケーション開発手法
+                                            </a>
+                                        </h3>
+                                        <span class="bg-emerald/10 text-emerald px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0">
+                                            テック/AI
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center space-x-4 text-xs text-graphite">
+                                        <span>techcrunch.com</span>
+                                        <span>2024年3月15日</span>
+                                        <span>田中太郎</span>
+                                        <div class="flex items-center space-x-1">
+                                            <span class="bg-mist text-graphite px-1.5 py-0.5 rounded text-xs">React</span>
+                                            <span class="bg-mist text-graphite px-1.5 py-0.5 rounded text-xs">AI</span>
+                                            <span class="bg-mist text-graphite px-1.5 py-0.5 rounded text-xs">開発</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="flex items-center space-x-2 ml-4">
+                            <button class="p-1.5 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                <i data-lucide="book-open" class="w-4 h-4"></i>
+                            </button>
+                            <button class="p-1.5 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                <i data-lucide="external-link" class="w-4 h-4"></i>
+                            </button>
+                            <button class="p-1.5 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Document Item 2 -->
+                <div class="p-4 hover:bg-ivory/50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center space-x-3">
+                                <!-- Icon -->
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-indigo bg-opacity-10 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="file-text" class="w-4 h-4 text-indigo"></i>
+                                    </div>
+                                </div>
+                                
+                                <!-- Content -->
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <h3 class="text-sm font-semibold text-ink truncate">
+                                            <a href="#" class="hover:text-emerald transition-colors">
+                                                クラウドネイティブアーキテクチャの設計パターン
+                                            </a>
+                                        </h3>
+                                        <span class="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0">
+                                            ソフトウェア開発
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center space-x-4 text-xs text-graphite">
+                                        <span>research-paper.pdf</span>
+                                        <span>2024年3月14日</span>
+                                        <span>佐藤花子</span>
+                                        <div class="flex items-center space-x-1">
+                                            <span class="bg-mist text-graphite px-1.5 py-0.5 rounded text-xs">Docker</span>
+                                            <span class="bg-mist text-graphite px-1.5 py-0.5 rounded text-xs">Kubernetes</span>
+                                            <span class="bg-mist text-graphite px-1.5 py-0.5 rounded text-xs">アーキテクチャ</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="flex items-center space-x-2 ml-4">
+                            <button class="p-1.5 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                <i data-lucide="book-open" class="w-4 h-4"></i>
+                            </button>
+                            <button class="p-1.5 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                            </button>
+                            <button class="p-1.5 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Document Item 3 -->
+                <div class="p-4 hover:bg-ivory/50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center space-x-3">
+                                <!-- Icon -->
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="shield" class="w-4 h-4 text-red-600"></i>
+                                    </div>
+                                </div>
+                                
+                                <!-- Content -->
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <h3 class="text-sm font-semibold text-ink truncate">
+                                            <a href="#" class="hover:text-emerald transition-colors">
+                                                セキュリティファーストなAPI設計の原則
+                                            </a>
+                                        </h3>
+                                        <span class="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0">
+                                            セキュリティ
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center space-x-4 text-xs text-graphite">
+                                        <span>owasp.org</span>
+                                        <span>2024年3月13日</span>
+                                        <span>山田次郎</span>
+                                        <div class="flex items-center space-x-1">
+                                            <span class="bg-mist text-graphite px-1.5 py-0.5 rounded text-xs">API</span>
+                                            <span class="bg-mist text-graphite px-1.5 py-0.5 rounded text-xs">セキュリティ</span>
+                                            <span class="bg-mist text-graphite px-1.5 py-0.5 rounded text-xs">認証</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="flex items-center space-x-2 ml-4">
+                            <button class="p-1.5 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                <i data-lucide="book-open" class="w-4 h-4"></i>
+                            </button>
+                            <button class="p-1.5 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                <i data-lucide="external-link" class="w-4 h-4"></i>
+                            </button>
+                            <button class="p-1.5 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Document Item 4 -->
+                <div class="p-4 hover:bg-ivory/50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center space-x-3">
+                                <!-- Icon -->
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="users" class="w-4 h-4 text-purple-600"></i>
+                                    </div>
+                                </div>
+                                
+                                <!-- Content -->
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <h3 class="text-sm font-semibold text-ink truncate">
+                                            <a href="#" class="hover:text-emerald transition-colors">
+                                                リモートワーク時代のチームマネジメント
+                                            </a>
+                                        </h3>
+                                        <span class="bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0">
+                                            ビジネス
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center space-x-4 text-xs text-graphite">
+                                        <span>harvard.edu</span>
+                                        <span>2024年3月12日</span>
+                                        <span>鈴木一郎</span>
+                                        <div class="flex items-center space-x-1">
+                                            <span class="bg-mist text-graphite px-1.5 py-0.5 rounded text-xs">リモートワーク</span>
+                                            <span class="bg-mist text-graphite px-1.5 py-0.5 rounded text-xs">マネジメント</span>
+                                            <span class="bg-mist text-graphite px-1.5 py-0.5 rounded text-xs">チーム</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="flex items-center space-x-2 ml-4">
+                            <button class="p-1.5 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                <i data-lucide="book-open" class="w-4 h-4"></i>
+                            </button>
+                            <button class="p-1.5 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                <i data-lucide="external-link" class="w-4 h-4"></i>
+                            </button>
+                            <button class="p-1.5 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compact Pagination -->
+            <div class="border-t border-mist p-3">
+                <div class="flex justify-between items-center">
+                    <div class="text-sm text-graphite">
+                        1-10 of 156 件
+                    </div>
+                    <div class="flex space-x-1">
+                        <button class="px-3 py-1 text-sm border border-mist rounded hover:bg-mist transition-colors">
+                            前へ
+                        </button>
+                        <button class="px-3 py-1 text-sm bg-emerald text-white rounded">1</button>
+                        <button class="px-3 py-1 text-sm border border-mist rounded hover:bg-mist transition-colors">2</button>
+                        <button class="px-3 py-1 text-sm border border-mist rounded hover:bg-mist transition-colors">3</button>
+                        <button class="px-3 py-1 text-sm border border-mist rounded hover:bg-mist transition-colors">
+                            次へ
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
