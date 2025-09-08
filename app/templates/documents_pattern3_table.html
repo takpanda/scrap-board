@@ -1,0 +1,543 @@
+{% extends "base.html" %}
+
+{% block title %}ドキュメント一覧 - Pattern 3: Table - Scrap-Board{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-ink">ドキュメント一覧</h1>
+            <p class="text-sm text-graphite mt-1">Pattern 3: テーブルビュー - データ重視の構造化レイアウト</p>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <!-- Sort Options -->
+            <select class="px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald">
+                <option value="created_desc">作成日時（新しい順）</option>
+                <option value="created_asc">作成日時（古い順）</option>
+                <option value="title_asc">タイトル（A-Z）</option>
+            </select>
+            
+            <!-- View Toggle -->
+            <div class="flex bg-mist rounded-lg p-1">
+                <button class="px-3 py-1 text-graphite text-sm">
+                    <i data-lucide="list" class="w-4 h-4"></i>
+                </button>
+                <button class="px-3 py-1 text-graphite text-sm">
+                    <i data-lucide="grid" class="w-4 h-4"></i>
+                </button>
+                <button class="px-3 py-1 bg-emerald text-white rounded shadow-sm text-sm">
+                    <i data-lucide="table" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <!-- Table Settings -->
+            <button class="px-3 py-2 border border-mist rounded-lg text-sm hover:bg-mist transition-colors">
+                <i data-lucide="settings" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Advanced Filters -->
+    <div class="bg-white rounded-xl border border-mist p-4 mb-6">
+        <div class="grid lg:grid-cols-6 md:grid-cols-4 gap-3">
+            <!-- Search -->
+            <div class="lg:col-span-2">
+                <input 
+                    type="text" 
+                    placeholder="タイトル、作者、タグで検索..."
+                    class="w-full px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald text-sm"
+                >
+            </div>
+            
+            <!-- Category Filter -->
+            <select class="px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald text-sm">
+                <option value="">すべてのカテゴリ</option>
+                <option value="テック/AI">テック/AI</option>
+                <option value="ソフトウェア開発">ソフトウェア開発</option>
+                <option value="ビジネス">ビジネス</option>
+                <option value="セキュリティ">セキュリティ</option>
+                <option value="研究">研究</option>
+            </select>
+            
+            <!-- Source Type -->
+            <select class="px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald text-sm">
+                <option value="">すべてのタイプ</option>
+                <option value="web">Web記事</option>
+                <option value="pdf">PDF</option>
+                <option value="rss">RSS</option>
+            </select>
+            
+            <!-- Date Range -->
+            <input 
+                type="date" 
+                class="px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald text-sm"
+            >
+            
+            <!-- Action Buttons -->
+            <div class="flex space-x-2">
+                <button class="px-3 py-2 bg-emerald text-white rounded-lg text-sm hover:bg-emerald/90 transition-colors">
+                    検索
+                </button>
+                <button class="px-3 py-2 border border-mist rounded-lg text-sm hover:bg-mist transition-colors">
+                    リセット
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Table Controls -->
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex items-center space-x-4">
+            <span class="text-sm text-graphite">156件のドキュメント</span>
+            <div class="flex items-center space-x-2">
+                <label class="text-sm text-graphite">表示件数:</label>
+                <select class="px-2 py-1 border border-mist rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-2">
+            <button class="px-3 py-1 border border-mist rounded text-sm hover:bg-mist transition-colors">
+                <i data-lucide="download" class="w-4 h-4 mr-1"></i>
+                エクスポート
+            </button>
+            <button class="px-3 py-1 border border-mist rounded text-sm hover:bg-mist transition-colors">
+                <i data-lucide="filter" class="w-4 h-4 mr-1"></i>
+                高度な検索
+            </button>
+        </div>
+    </div>
+    
+    <!-- Table -->
+    <div class="bg-white rounded-xl border border-mist overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <!-- Table Header -->
+                <thead class="bg-gradient-to-r from-mist/50 to-ivory border-b border-mist">
+                    <tr>
+                        <th class="px-4 py-3 text-left">
+                            <input type="checkbox" class="rounded border-mist focus:ring-emerald">
+                        </th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-ink">
+                            <button class="flex items-center space-x-1 hover:text-emerald">
+                                <span>タイトル</span>
+                                <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                            </button>
+                        </th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-ink">
+                            <button class="flex items-center space-x-1 hover:text-emerald">
+                                <span>カテゴリ</span>
+                                <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                            </button>
+                        </th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-ink">
+                            <button class="flex items-center space-x-1 hover:text-emerald">
+                                <span>ソース</span>
+                                <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                            </button>
+                        </th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-ink">
+                            <button class="flex items-center space-x-1 hover:text-emerald">
+                                <span>作者</span>
+                                <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                            </button>
+                        </th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-ink">
+                            <button class="flex items-center space-x-1 hover:text-emerald">
+                                <span>作成日</span>
+                                <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                            </button>
+                        </th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-ink">タグ</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-ink">ステータス</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-ink">操作</th>
+                    </tr>
+                </thead>
+                
+                <!-- Table Body -->
+                <tbody class="divide-y divide-mist">
+                    <!-- Row 1 -->
+                    <tr class="hover:bg-ivory/30 transition-colors">
+                        <td class="px-4 py-3">
+                            <input type="checkbox" class="rounded border-mist focus:ring-emerald">
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-6 h-6 bg-emerald/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="external-link" class="w-3 h-3 text-emerald"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-sm font-medium text-ink truncate max-w-xs">
+                                        <a href="#" class="hover:text-emerald transition-colors">
+                                            AIを活用した次世代のWebアプリケーション開発手法
+                                        </a>
+                                    </h4>
+                                    <p class="text-xs text-graphite truncate max-w-xs">
+                                        最新のAI技術を使ったWebアプリケーション開発における新しいアプローチと...
+                                    </p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="bg-emerald/15 text-emerald px-2 py-1 rounded-full text-xs font-medium">
+                                テック/AI
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="globe" class="w-3 h-3 text-graphite"></i>
+                                <span class="text-sm text-graphite">techcrunch.com</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-graphite">田中太郎</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-graphite">2024-03-15</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap gap-1 max-w-32">
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">React</span>
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">AI</span>
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">+1</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i>
+                                処理済み
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center space-x-1">
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors" title="Reader Mode">
+                                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors" title="元記事を開く">
+                                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors" title="その他">
+                                    <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Row 2 -->
+                    <tr class="hover:bg-ivory/30 transition-colors">
+                        <td class="px-4 py-3">
+                            <input type="checkbox" class="rounded border-mist focus:ring-emerald">
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-6 h-6 bg-indigo/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="file-text" class="w-3 h-3 text-indigo"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-sm font-medium text-ink truncate max-w-xs">
+                                        <a href="#" class="hover:text-emerald transition-colors">
+                                            クラウドネイティブアーキテクチャの設計パターン
+                                        </a>
+                                    </h4>
+                                    <p class="text-xs text-graphite truncate max-w-xs">
+                                        現代のクラウドネイティブアプリケーションにおける設計パターンと...
+                                    </p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="bg-indigo/15 text-indigo px-2 py-1 rounded-full text-xs font-medium">
+                                ソフトウェア開発
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="file" class="w-3 h-3 text-graphite"></i>
+                                <span class="text-sm text-graphite">research-paper.pdf</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-graphite">佐藤花子</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-graphite">2024-03-14</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap gap-1 max-w-32">
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">Docker</span>
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">K8s</span>
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">+1</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i>
+                                処理済み
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center space-x-1">
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                    <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Row 3 -->
+                    <tr class="hover:bg-ivory/30 transition-colors">
+                        <td class="px-4 py-3">
+                            <input type="checkbox" class="rounded border-mist focus:ring-emerald">
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="shield" class="w-3 h-3 text-red-600"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-sm font-medium text-ink truncate max-w-xs">
+                                        <a href="#" class="hover:text-emerald transition-colors">
+                                            セキュリティファーストなAPI設計の原則
+                                        </a>
+                                    </h4>
+                                    <p class="text-xs text-graphite truncate max-w-xs">
+                                        セキュリティを最優先に考えたAPI設計について、OWASP API Security...
+                                    </p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-medium">
+                                セキュリティ
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="globe" class="w-3 h-3 text-graphite"></i>
+                                <span class="text-sm text-graphite">owasp.org</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-graphite">山田次郎</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-graphite">2024-03-13</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap gap-1 max-w-32">
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">API</span>
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">Auth</span>
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">+1</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i>
+                                処理済み
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center space-x-1">
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                    <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Row 4 -->
+                    <tr class="hover:bg-ivory/30 transition-colors">
+                        <td class="px-4 py-3">
+                            <input type="checkbox" class="rounded border-mist focus:ring-emerald">
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="users" class="w-3 h-3 text-purple-600"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-sm font-medium text-ink truncate max-w-xs">
+                                        <a href="#" class="hover:text-emerald transition-colors">
+                                            リモートワーク時代のチームマネジメント
+                                        </a>
+                                    </h4>
+                                    <p class="text-xs text-graphite truncate max-w-xs">
+                                        リモートワーク環境でのチーム管理における課題と解決策...
+                                    </p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="bg-purple-100 text-purple-600 px-2 py-1 rounded-full text-xs font-medium">
+                                ビジネス
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="globe" class="w-3 h-3 text-graphite"></i>
+                                <span class="text-sm text-graphite">harvard.edu</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-graphite">鈴木一郎</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-graphite">2024-03-12</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap gap-1 max-w-32">
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">Remote</span>
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">Team</span>
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">+1</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                                <i data-lucide="clock" class="w-3 h-3 mr-1"></i>
+                                処理中
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center space-x-1">
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                    <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Row 5 -->
+                    <tr class="hover:bg-ivory/30 transition-colors">
+                        <td class="px-4 py-3">
+                            <input type="checkbox" class="rounded border-mist focus:ring-emerald">
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-6 h-6 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="beaker" class="w-3 h-3 text-amber-600"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-sm font-medium text-ink truncate max-w-xs">
+                                        <a href="#" class="hover:text-emerald transition-colors">
+                                            量子コンピューティングの最新動向と実用化への道筋
+                                        </a>
+                                    </h4>
+                                    <p class="text-xs text-graphite truncate max-w-xs">
+                                        量子コンピューティング技術の現在の発展状況と、今後の実用化に向けた...
+                                    </p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="bg-amber-100 text-amber-600 px-2 py-1 rounded-full text-xs font-medium">
+                                研究
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="file" class="w-3 h-3 text-graphite"></i>
+                                <span class="text-sm text-graphite">quantum-research.pdf</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-graphite">研究チーム</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-graphite">2024-03-10</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap gap-1 max-w-32">
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">量子</span>
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">研究</span>
+                                <span class="bg-mist text-graphite px-2 py-0.5 rounded text-xs">+1</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">
+                                <i data-lucide="alert-circle" class="w-3 h-3 mr-1"></i>
+                                エラー
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center space-x-1">
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1 text-graphite hover:text-emerald hover:bg-emerald/10 rounded transition-colors">
+                                    <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Table Footer -->
+        <div class="border-t border-mist bg-gradient-to-r from-mist/20 to-ivory/50 px-4 py-3">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-graphite">1-5 of 156 件を表示</span>
+                    <div class="flex items-center space-x-2">
+                        <button class="text-sm text-emerald hover:underline">すべて選択</button>
+                        <span class="text-graphite">|</span>
+                        <button class="text-sm text-emerald hover:underline">選択解除</button>
+                        <span class="text-graphite">|</span>
+                        <button class="text-sm text-emerald hover:underline">一括操作</button>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <button class="px-3 py-1 border border-mist rounded text-sm hover:bg-mist transition-colors disabled:opacity-50" disabled>
+                        前へ
+                    </button>
+                    <div class="flex space-x-1">
+                        <button class="px-3 py-1 bg-emerald text-white rounded text-sm">1</button>
+                        <button class="px-3 py-1 border border-mist rounded text-sm hover:bg-mist transition-colors">2</button>
+                        <button class="px-3 py-1 border border-mist rounded text-sm hover:bg-mist transition-colors">3</button>
+                        <span class="px-2 py-1 text-sm text-graphite">...</span>
+                        <button class="px-3 py-1 border border-mist rounded text-sm hover:bg-mist transition-colors">32</button>
+                    </div>
+                    <button class="px-3 py-1 border border-mist rounded text-sm hover:bg-mist transition-colors">
+                        次へ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Placeholder for icon initialization
+    if (typeof createIcons === 'function') {
+        createIcons();
+    }
+</script>
+{% endblock %}
