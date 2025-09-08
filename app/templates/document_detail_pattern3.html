@@ -1,0 +1,835 @@
+{% extends "base.html" %}
+
+{% block title %}{{ document.title }} - Scrap-Board{% endblock %}
+
+{% block content %}
+<!-- Pattern 3: Modern Tab-based Interface -->
+<div class="pattern3-container">
+    <!-- Document Header -->
+    <div class="document-header">
+        <div class="max-w-6xl mx-auto px-6 py-4">
+            <div class="header-content">
+                <!-- Breadcrumb & Back -->
+                <div class="breadcrumb">
+                    <a href="/documents" class="breadcrumb-link">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                        ドキュメント
+                    </a>
+                    <i data-lucide="chevron-right" class="w-3 h-3 text-mist"></i>
+                    <span class="breadcrumb-current">詳細</span>
+                </div>
+                
+                <!-- Document Title & Quick Info -->
+                <div class="header-main">
+                    <div class="title-section">
+                        <h1 class="doc-title">{{ document.title }}</h1>
+                        <div class="doc-meta">
+                            {% if document.url %}
+                            <a href="{{ document.url }}" target="_blank" class="source-badge">
+                                <i data-lucide="external-link" class="w-3 h-3"></i>
+                                {{ document.domain }}
+                            </a>
+                            {% else %}
+                            <span class="source-badge">
+                                <i data-lucide="file-text" class="w-3 h-3"></i>
+                                PDF Document
+                            </span>
+                            {% endif %}
+                            
+                            <span class="meta-divider">•</span>
+                            <span class="reading-time">5分で読める</span>
+                            
+                            {% if document.author %}
+                            <span class="meta-divider">•</span>
+                            <span class="author">{{ document.author }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="quick-actions">
+                        <a href="/reader/{{ document.id }}" class="quick-action-btn primary">
+                            <i data-lucide="book-open" class="w-4 h-4"></i>
+                            Reader
+                        </a>
+                        
+                        <button onclick="shareDocument()" class="quick-action-btn secondary">
+                            <i data-lucide="share-2" class="w-4 h-4"></i>
+                            共有
+                        </button>
+                        
+                        <button onclick="addToCollection()" class="quick-action-btn secondary">
+                            <i data-lucide="bookmark-plus" class="w-4 h-4"></i>
+                            保存
+                        </button>
+                        
+                        <div class="action-menu">
+                            <button onclick="toggleActionMenu()" class="action-menu-btn">
+                                <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                            </button>
+                            <div class="action-menu-dropdown hidden" id="action-menu">
+                                <a href="#" onclick="exportDocument()" class="menu-item">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
+                                    エクスポート
+                                </a>
+                                <a href="#" onclick="reportDocument()" class="menu-item">
+                                    <i data-lucide="flag" class="w-4 h-4"></i>
+                                    報告
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Tab Interface -->
+    <div class="tab-interface">
+        <div class="max-w-6xl mx-auto px-6">
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <div class="tab-nav-container">
+                    <button class="tab-nav-item active" data-tab="overview">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                        <span>概要</span>
+                        <div class="tab-indicator"></div>
+                    </button>
+                    
+                    <button class="tab-nav-item" data-tab="content">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        <span>本文</span>
+                        <div class="tab-indicator"></div>
+                    </button>
+                    
+                    <button class="tab-nav-item" data-tab="analysis">
+                        <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                        <span>分析</span>
+                        <div class="tab-indicator"></div>
+                    </button>
+                    
+                    <button class="tab-nav-item" data-tab="related">
+                        <i data-lucide="link" class="w-4 h-4"></i>
+                        <span>関連</span>
+                        <div class="tab-indicator"></div>
+                    </button>
+                    
+                    <button class="tab-nav-item" data-tab="discuss">
+                        <i data-lucide="message-circle" class="w-4 h-4"></i>
+                        <span>議論</span>
+                        <div class="tab-indicator"></div>
+                    </button>
+                </div>
+                
+                <!-- Tab Controls -->
+                <div class="tab-controls">
+                    <button onclick="toggleFullscreen()" class="tab-control-btn">
+                        <i data-lucide="maximize" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="toggleSettings()" class="tab-control-btn">
+                        <i data-lucide="settings" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tab Content -->
+            <div class="tab-content-container">
+                <!-- Overview Tab -->
+                <div class="tab-content active" id="overview-content">
+                    <div class="overview-layout">
+                        <!-- Summary Section -->
+                        <div class="overview-section">
+                            <div class="section-header">
+                                <h2 class="section-title">
+                                    <i data-lucide="zap" class="w-5 h-5"></i>
+                                    AI要約
+                                </h2>
+                                <div class="section-actions">
+                                    <button onclick="regenerateSummary()" class="section-action">
+                                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                                        再生成
+                                    </button>
+                                    <button onclick="expandSummary()" class="section-action" id="summary-expand">
+                                        <i data-lucide="expand" class="w-4 h-4"></i>
+                                        展開
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="summary-container">
+                                <div id="summary-content" class="summary-display">
+                                    <div class="summary-loading">
+                                        <div class="loading-dots">
+                                            <div class="dot"></div>
+                                            <div class="dot"></div>
+                                            <div class="dot"></div>
+                                        </div>
+                                        <p>要約を生成中...</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="summary-toolbar">
+                                    <div class="summary-metrics">
+                                        <span class="metric">
+                                            <i data-lucide="zap" class="w-3 h-3"></i>
+                                            <span id="compression-ratio">--%</span> 圧縮率
+                                        </span>
+                                        <span class="metric">
+                                            <i data-lucide="clock" class="w-3 h-3"></i>
+                                            <span id="read-time">--分</span> 読了時間
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="summary-actions">
+                                        <button onclick="copySummary()" class="summary-action">
+                                            <i data-lucide="copy" class="w-3 h-3"></i>
+                                        </button>
+                                        <button onclick="speakSummary()" class="summary-action">
+                                            <i data-lucide="volume-2" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Classification & Metadata -->
+                        <div class="overview-section">
+                            <div class="section-header">
+                                <h2 class="section-title">
+                                    <i data-lucide="tag" class="w-5 h-5"></i>
+                                    分類情報
+                                </h2>
+                            </div>
+                            
+                            {% if document.classifications %}
+                            <div class="classification-display">
+                                <div class="primary-classification">
+                                    <div class="classification-badge">
+                                        <span class="badge-text">{{ document.classifications[0].primary_category }}</span>
+                                        <div class="confidence-ring">
+                                            <svg class="confidence-circle" viewBox="0 0 36 36">
+                                                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+                                                <path class="circle-progress" stroke-dasharray="{{ document.classifications[0].confidence * 100 }}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+                                            </svg>
+                                            <div class="confidence-text">{{ "%.0f" | format(document.classifications[0].confidence * 100) }}%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {% if document.classifications[0].tags %}
+                                <div class="secondary-tags">
+                                    {% for tag in document.classifications[0].tags %}
+                                    <span class="secondary-tag">{{ tag }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Quick Stats -->
+                        <div class="overview-section">
+                            <div class="section-header">
+                                <h2 class="section-title">
+                                    <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                                    統計情報
+                                </h2>
+                            </div>
+                            
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i data-lucide="type" class="w-4 h-4"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">{{ document.content_text|length }}</div>
+                                        <div class="stat-label">文字数</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i data-lucide="clock" class="w-4 h-4"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">5分</div>
+                                        <div class="stat-label">読了時間</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i data-lucide="calendar" class="w-4 h-4"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">{{ document.fetched_at.strftime('%m/%d') }}</div>
+                                        <div class="stat-label">取得日</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">1</div>
+                                        <div class="stat-label">閲覧回数</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Content Tab -->
+                <div class="tab-content" id="content-content">
+                    <div class="content-layout">
+                        <div class="content-header">
+                            <div class="content-title-section">
+                                <h2 class="content-title">記事本文</h2>
+                                <div class="content-meta">
+                                    {% if document.published_at %}
+                                    <span>{{ document.published_at.strftime('%Y年%m月%d日') }} 公開</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="content-toolbar">
+                                <button onclick="toggleContentMode()" class="content-tool-btn" id="content-mode-btn">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                    読書モード
+                                </button>
+                                <button onclick="adjustFontSize('increase')" class="content-tool-btn">
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="adjustFontSize('decrease')" class="content-tool-btn">
+                                    <i data-lucide="minus" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="toggleContentTheme()" class="content-tool-btn">
+                                    <i data-lucide="sun" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="content-body" id="main-content">
+                            <div class="article-content">
+                                <div class="content-preview" id="content-preview">
+                                    {{ document.content_md[:1200] | markdown | safe }}
+                                    {% if document.content_md|length > 1200 %}
+                                    <div class="content-expand-area">
+                                        <button onclick="expandContent()" class="expand-content-btn">
+                                            <span>全文を表示</span>
+                                            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="content-full hidden" id="content-full">
+                                    <div class="prose prose-lg max-w-none">
+                                        {{ document.content_md | safe }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Analysis Tab -->
+                <div class="tab-content" id="analysis-content">
+                    <div class="analysis-layout">
+                        <h2 class="tab-section-title">
+                            <i data-lucide="pie-chart" class="w-5 h-5"></i>
+                            文書分析レポート
+                        </h2>
+                        
+                        <div class="analysis-grid">
+                            <!-- Readability Analysis -->
+                            <div class="analysis-card">
+                                <div class="analysis-header">
+                                    <h3 class="analysis-title">
+                                        <i data-lucide="trending-up" class="w-4 h-4"></i>
+                                        読みやすさ分析
+                                    </h3>
+                                </div>
+                                <div class="analysis-content">
+                                    <div class="readability-score">
+                                        <div class="score-circle">
+                                            <div class="score-value">8.2</div>
+                                            <div class="score-max">/10</div>
+                                        </div>
+                                        <div class="score-description">
+                                            <div class="score-level">読みやすい</div>
+                                            <div class="score-detail">一般読者向け</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Keyword Analysis -->
+                            <div class="analysis-card">
+                                <div class="analysis-header">
+                                    <h3 class="analysis-title">
+                                        <i data-lucide="hash" class="w-4 h-4"></i>
+                                        キーワード分析
+                                    </h3>
+                                </div>
+                                <div class="analysis-content">
+                                    <div class="keyword-cloud">
+                                        <span class="keyword primary">AI</span>
+                                        <span class="keyword secondary">機械学習</span>
+                                        <span class="keyword secondary">技術</span>
+                                        <span class="keyword tertiary">開発</span>
+                                        <span class="keyword tertiary">システム</span>
+                                        <span class="keyword tertiary">データ</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Sentiment Analysis -->
+                            <div class="analysis-card">
+                                <div class="analysis-header">
+                                    <h3 class="analysis-title">
+                                        <i data-lucide="heart" class="w-4 h-4"></i>
+                                        感情分析
+                                    </h3>
+                                </div>
+                                <div class="analysis-content">
+                                    <div class="sentiment-meters">
+                                        <div class="sentiment-item">
+                                            <span class="sentiment-label">ポジティブ</span>
+                                            <div class="sentiment-bar">
+                                                <div class="sentiment-fill positive" style="width: 75%"></div>
+                                            </div>
+                                            <span class="sentiment-value">75%</span>
+                                        </div>
+                                        <div class="sentiment-item">
+                                            <span class="sentiment-label">ニュートラル</span>
+                                            <div class="sentiment-bar">
+                                                <div class="sentiment-fill neutral" style="width: 20%"></div>
+                                            </div>
+                                            <span class="sentiment-value">20%</span>
+                                        </div>
+                                        <div class="sentiment-item">
+                                            <span class="sentiment-label">ネガティブ</span>
+                                            <div class="sentiment-bar">
+                                                <div class="sentiment-fill negative" style="width: 5%"></div>
+                                            </div>
+                                            <span class="sentiment-value">5%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Related Tab -->
+                <div class="tab-content" id="related-content">
+                    <div class="related-layout">
+                        <h2 class="tab-section-title">
+                            <i data-lucide="link" class="w-5 h-5"></i>
+                            関連ドキュメント
+                        </h2>
+                        
+                        <div id="related-documents" 
+                             hx-get="/api/documents/{{ document.id }}/similar"
+                             hx-trigger="load"
+                             hx-target="#related-documents">
+                            <div class="related-grid">
+                                <!-- Loading skeleton -->
+                                <div class="related-item-skeleton">
+                                    <div class="skeleton-header">
+                                        <div class="skeleton-title"></div>
+                                        <div class="skeleton-meta"></div>
+                                    </div>
+                                    <div class="skeleton-body">
+                                        <div class="skeleton-line"></div>
+                                        <div class="skeleton-line short"></div>
+                                    </div>
+                                </div>
+                                <div class="related-item-skeleton">
+                                    <div class="skeleton-header">
+                                        <div class="skeleton-title"></div>
+                                        <div class="skeleton-meta"></div>
+                                    </div>
+                                    <div class="skeleton-body">
+                                        <div class="skeleton-line"></div>
+                                        <div class="skeleton-line short"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Discussion Tab -->
+                <div class="tab-content" id="discuss-content">
+                    <div class="discussion-layout">
+                        <h2 class="tab-section-title">
+                            <i data-lucide="message-circle" class="w-5 h-5"></i>
+                            フィードバック & 議論
+                        </h2>
+                        
+                        <!-- Feedback Section -->
+                        <div class="feedback-section">
+                            <div class="feedback-header">
+                                <h3 class="feedback-title">この文書についてのフィードバック</h3>
+                                <p class="feedback-subtitle">分類の正確性や内容についてお聞かせください</p>
+                            </div>
+                            
+                            <div class="feedback-options">
+                                <div class="feedback-category">
+                                    <h4 class="category-title">分類の正確性</h4>
+                                    <div class="rating-buttons">
+                                        <button onclick="submitClassificationFeedback('excellent')" class="rating-btn excellent">
+                                            <i data-lucide="star" class="w-4 h-4"></i>
+                                            優秀
+                                        </button>
+                                        <button onclick="submitClassificationFeedback('good')" class="rating-btn good">
+                                            <i data-lucide="thumbs-up" class="w-4 h-4"></i>
+                                            良い
+                                        </button>
+                                        <button onclick="submitClassificationFeedback('poor')" class="rating-btn poor">
+                                            <i data-lucide="thumbs-down" class="w-4 h-4"></i>
+                                            改善必要
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="feedback-category">
+                                    <h4 class="category-title">要約の品質</h4>
+                                    <div class="rating-buttons">
+                                        <button onclick="submitSummaryFeedback('excellent')" class="rating-btn excellent">
+                                            <i data-lucide="star" class="w-4 h-4"></i>
+                                            優秀
+                                        </button>
+                                        <button onclick="submitSummaryFeedback('good')" class="rating-btn good">
+                                            <i data-lucide="thumbs-up" class="w-4 h-4"></i>
+                                            良い
+                                        </button>
+                                        <button onclick="submitSummaryFeedback('poor')" class="rating-btn poor">
+                                            <i data-lucide="thumbs-down" class="w-4 h-4"></i>
+                                            改善必要
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="detailed-feedback">
+                                <h4 class="feedback-form-title">詳細なフィードバック</h4>
+                                <textarea class="feedback-textarea" placeholder="この文書について詳細なフィードバックがあれば、ぜひお聞かせください..." rows="4"></textarea>
+                                <button onclick="submitDetailedFeedback()" class="submit-feedback-btn">
+                                    <i data-lucide="send" class="w-4 h-4"></i>
+                                    フィードバックを送信
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentTab = 'overview';
+    let summaryLoaded = false;
+    let fullContentVisible = false;
+    let readingMode = false;
+    
+    // Tab switching functionality
+    function switchTab(tabName) {
+        // Update active tab
+        document.querySelectorAll('.tab-nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        
+        // Update content
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(`${tabName}-content`).classList.add('active');
+        
+        currentTab = tabName;
+        
+        // Load content if needed
+        if (tabName === 'overview' && !summaryLoaded) {
+            loadSummary();
+        }
+    }
+    
+    // Initialize tab navigation
+    document.querySelectorAll('.tab-nav-item').forEach(item => {
+        item.addEventListener('click', function() {
+            switchTab(this.dataset.tab);
+        });
+    });
+    
+    function loadSummary() {
+        const content = document.getElementById('summary-content');
+        
+        fetch(`/api/documents/{{ document.id }}/summarize`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            const summaryHtml = markdownToHtml(data.short_summary || '要約の生成に失敗しました。');
+            content.innerHTML = `
+                <div class="summary-text">
+                    ${summaryHtml}
+                </div>
+            `;
+            
+            // Update metrics
+            const originalLength = {{ document.content_text|length }};
+            const summaryLength = data.short_summary ? data.short_summary.length : 0;
+            const compressionRatio = originalLength > 0 ? Math.round((1 - summaryLength / originalLength) * 100) : 0;
+            const readTime = Math.ceil(summaryLength / 200); // Assuming 200 chars per minute
+            
+            document.getElementById('compression-ratio').textContent = compressionRatio + '%';
+            document.getElementById('read-time').textContent = readTime + '分';
+            
+            summaryLoaded = true;
+        })
+        .catch(error => {
+            content.innerHTML = `
+                <div class="summary-error">
+                    <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                    <p>要約の生成中にエラーが発生しました。</p>
+                </div>
+            `;
+        });
+    }
+    
+    function expandContent() {
+        document.getElementById('content-preview').classList.add('hidden');
+        document.getElementById('content-full').classList.remove('hidden');
+        fullContentVisible = true;
+    }
+    
+    function expandSummary() {
+        const btn = document.getElementById('summary-expand');
+        const icon = btn.querySelector('i');
+        
+        // Toggle expanded state
+        if (icon.getAttribute('data-lucide') === 'expand') {
+            icon.setAttribute('data-lucide', 'minimize');
+            btn.querySelector('span').textContent = '縮小';
+        } else {
+            icon.setAttribute('data-lucide', 'expand');
+            btn.querySelector('span').textContent = '展開';
+        }
+        
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
+    
+    function toggleContentMode() {
+        readingMode = !readingMode;
+        const btn = document.getElementById('content-mode-btn');
+        const content = document.getElementById('main-content');
+        
+        if (readingMode) {
+            content.classList.add('reading-mode');
+            btn.querySelector('span').textContent = '通常モード';
+        } else {
+            content.classList.remove('reading-mode');
+            btn.querySelector('span').textContent = '読書モード';
+        }
+    }
+    
+    function adjustFontSize(action) {
+        const content = document.getElementById('main-content');
+        const currentSize = parseFloat(window.getComputedStyle(content).fontSize);
+        
+        if (action === 'increase' && currentSize < 20) {
+            content.style.fontSize = (currentSize + 1) + 'px';
+        } else if (action === 'decrease' && currentSize > 12) {
+            content.style.fontSize = (currentSize - 1) + 'px';
+        }
+    }
+    
+    function toggleContentTheme() {
+        document.body.classList.toggle('dark-theme');
+    }
+    
+    function toggleActionMenu() {
+        document.getElementById('action-menu').classList.toggle('hidden');
+    }
+    
+    function regenerateSummary() {
+        summaryLoaded = false;
+        document.getElementById('summary-content').innerHTML = `
+            <div class="summary-loading">
+                <div class="loading-dots">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+                <p>要約を再生成中...</p>
+            </div>
+        `;
+        loadSummary();
+    }
+    
+    function copySummary() {
+        const summaryText = document.querySelector('#summary-content .summary-text').innerText;
+        navigator.clipboard.writeText(summaryText).then(() => {
+            alert('要約をクリップボードにコピーしました。');
+        });
+    }
+    
+    function speakSummary() {
+        const summaryText = document.querySelector('#summary-content .summary-text').innerText;
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(summaryText);
+            utterance.lang = 'ja-JP';
+            speechSynthesis.speak(utterance);
+        } else {
+            alert('音声読み上げはサポートされていません。');
+        }
+    }
+    
+    function submitClassificationFeedback(rating) {
+        fetch(`/api/documents/{{ document.id }}/feedback`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                type: 'classification',
+                rating: rating
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert('分類フィードバックをありがとうございます！');
+        })
+        .catch(error => {
+            alert('フィードバックの送信に失敗しました。');
+        });
+    }
+    
+    function submitSummaryFeedback(rating) {
+        fetch(`/api/documents/{{ document.id }}/feedback`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                type: 'summary',
+                rating: rating
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert('要約フィードバックをありがとうございます！');
+        })
+        .catch(error => {
+            alert('フィードバックの送信に失敗しました。');
+        });
+    }
+    
+    function submitDetailedFeedback() {
+        const textarea = document.querySelector('.feedback-textarea');
+        const feedback = textarea.value.trim();
+        
+        if (!feedback) {
+            alert('フィードバック内容を入力してください。');
+            return;
+        }
+        
+        fetch(`/api/documents/{{ document.id }}/feedback`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                type: 'detailed',
+                comment: feedback
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert('詳細なフィードバックをありがとうございます！');
+            textarea.value = '';
+        })
+        .catch(error => {
+            alert('フィードバックの送信に失敗しました。');
+        });
+    }
+    
+    // Utility functions
+    function shareDocument() {
+        if (navigator.share) {
+            navigator.share({
+                title: '{{ document.title }}',
+                url: window.location.href
+            });
+        } else {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                alert('URLをクリップボードにコピーしました。');
+            });
+        }
+    }
+    
+    function addToCollection() {
+        alert('コレクション機能は近日実装予定です。');
+    }
+    
+    function exportDocument() {
+        alert('エクスポート機能は近日実装予定です。');
+    }
+    
+    function reportDocument() {
+        alert('報告機能は近日実装予定です。');
+    }
+    
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+    
+    function toggleSettings() {
+        alert('設定パネルは近日実装予定です。');
+    }
+    
+    // Simple Markdown to HTML converter
+    function markdownToHtml(text) {
+        if (!text) return '';
+        
+        return text
+            .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>')
+            .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-4 mb-2">$1</h2>')
+            .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-4 mb-2">$1</h1>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
+            .replace(/__(.*?)__/g, '<strong class="font-semibold">$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+            .replace(/_(.*?)_/g, '<em class="italic">$1</em>')
+            .replace(/```(.*?)```/gs, '<code class="bg-gray-100 px-2 py-1 rounded text-sm font-mono">$1</code>')
+            .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 rounded text-sm font-mono">$1</code>')
+            .replace(/^[\-\*] (.*$)/gim, '<li class="ml-4">• $1</li>')
+            .replace(/\n\n/g, '<br><br>')
+            .replace(/\n/g, '<br>');
+    }
+    
+    // Click outside to close action menu
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.action-menu')) {
+            document.getElementById('action-menu').classList.add('hidden');
+        }
+    });
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+        loadSummary(); // Auto-load summary
+    });
+</script>
+{% endblock %}
