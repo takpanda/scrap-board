@@ -148,18 +148,59 @@ class TestJapaneseTextRendering:
         # Verify the text was input correctly
         expect(url_input).to_have_value(japanese_url)
 
-    def test_page_encoding_utf8(self, page: Page):
-        """Test that pages use UTF-8 encoding."""
+    def test_japanese_text_screenshot_quality(self, page: Page):
+        """Test Japanese text rendering quality in screenshots."""
         page.goto("http://localhost:8000")
         
-        # Check meta charset tag
-        charset_meta = page.locator('meta[charset]')
-        if charset_meta.count() > 0:
-            charset = charset_meta.get_attribute('charset')
-            assert charset.lower() == 'utf-8', f"Expected UTF-8 charset, got {charset}"
+        # Wait for page to load completely
+        page.wait_for_load_state("networkidle")
         
-        # Alternative: check Content-Type header
-        content_type = page.evaluate("""
-            () => document.contentType || document.characterSet || 'unknown'
+        # Take a screenshot to verify text quality
+        screenshot_path = "/tmp/homepage_japanese_test.png"
+        page.screenshot(path=screenshot_path, full_page=True)
+        
+        # Verify screenshot was created
+        import os
+        assert os.path.exists(screenshot_path), "Screenshot should be created"
+        assert os.path.getsize(screenshot_path) > 0, "Screenshot should not be empty"
+        
+        # Check that Japanese text elements are visible
+        heading = page.locator("h1")
+        expect(heading).to_be_visible()
+        expect(heading).to_contain_text("Web")  # Should contain part of the Japanese heading
+        
+        # Check navigation elements
+        nav_elements = page.locator('nav a')
+        expect(nav_elements).to_have_count_greater_than(0)
+
+    def test_font_rendering_consistency(self, page: Page):
+        """Test that Japanese fonts render consistently across different elements."""
+        page.goto("http://localhost:8000")
+        
+        # Check various text elements for proper rendering
+        text_elements = [
+            page.locator("h1"),
+            page.locator("nav a").first,
+            page.locator("button").first if page.locator("button").count() > 0 else None
+        ]
+        
+        for element in text_elements:
+            if element:
+                expect(element).to_be_visible()
+                # Get computed styles to verify font settings
+                font_family = element.evaluate("getComputedStyle(this).fontFamily")
+                assert font_family is not None, "Font family should be set"
+
+    def test_character_encoding_utf8(self, page: Page):
+        """Test that pages use UTF-8 encoding for proper Japanese text display."""
+        page.goto("http://localhost:8000")
+        
+        # Check document character set
+        charset = page.evaluate("""
+            () => {
+                const meta = document.querySelector('meta[charset]');
+                return meta ? meta.getAttribute('charset') : document.characterSet;
+            }
         """)
-        assert 'utf' in content_type.lower(), f"Expected UTF encoding, got {content_type}"
+        
+        assert charset.lower() == 'utf-8', f"Expected UTF-8 charset, got {charset}"

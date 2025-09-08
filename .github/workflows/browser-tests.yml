@@ -1,0 +1,74 @@
+name: Browser Tests with Japanese Font Support
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  browser-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install Japanese fonts and dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          fonts-noto-cjk \
+          fonts-noto-cjk-extra \
+          fonts-takao \
+          fonts-liberation \
+          fontconfig \
+          libnss3-dev \
+          libatk-bridge2.0-dev \
+          libdrm2 \
+          libxkbcommon-dev \
+          libgtk-3-dev \
+          libgbm-dev
+        
+        # Refresh font cache
+        fc-cache -f
+        
+        # Verify Japanese fonts are available
+        fc-list :lang=ja | head -5
+    
+    - name: Install Python dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install playwright pytest-playwright
+    
+    - name: Setup Japanese font configuration
+      run: |
+        python setup_fonts.py
+    
+    - name: Install Playwright browsers
+      run: |
+        playwright install chromium
+      env:
+        PLAYWRIGHT_BROWSERS_PATH: ~/.cache/ms-playwright
+    
+    - name: Run Japanese text screenshot test
+      run: |
+        python test_japanese_screenshot.py
+    
+    - name: Run browser tests
+      run: |
+        pytest tests/test_browser.py -v --browser=chromium
+      env:
+        HEADLESS: true
+    
+    - name: Upload screenshot artifacts
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: japanese-text-screenshots
+        path: /tmp/japanese_test_screenshot.png
+        retention-days: 7
