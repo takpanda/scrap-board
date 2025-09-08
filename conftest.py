@@ -59,7 +59,12 @@ def browser_context_args():
         },
         # Ensure proper font rendering
         "ignore_https_errors": True,
-        "color_scheme": "light"
+        "color_scheme": "light",
+        # Enhanced font configuration for Japanese text
+        "font_size": 16,
+        "device_scale_factor": 1.0,
+        "has_touch": False,
+        "is_mobile": False,
     }
 
 
@@ -77,7 +82,21 @@ def browser_type_launch_args():
             "--accept-lang=ja,ja-JP,en",
             "--disable-features=VizDisplayCompositor",
             "--disable-dev-shm-usage",
-            "--force-device-scale-factor=1"
+            "--force-device-scale-factor=1",
+            # Enhanced Japanese text rendering
+            "--disable-extensions",
+            "--disable-background-timer-throttling",
+            "--disable-backgrounding-occluded-windows",
+            "--disable-renderer-backgrounding",
+            # Font configuration for CJK characters
+            "--font-config-file=/etc/fonts/fonts.conf",
+            "--enable-font-antialiasing",
+            "--disable-lcd-text",
+            # Character encoding support
+            "--default-encoding=utf-8",
+            # Disable hardware acceleration issues
+            "--disable-gpu",
+            "--disable-software-rasterizer",
         ]
     }
 
