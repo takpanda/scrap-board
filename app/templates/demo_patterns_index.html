@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block title %}デザインパターン一覧 - Scrap-Board{% endblock %}
+
+{% block extra_head %}
+<style>
+    .pattern-showcase {
+        background: linear-gradient(135deg, var(--ivory) 0%, #f8fafc 100%);
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+    
+    .showcase-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    
+    .showcase-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--ink);
+        margin-bottom: 1rem;
+    }
+    
+    .showcase-subtitle {
+        font-size: 1.125rem;
+        color: var(--graphite);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .patterns-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+    
+    .pattern-card {
+        background: white;
+        border: 1px solid rgba(232, 236, 242, 0.8);
+        border-radius: 1.5rem;
+        padding: 2rem;
+        box-shadow: 0 4px 24px rgba(11, 18, 33, 0.04);
+        transition: all 0.3s ease;
+    }
+    
+    .pattern-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(11, 18, 33, 0.12);
+    }
+    
+    .pattern-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .pattern-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, var(--emerald), #22c55e);
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+    
+    .pattern-info h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--ink);
+        margin-bottom: 0.25rem;
+    }
+    
+    .pattern-info .pattern-type {
+        font-size: 0.875rem;
+        color: var(--emerald);
+        font-weight: 500;
+    }
+    
+    .pattern-description {
+        color: var(--graphite);
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+    }
+    
+    .pattern-features {
+        margin-bottom: 2rem;
+    }
+    
+    .pattern-features h4 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--ink);
+        margin-bottom: 0.75rem;
+    }
+    
+    .features-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--graphite);
+    }
+    
+    .feature-icon {
+        width: 16px;
+        height: 16px;
+        color: var(--emerald);
+    }
+    
+    .pattern-actions {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .pattern-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .pattern-btn.primary {
+        background: var(--emerald);
+        color: white;
+        border: none;
+    }
+    
+    .pattern-btn.primary:hover {
+        background: #249760;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(43, 182, 115, 0.3);
+    }
+    
+    .pattern-btn.secondary {
+        background: white;
+        color: var(--emerald);
+        border: 1px solid var(--emerald);
+    }
+    
+    .pattern-btn.secondary:hover {
+        background: rgba(43, 182, 115, 0.05);
+        transform: translateY(-1px);
+    }
+    
+    .showcase-footer {
+        text-align: center;
+        padding: 2rem;
+        background: white;
+        border: 1px solid rgba(232, 236, 242, 0.8);
+        border-radius: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .footer-text {
+        color: var(--graphite);
+        margin-bottom: 1rem;
+    }
+    
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--emerald);
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .back-link:hover {
+        color: #249760;
+        transform: translateX(-2px);
+    }
+    
+    @media (max-width: 768px) {
+        .patterns-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        
+        .showcase-title {
+            font-size: 2rem;
+        }
+        
+        .pattern-card {
+            padding: 1.5rem;
+        }
+        
+        .pattern-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pattern-showcase">
+    <div class="max-w-6xl mx-auto px-4">
+        <!-- Header -->
+        <div class="showcase-header">
+            <h1 class="showcase-title">ドキュメント詳細ページ</h1>
+            <p class="showcase-subtitle">
+                視認性、操作性、UXの向上を目的とした3つのデザインパターンをご提案します。
+                それぞれ異なるアプローチで情報の整理と表示方法を最適化しています。
+            </p>
+        </div>
+        
+        <!-- Patterns Grid -->
+        <div class="patterns-grid">
+            <!-- Pattern 1: Improved Traditional -->
+            <div class="pattern-card">
+                <div class="pattern-header">
+                    <div class="pattern-icon">
+                        <i data-lucide="layout" class="w-8 h-8"></i>
+                    </div>
+                    <div class="pattern-info">
+                        <h3>従来型改良版</h3>
+                        <div class="pattern-type">Pattern 1: Improved Traditional</div>
+                    </div>
+                </div>
+                
+                <p class="pattern-description">
+                    既存のレイアウトをベースに、サイドバー形式の情報整理とクリーンなデザインで視認性を向上させました。
+                    直感的なナビゲーションと明確な情報階層で使いやすさを重視しています。
+                </p>
+                
+                <div class="pattern-features">
+                    <h4>主な特徴</h4>
+                    <div class="features-list">
+                        <div class="feature-item">
+                            <i data-lucide="sidebar" class="feature-icon"></i>
+                            左サイドバーによる情報整理
+                        </div>
+                        <div class="feature-item">
+                            <i data-lucide="navigation" class="feature-icon"></i>
+                            ページ内ナビゲーション
+                        </div>
+                        <div class="feature-item">
+                            <i data-lucide="zap" class="feature-icon"></i>
+                            アクションボタンの分離
+                        </div>
+                        <div class="feature-item">
+                            <i data-lucide="eye" class="feature-icon"></i>
+                            クリーンな視覚デザイン
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pattern-actions">
+                    <a href="/demo/pattern1/sample-ai-doc" class="pattern-btn primary">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                        プレビュー
+                    </a>
+                    <a href="#" onclick="copyLink('/demo/pattern1/sample-ai-doc')" class="pattern-btn secondary">
+                        <i data-lucide="share-2" class="w-4 h-4"></i>
+                        リンク
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Pattern 2: Split Layout -->
+            <div class="pattern-card">
+                <div class="pattern-header">
+                    <div class="pattern-icon">
+                        <i data-lucide="columns" class="w-8 h-8"></i>
+                    </div>
+                    <div class="pattern-info">
+                        <h3>分割レイアウト</h3>
+                        <div class="pattern-type">Pattern 2: Split Layout</div>
+                    </div>
+                </div>
+                
+                <p class="pattern-description">
+                    2カラム固定分割により、メタデータと本文を効率的に表示。タブベースのコンテンツ切り替えで
+                    情報密度を高めながら、フローティングフィードバックで使いやすさを保持。
+                </p>
+                
+                <div class="pattern-features">
+                    <h4>主な特徴</h4>
+                    <div class="features-list">
+                        <div class="feature-item">
+                            <i data-lucide="layout" class="feature-icon"></i>
+                            2カラム固定分割レイアウト
+                        </div>
+                        <div class="feature-item">
+                            <i data-lucide="tabs" class="feature-icon"></i>
+                            タブベースコンテンツ
+                        </div>
+                        <div class="feature-item">
+                            <i data-lucide="message-circle" class="feature-icon"></i>
+                            フローティングフィードバック
+                        </div>
+                        <div class="feature-item">
+                            <i data-lucide="bar-chart" class="feature-icon"></i>
+                            高度な分析機能
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pattern-actions">
+                    <a href="/demo/pattern2/sample-ai-doc" class="pattern-btn primary">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                        プレビュー
+                    </a>
+                    <a href="#" onclick="copyLink('/demo/pattern2/sample-ai-doc')" class="pattern-btn secondary">
+                        <i data-lucide="share-2" class="w-4 h-4"></i>
+                        リンク
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Pattern 3: Modern Tab-based -->
+            <div class="pattern-card">
+                <div class="pattern-header">
+                    <div class="pattern-icon">
+                        <i data-lucide="monitor" class="w-8 h-8"></i>
+                    </div>
+                    <div class="pattern-info">
+                        <h3>モダンタブベース</h3>
+                        <div class="pattern-type">Pattern 3: Modern Tab-based</div>
+                    </div>
+                </div>
+                
+                <p class="pattern-description">
+                    最新のWebアプリケーションUIを採用したタブインターフェース。概要・本文・分析・関連・議論の
+                    5つのタブで情報を整理し、モダンで直感的な操作体験を提供。
+                </p>
+                
+                <div class="pattern-features">
+                    <h4>主な特徴</h4>
+                    <div class="features-list">
+                        <div class="feature-item">
+                            <i data-lucide="tabs" class="feature-icon"></i>
+                            5タブ構成インターフェース
+                        </div>
+                        <div class="feature-item">
+                            <i data-lucide="smartphone" class="feature-icon"></i>
+                            モダンUI/UX
+                        </div>
+                        <div class="feature-item">
+                            <i data-lucide="pie-chart" class="feature-icon"></i>
+                            詳細分析レポート
+                        </div>
+                        <div class="feature-item">
+                            <i data-lucide="users" class="feature-icon"></i>
+                            議論・フィードバック機能
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pattern-actions">
+                    <a href="/demo/pattern3/sample-ai-doc" class="pattern-btn primary">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                        プレビュー
+                    </a>
+                    <a href="#" onclick="copyLink('/demo/pattern3/sample-ai-doc')" class="pattern-btn secondary">
+                        <i data-lucide="share-2" class="w-4 h-4"></i>
+                        リンク
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="showcase-footer">
+            <p class="footer-text">
+                各パターンは同じサンプルデータを使用しており、実際の使用感を比較できます。
+                ご意見・ご要望がございましたら、お気軽にフィードバックをお寄せください。
+            </p>
+            <a href="/" class="back-link">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                ホームに戻る
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function copyLink(path) {
+        const fullUrl = window.location.origin + path;
+        navigator.clipboard.writeText(fullUrl).then(() => {
+            alert('リンクをクリップボードにコピーしました: ' + fullUrl);
+        }).catch(() => {
+            alert('リンクのコピーに失敗しました。');
+        });
+    }
+    
+    // Initialize icons
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    });
+</script>
+{% endblock %}
