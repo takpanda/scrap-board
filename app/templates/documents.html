@@ -118,78 +118,81 @@
     <!-- Documents List -->
     <div id="documents-container">
         {% if documents %}
-        <div class="space-y-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% set category_class_map = {
+                'テック/AI': 'tag-tech',
+                'ソフトウェア開発': 'tag-dev',
+                'ビジネス': 'tag-business',
+                'セキュリティ': 'tag-security',
+                '研究': 'tag-research',
+                'その他': 'tag-other'
+            } %}
+
             {% for document in documents %}
-            <div class="bg-white rounded-xl border border-mist p-6 hover:shadow-md transition-shadow">
-                <div class="flex justify-between items-start mb-3">
-                    <div class="flex-1">
-                        <h3 class="text-lg font-semibold text-ink mb-1">
-                            <a href="/documents/{{ document.id }}" class="hover:text-emerald transition-colors">
+                <div class="doc-card card-like bg-white rounded-xl border border-mist p-6 hover:shadow-lg transition-shadow">
+                    <div class="flex items-start gap-4">
+                        <div class="flex-1 min-w-0">
+                            <a href="/documents/{{ document.id }}" class="doc-title text-lg font-semibold text-ink hover:text-emerald transition-colors block truncate">
                                 {{ document.title }}
                             </a>
-                        </h3>
-                        
-                        <div class="flex items-center space-x-4 text-sm text-graphite mb-2">
+
+                            {% set _has_meta = false %}
+                            <div class="mt-2 text-sm text-graphite">
+                                {% if document.url %}
+                                    <span class="inline-flex items-center gap-2 truncate">
+                                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                                        <span class="truncate">{{ document.domain }}</span>
+                                    </span>
+                                    {% set _has_meta = true %}
+                                {% else %}
+                                    <span class="inline-flex items-center gap-2">
+                                        <i data-lucide="file-text" class="w-3 h-3"></i>
+                                        <span>PDF</span>
+                                    </span>
+                                    {% set _has_meta = true %}
+                                {% endif %}
+
+                                {% if document.created_at %}
+                                    {% if _has_meta %}<span class="mx-2 text-gray-400">/</span>{% endif %}
+                                    <time class="text-xs text-gray-400">{{ document.created_at.strftime('%Y年%m月%d日') }}</time>
+                                    {% set _has_meta = true %}
+                                {% endif %}
+
+                                {% if document.author %}
+                                    {% if _has_meta %}<span class="mx-2 text-gray-400">/</span>{% endif %}
+                                    <span class="text-xs">{{ document.author }}</span>
+                                {% endif %}
+                            </div>
+
+                            {% if document.classifications %}
+                            <div class="mt-3 flex items-center gap-3 flex-wrap">
+                                {% set cat = document.classifications[0].primary_category %}
+                                <span class="tag-enhanced {{ category_class_map.get(cat, 'tag-other') }}">{{ cat }}</span>
+                                {% if document.classifications[0].tags %}
+                                    {% for tag in document.classifications[0].tags[:3] %}
+                                    <span class="tag-secondary text-xs">{{ tag }}</span>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            <p class="mt-3 text-sm text-graphite leading-relaxed line-clamp-3">{{ document.content_text[:300] }}{% if document.content_text|length > 300 %}...{% endif %}</p>
+                        </div>
+
+                        <div class="ml-4 flex flex-col gap-2">
+                            <a href="/reader/{{ document.id }}" class="btn gradient-cta text-white px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+                                <i data-lucide="book-open" class="w-4 h-4"></i>
+                                <span>Reader</span>
+                            </a>
                             {% if document.url %}
-                            <span class="flex items-center space-x-1">
-                                <i data-lucide="external-link" class="w-3 h-3"></i>
-                                <span>{{ document.domain }}</span>
-                            </span>
-                            {% else %}
-                            <span class="flex items-center space-x-1">
-                                <i data-lucide="file-text" class="w-3 h-3"></i>
-                                <span>PDF</span>
-                            </span>
-                            {% endif %}
-                            
-                            <span>{{ document.created_at.strftime('%Y年%m月%d日') }}</span>
-                            
-                            {% if document.author %}
-                            <span>{{ document.author }}</span>
+                            <a href="{{ document.url }}" target="_blank" class="btn border border-mist text-graphite px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+                                <i data-lucide="external-link" class="w-4 h-4"></i>
+                                <span>元記事</span>
+                            </a>
                             {% endif %}
                         </div>
-                        
-                        <!-- Categories and Tags -->
-                        {% if document.classifications %}
-                        <div class="flex flex-wrap items-center gap-2 mb-3">
-                            <span class="bg-emerald/10 text-emerald px-2 py-1 rounded-full text-xs font-medium">
-                                {{ document.classifications[0].primary_category }}
-                            </span>
-                            
-                            {% if document.classifications[0].tags %}
-                            {% for tag in document.classifications[0].tags[:3] %}
-                            <span class="bg-mist text-graphite px-2 py-1 rounded-full text-xs">
-                                {{ tag }}
-                            </span>
-                            {% endfor %}
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                        
-                        <!-- Content Preview -->
-                        <p class="text-graphite leading-relaxed">
-                            {{ document.content_text[:200] }}{% if document.content_text|length > 200 %}...{% endif %}
-                        </p>
-                    </div>
-                    
-                    <!-- Actions -->
-                    <div class="flex flex-col space-y-2 ml-4">
-                        <a href="/reader/{{ document.id }}" 
-                           class="bg-emerald text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald/90 transition-colors flex items-center space-x-1">
-                            <i data-lucide="book-open" class="w-4 h-4"></i>
-                            <span>Reader</span>
-                        </a>
-                        
-                        {% if document.url %}
-                        <a href="{{ document.url }}" target="_blank"
-                           class="border border-mist text-graphite px-3 py-2 rounded-lg text-sm hover:bg-mist transition-colors flex items-center space-x-1">
-                            <i data-lucide="external-link" class="w-4 h-4"></i>
-                            <span>元記事</span>
-                        </a>
-                        {% endif %}
                     </div>
                 </div>
-            </div>
             {% endfor %}
         </div>
         

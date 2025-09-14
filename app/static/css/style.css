@@ -398,6 +398,136 @@
     transition: all 0.2s;
 }
 
+/* Utilities for card layout fallbacks */
+.card-like {
+    overflow: hidden;
+}
+
+/* Line clamp fallback for browsers without Tailwind line-clamp plugin */
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.tag-secondary {
+    background: rgba(232, 236, 242, 0.8);
+    color: var(--graphite);
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+}
+
+/* Card hover lift and shadow */
+.card-like {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.card-like:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(11,18,33,0.10);
+}
+
+/* Left accent bar for doc cards */
+.doc-card {
+    position: relative;
+    overflow: visible;
+}
+/* Accent bar removed - previous ::before styles deleted */
+/* slightly softer card corners and border */
+.doc-card {
+    border-radius: 14px;
+    border: 1px solid rgba(14,20,26,0.04);
+}
+
+/* Inner highlight and soft inset shadow for premium edge feel */
+.doc-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(250,251,252,0.98));
+    box-shadow: 0 8px 22px rgba(11,18,33,0.07), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+/* Source badge in top-right */
+.source-badge {
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(14,20,26,0.04);
+}
+
+/* Make sure badge appears above the accent bar */
+.doc-card .source-badge {
+    position: relative;
+    z-index: 2;
+}
+
+/* Buttons in cards */
+.card-like .btn {
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+    border-radius: 0.75rem;
+    transition: transform 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
+}
+.card-like .btn:hover {
+    transform: translateY(-2px);
+}
+.card-like .btn.bg-emerald {
+    background: var(--emerald);
+    color: white;
+    box-shadow: 0 6px 18px rgba(43,182,115,0.12);
+}
+
+/* Gradient primary CTA similar to reference */
+.gradient-cta {
+    background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%);
+    color: white;
+    font-weight: 600;
+}
+
+/* Thumbnail adjustments */
+/* Thumbnail removed - styles cleaned up */
+.card-like .btn.border:hover {
+    background: rgba(232,236,242,0.6);
+}
+
+/* Tighter favicon box */
+.card-like .w-14.h-14 {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+}
+
+/* Title and snippet tweaks */
+.doc-title {
+    font-size: 1.02rem;
+}
+.card-like p {
+    line-height: 1.6;
+}
+
+/* Tag hover */
+.tag-enhanced:hover, .tag-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(11,18,33,0.06);
+}
+
+/* Stronger tag color for primary category */
+.tag-enhanced {
+    background: linear-gradient(135deg, rgba(43,182,115,0.12), rgba(43,182,115,0.06));
+    color: var(--emerald);
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+}
+
+/* Category-specific tag colors */
+.tag-tech { background: linear-gradient(90deg, #e0e7ff, #eef2ff); color: #4f46e5; }
+.tag-dev { background: linear-gradient(90deg, #f0f9ff, #e6f6ff); color: #0ea5a4; }
+.tag-business { background: linear-gradient(90deg, #fff7ed, #fffbeb); color: #d97706; }
+.tag-security { background: linear-gradient(90deg, #fff1f2, #fff7f9); color: #ef4444; }
+.tag-research { background: linear-gradient(90deg, #f7fee7, #f0fdf4); color: #16a34a; }
+.tag-other { background: linear-gradient(90deg, #f3f4f6, #ffffff); color: var(--graphite); }
+
+.source-badge {
+    box-shadow: 0 4px 12px rgba(11,18,33,0.06);
+}
+
 .btn-primary {
     background: var(--emerald);
     color: white;
