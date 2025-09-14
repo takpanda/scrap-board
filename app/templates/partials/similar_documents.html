@@ -1,35 +1,56 @@
 {% if similar_documents %}
     {% for doc in similar_documents %}
-    <div class="similar-doc-enhanced">
-        <div class="flex items-start justify-between mb-3">
-            <h4 class="similar-doc-title">
-                <a href="/documents/{{ doc.id }}" class="hover:text-emerald transition-colors">
+    <div class="dify-similar-card">
+        <div class="dify-similar-header">
+            <h4 class="dify-similar-title">
+                <a href="/documents/{{ doc.id }}">
                     {{ doc.title }}
                 </a>
             </h4>
-            <span class="similarity-score text-xs bg-emerald/10 px-2 py-1 rounded-full ml-2 shrink-0">
-                類似度: {{ "%.1f"|format(doc.similarity_score * 100) }}%
-            </span>
+            <div class="dify-similarity-score">
+                {{ "%.1f"|format(doc.similarity_score * 100) }}%
+            </div>
         </div>
         
-        <div class="similar-doc-meta">
+        <div class="dify-similar-meta">
             {% if doc.domain %}
-            <span class="flex items-center space-x-1">
-                <i data-lucide="external-link" class="w-3 h-3"></i>
+            <div class="dify-meta-item">
+                <i data-lucide="globe" class="w-3 h-3"></i>
                 <span>{{ doc.domain }}</span>
-            </span>
+            </div>
             {% endif %}
-            <span class="flex items-center space-x-1">
+            <div class="dify-meta-item">
                 <i data-lucide="clock" class="w-3 h-3"></i>
                 <span>{{ doc.created_at }}</span>
-            </span>
+            </div>
+        </div>
+        
+        {% if doc.content_md %}
+        <div class="dify-similar-preview">
+            {{ doc.content_md[:120] }}{% if doc.content_md|length > 120 %}...{% endif %}
+        </div>
+        {% endif %}
+        
+        <div class="dify-similar-actions">
+            <a href="/documents/{{ doc.id }}" class="dify-action-link dify-action-primary">
+                <i data-lucide="eye" class="w-3 h-3"></i>
+                <span>詳細を見る</span>
+            </a>
+            {% if doc.url %}
+            <a href="{{ doc.url }}" target="_blank" class="dify-action-link dify-action-secondary">
+                <i data-lucide="external-link" class="w-3 h-3"></i>
+                <span>元記事</span>
+            </a>
+            {% endif %}
         </div>
     </div>
     {% endfor %}
 {% else %}
-    <div class="col-span-2 text-center py-12 text-graphite bg-white rounded-2xl border border-mist">
-        <i data-lucide="search-x" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
-        <p class="text-base font-medium mb-2">関連するドキュメントが見つかりませんでした</p>
-        <p class="text-sm opacity-75">このドキュメントと類似したコンテンツはまだ収集されていません</p>
+    <div class="dify-empty-state">
+        <div class="dify-empty-icon">
+            <i data-lucide="search-x" class="w-12 h-12"></i>
+        </div>
+        <h3 class="dify-empty-title">関連するドキュメントが見つかりませんでした</h3>
+        <p class="dify-empty-description">このドキュメントと類似したコンテンツはまだ収集されていません</p>
     </div>
 {% endif %}

@@ -17,9 +17,9 @@
             
             <!-- Categories and Tags -->
             {% if document.classifications %}
-            <div class="flex flex-wrap items-start mb-6" style="gap: 0.5rem;">
+            <div class="flex flex-wrap items-center gap-3 mb-6">
                 <span class="dify-tag-primary">
-                    <i data-lucide="tag" class="w-3 h-3"></i>
+                    <i data-lucide="tag" class="w-4 h-4"></i>
                     {{ document.classifications[0].primary_category }}
                 </span>
                 
@@ -30,19 +30,24 @@
                 </span>
                 {% endfor %}
                 {% endif %}
+                
+                <span class="dify-confidence-badge">
+                    <i data-lucide="trending-up" class="w-3 h-3"></i>
+                    信頼度: {{ "%.0f" | format(document.classifications[0].confidence * 100) }}%
+                </span>
             </div>
             {% endif %}
             
             <!-- Action Buttons -->
             <div class="dify-actions">
                 <a href="/reader/{{ document.id }}" class="dify-btn dify-btn-primary">
-                    <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
                     <span>Reader Mode で読む</span>
                 </a>
                 
                 {% if document.url %}
                 <a href="{{ document.url }}" target="_blank" class="dify-btn dify-btn-secondary">
-                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    <i data-lucide="external-link" class="w-4 h-4"></i>
                     <span>元記事を開く</span>
                 </a>
                 {% endif %}
@@ -52,108 +57,129 @@
                     onclick="toggleContentView()"
                     class="dify-btn dify-btn-outline"
                 >
-                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
                     <span>全文を表示</span>
                 </button>
             </div>
         </div>
-        
-        <!-- Summary Section -->
-        <div id="summary-section" class="dify-content-card">
-            <h2 class="dify-section-title">
-                AI要約
-            </h2>
+                <span>元記事を開く</span>
+            </a>
+            {% endif %}
             
-            <div id="summary-content" class="mt-4">
-                    {% if document.short_summary %}
-                    <div class="dify-summary-container">
-                        <div class="dify-summary-badge">
-                            <span>AI生成要約</span>
-                        </div>
-                        <div class="dify-summary-content">{{ document.short_summary }}</div>
-                    </div>
-                    {% else %}
-                    <div class="animate-pulse space-y-3">
-                        <div class="dify-loading-line w-3/4"></div>
-                        <div class="dify-loading-line w-1/2"></div>
-                        <div class="dify-loading-line w-2/3"></div>
-                    </div>
-                    {% endif %}
-            </div>
-        </div>
-        
-        <!-- Content Preview Section -->
-        <div id="content-section" class="hidden dify-content-card">
-            <div class="dify-content-header">
-                <h2 class="dify-section-title">
-                    <i data-lucide="file-text" class="w-5 h-5"></i>
-                    コンテンツプレビュー
-                </h2>
-                <button 
-                    onclick="toggleFullContent()"
-                    id="content-toggle"
-                    class="dify-toggle-btn"
-                >
-                    <span>全文を表示</span>
-                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </button>
-            </div>
-            
-            <div id="content-preview" class="prose max-w-none">
-                <div class="dify-content-text">
-                    {{ document.content_md[:500] | markdown | safe }}{% if document.content_md|length > 500 %}<span class="text-gray-400">...</span>{% endif %}
-                </div>
-            </div>
-            
-            <div id="content-full" class="hidden prose max-w-none">
-                <div class="dify-content-text">
-                    {{ document.content_md | safe }}
-                </div>
-            </div>
-        </div>
-        
-        <!-- Similar Documents Section -->
-        <div class="dify-content-card">
-            <h2 class="dify-section-title">
-                関連ドキュメント
-            </h2>
-            
-            <div 
-                hx-get="/api/documents/{{ document.id }}/similar"
-                hx-trigger="load"
-                hx-target="#similar-documents"
-                class="mt-6"
+            <button 
+                id="content-view-toggle"
+                onclick="toggleContentView()"
+                class="dify-btn dify-btn-outline"
             >
-                <div id="similar-documents">
-                    <!-- Loading State -->
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                <span>全文を表示</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Summary Section -->
+    <div id="summary-section" class="dify-content-card">
+        <h2 class="dify-section-title">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+            AI要約
+        </h2>
+        
+        <div id="summary-content" class="space-y-4">
+            <div class="animate-pulse space-y-3">
+                <div class="dify-loading-line w-3/4"></div>
+                <div class="dify-loading-line w-1/2"></div>
+                <div class="dify-loading-line w-2/3"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Content Preview Section -->
+    <div id="content-section" class="hidden dify-content-card">
+        <div class="dify-content-header">
+            <h2 class="dify-section-title">
+                <i data-lucide="file-text" class="w-5 h-5"></i>
+                コンテンツプレビュー
+            </h2>
+            <button 
+                onclick="toggleFullContent()"
+                id="content-toggle"
+                class="dify-toggle-btn"
+            >
+                <span>全文を表示</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+        
+        <div id="content-preview" class="prose max-w-none">
+            <div class="dify-content-text">
+                {{ document.content_md[:500] | markdown | safe }}{% if document.content_md|length > 500 %}<span class="text-gray-400">...</span>{% endif %}
+            </div>
+        </div>
+        
+        <div id="content-full" class="hidden prose max-w-none">
+            <div class="dify-content-text">
+                {{ document.content_md | safe }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Similar Documents Section -->
+    <div class="dify-content-card">
+        <h2 class="dify-section-title">
+            <i data-lucide="link" class="w-5 h-5"></i>
+            関連ドキュメント
+        </h2>
+        
+        <div 
+            hx-get="/api/documents/{{ document.id }}/similar"
+            hx-trigger="load"
+            hx-target="#similar-documents"
+            class="mt-6"
+        >
+            <div id="similar-documents" class="grid md:grid-cols-2 gap-4">
+                <!-- Loading State -->
+                <div class="space-y-4">
                     <div class="dify-similar-card animate-pulse">
-                        <div class="dify-loading-line w-3/4 mb-2"></div>
+                        <div class="dify-loading-line w-3/4 mb-3"></div>
                         <div class="dify-loading-line w-1/2"></div>
                     </div>
                     <div class="dify-similar-card animate-pulse">
-                        <div class="dify-loading-line w-2/3 mb-2"></div>
-                        <div class="dify-loading-line w-1/3"></div>
-                    </div>
-                    <div class="dify-similar-card animate-pulse">
-                        <div class="dify-loading-line w-2/3 mb-2"></div>
-                        <div class="dify-loading-line w-1/3"></div>
-                    </div>
-                    <div class="dify-similar-card animate-pulse">
-                        <div class="dify-loading-line w-2/3 mb-2"></div>
-                        <div class="dify-loading-line w-1/3"></div>
-                    </div>
-                    <div class="dify-similar-card animate-pulse">
-                        <div class="dify-loading-line w-2/3 mb-2"></div>
-                        <div class="dify-loading-line w-1/3"></div>
-                    </div>
-                    <div class="dify-similar-card animate-pulse">
-                        <div class="dify-loading-line w-2/3 mb-2"></div>
+                        <div class="dify-loading-line w-2/3 mb-3"></div>
                         <div class="dify-loading-line w-1/3"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    
+    <!-- Feedback Section -->
+    <div class="dify-feedback-card">
+        <div class="dify-feedback-grid">
+            <div class="dify-feedback-icon">
+                <i data-lucide="thumbs-up" class="w-6 h-6"></i>
+            </div>
+            
+            <div class="dify-feedback-content">
+                <h3>この分類は正確ですか？</h3>
+                <p>あなたのフィードバックは分類精度の向上に活用されます。</p>
+                <div class="dify-feedback-actions">
+                    <button onclick="submitFeedback('correct', this)" class="dify-feedback-btn dify-feedback-primary" aria-pressed="false">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span>正確</span>
+                    </button>
+                    <button onclick="submitFeedback('incorrect', this)" class="dify-feedback-btn dify-feedback-secondary" aria-pressed="false">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                        <span>修正が必要</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="dify-feedback-status">
+                <div class="dify-feedback-message" aria-live="polite" role="status" hidden></div>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
 
 <script>
@@ -208,6 +234,7 @@
                 content.innerHTML = `
                     <div class="dify-summary-container">
                         <div class="dify-summary-badge">
+                            <i data-lucide="sparkles" class="w-3 h-3"></i>
                             <span>AI生成要約</span>
                         </div>
                         <div class="dify-summary-content">${summaryHtml}</div>
@@ -262,26 +289,70 @@
         const preview = document.getElementById('content-preview');
         const full = document.getElementById('content-full');
         const toggle = document.getElementById('content-toggle');
-        const toggleText = toggle.querySelector('span');
         
         if (fullContentVisible) {
             preview.classList.remove('hidden');
             full.classList.add('hidden');
-            toggleText.textContent = '全文を表示';
+            toggle.textContent = '全文を表示';
             fullContentVisible = false;
         } else {
             preview.classList.add('hidden');
             full.classList.remove('hidden');
-            toggleText.textContent = '概要に戻る';
+            toggle.textContent = '概要に戻る';
             fullContentVisible = true;
         }
     }
     
+    function submitFeedback(label, buttonEl) {
+        const messageEl = document.querySelector('.feedback-message');
+        const btn = buttonEl || null;
+        if (btn) {
+            btn.setAttribute('aria-pressed', 'true');
+            btn.disabled = true;
+        }
+
+        fetch(`/api/documents/{{ document.id }}/feedback`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ label: label })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (messageEl) {
+                messageEl.hidden = false;
+                messageEl.className = 'dify-feedback-message success';
+                messageEl.innerHTML = `
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    <span>${label === 'correct' ? 'フィードバックありがとうございます！' : '修正のご指摘を受け取りました。ありがとうございます。'}</span>
+                `;
+            } else {
+                alert(label === 'correct' ? 'フィードバックありがとうございます！' : '修正のご指摘ありがとうございます。');
+            }
+        })
+        .catch(error => {
+            if (messageEl) {
+                messageEl.hidden = false;
+                messageEl.className = 'dify-feedback-message error';
+                messageEl.innerHTML = `
+                    <i data-lucide="x-circle" class="w-4 h-4"></i>
+                    <span>フィードバックの送信に失敗しました。後でもう一度お試しください。</span>
+                `;
+            } else {
+                alert('フィードバックの送信に失敗しました。');
+            }
+        })
+        .finally(() => {
+            if (btn) {
+                setTimeout(() => { btn.disabled = false; btn.setAttribute('aria-pressed', 'false'); }, 1200);
+            }
+        });
+    }
+    
     // Initialize icons and auto-load summary
     document.addEventListener('DOMContentLoaded', function() {
-        if (window.lucide) {
-            lucide.createIcons();
-        }
+        lucide.createIcons();
         autoLoadSummary(); // Auto-load summary on page load
     });
 </script>

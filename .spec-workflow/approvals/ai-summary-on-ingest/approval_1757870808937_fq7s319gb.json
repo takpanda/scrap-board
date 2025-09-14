@@ -1,0 +1,12 @@
+{
+  "id": "approval_1757870808937_fq7s319gb",
+  "title": "設計: AI要約をURL取り込み時に事前生成してDB保存する",
+  "filePath": ".spec-workflow/specs/ai-summary-on-ingest/design.md",
+  "type": "document",
+  "status": "approved",
+  "createdAt": "2025-09-14T17:26:48.938Z",
+  "category": "spec",
+  "categoryName": "ai-summary-on-ingest",
+  "response": "承認済み",
+  "respondedAt": "2025-09-14T17:26:57.046Z"
+}

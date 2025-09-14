@@ -28,9 +28,17 @@ def override_get_db():
         db.close()
 
 
+
 app.dependency_overrides[get_db] = override_get_db
 
-client = TestClient(app)
+
+@pytest.fixture(scope="function")
+def client():
+    """Create a TestClient for each test after DB setup."""
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -77,7 +85,7 @@ def sample_document():
         db.close()
 
 
-def test_summarize_endpoint_not_found():
+def test_summarize_endpoint_not_found(client):
     """存在しないドキュメントの要約リクエスト"""
     non_existent_id = str(uuid.uuid4())
     response = client.post(f"/api/documents/{non_existent_id}/summarize")
@@ -87,7 +95,7 @@ def test_summarize_endpoint_not_found():
 
 
 @patch('app.api.routes.documents.llm_client.summarize_text')
-def test_summarize_endpoint_success(mock_summarize, sample_document):
+def test_summarize_endpoint_success(mock_summarize, sample_document, client):
     """正常な要約生成"""
     # LLMクライアントのモック設定 - AsyncMockを使わずに直接戻り値を設定
     mock_summarize.return_value = "これはテスト記事の要約です。"
@@ -103,7 +111,7 @@ def test_summarize_endpoint_success(mock_summarize, sample_document):
 
 
 @patch('app.api.routes.documents.llm_client.summarize_text')
-def test_summarize_endpoint_llm_failure(mock_summarize, sample_document):
+def test_summarize_endpoint_llm_failure(mock_summarize, sample_document, client):
     """LLM要約生成失敗時の処理"""
     # LLMクライアントが None を返すケース
     mock_summarize.return_value = None
@@ -117,7 +125,7 @@ def test_summarize_endpoint_llm_failure(mock_summarize, sample_document):
 
 
 @patch('app.api.routes.documents.llm_client.summarize_text')
-def test_summarize_endpoint_exception(mock_summarize, sample_document):
+def test_summarize_endpoint_exception(mock_summarize, sample_document, client):
     """LLM要約生成で例外が発生した場合の処理"""
     # LLMクライアントが例外を投げるケース
     mock_summarize.side_effect = Exception("LLM service error")
@@ -130,7 +138,7 @@ def test_summarize_endpoint_exception(mock_summarize, sample_document):
     assert "エラーが発生しました" in data["short_summary"]
 
 
-def test_summarize_endpoint_response_format(sample_document):
+def test_summarize_endpoint_response_format(sample_document, client):
     """レスポンス形式の確認（LLMサービスなしでも基本的なレスポンス形式をチェック）"""
     response = client.post(f"/api/documents/{sample_document.id}/summarize")
     

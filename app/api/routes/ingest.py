@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Optional, List
 import json
@@ -9,6 +9,10 @@ import logging
 from app.core.database import get_db, Document, Classification, Embedding
 from app.services.extractor import content_extractor
 from app.services.llm_client import llm_client
+from app.core.config import settings
+from datetime import datetime
+import asyncio
+from app.core.database import SessionLocal
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -18,6 +22,7 @@ logger = logging.getLogger(__name__)
 async def ingest_url(
     url: str = Form(...),
     force: bool = Form(False),
+    background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db)
 ):
     """URLからコンテンツを取り込み"""
@@ -39,8 +44,30 @@ async def ingest_url(
     db.commit()
     db.refresh(document)
     
-    # 非同期でバックグラウンド処理（分類・要約・埋め込み）
-    await _process_document_async(document.id, content_data, db)
+    # 要約生成（同期モードでは即時生成してDBに保存、非同期モードではバックグラウンドで処理）
+    try:
+        if settings.summary_mode == "sync":
+            text_for_summary = content_extractor.prepare_text_for_summary(content_data.get("content_text", ""), max_chars=settings.short_summary_max_chars)
+            short = await llm_client.generate_summary(text_for_summary, style="short", timeout_sec=settings.summary_timeout_sec)
+            # short のみ同期保存
+            if short is not None:
+                document.short_summary = short[:settings.short_summary_max_chars]
+                document.summary_generated_at = datetime.utcnow()
+                document.summary_model = settings.summary_model or settings.chat_model
+                db.add(document)
+                db.commit()
+
+            # 続けて分類・埋め込みなどの非同期処理は待機して実行
+            await _process_document_async(document.id, content_data, db)
+        else:
+            # 非同期モード: BackgroundTasks に処理を登録してレスポンスを即時返す
+            if background_tasks is not None:
+                background_tasks.add_task(_process_document_background_sync, document.id)
+            else:
+                # fallback: create_task
+                asyncio.create_task(_process_document_background(document.id))
+    except Exception as e:
+        logger.error(f"Summary/background processing scheduling failed for {document.id}: {e}")
     
     return {
         "message": "Content ingested successfully",
@@ -139,3 +166,80 @@ async def _process_document_async(document_id: str, content_data: dict, db: Sess
     except Exception as e:
         logger.error(f"Document processing error for {document_id}: {e}")
         db.rollback()
+
+
+async def _process_document_background(document_id: str):
+    """バックグラウンドで要約・分類・埋め込みを実行する（async モード用）。
+
+    新しいDBセッションを作成して操作する。
+    """
+    db = SessionLocal()
+    try:
+        # ドキュメント取得
+        doc = db.query(Document).filter(Document.id == document_id).first()
+        if not doc:
+            logger.error(f"Background process: document not found {document_id}")
+            return
+
+        content_text = doc.content_text or ""
+
+        # 要約生成（short）
+        try:
+            text_for_summary = content_extractor.prepare_text_for_summary(content_text, max_chars=settings.short_summary_max_chars)
+            short = await llm_client.generate_summary(text_for_summary, style="short", timeout_sec=settings.summary_timeout_sec)
+            if short is not None:
+                doc.short_summary = short[:settings.short_summary_max_chars]
+                doc.summary_generated_at = datetime.utcnow()
+                doc.summary_model = settings.summary_model or settings.chat_model
+                db.add(doc)
+                db.commit()
+        except Exception as e:
+            logger.error(f"Background summary generation failed for {document_id}: {e}")
+            db.rollback()
+
+        # 続けて分類・埋め込み
+        try:
+            classification_result = await llm_client.classify_content(
+                doc.title,
+                (content_text[:2000] if content_text else "")
+            )
+            if classification_result:
+                classification = Classification(
+                    document_id=document_id,
+                    primary_category=classification_result.get("primary_category", "その他"),
+                    topics=None,
+                    tags=classification_result.get("tags", []),
+                    confidence=classification_result.get("confidence", 0.5),
+                    method="llm"
+                )
+                db.add(classification)
+
+            embedding_vector = await llm_client.create_embedding(content_text[:1000])
+            if embedding_vector:
+                embedding = Embedding(
+                    document_id=document_id,
+                    chunk_id=0,
+                    vec=json.dumps(embedding_vector),
+                    chunk_text=content_text[:1000]
+                )
+                db.add(embedding)
+
+            db.commit()
+            logger.info(f"Background document {document_id} processed successfully")
+        except Exception as e:
+            logger.error(f"Background document processing error for {document_id}: {e}")
+            db.rollback()
+
+    finally:
+        db.close()
+
+
+def _process_document_background_sync(document_id: str):
+    """同期ラッパー: BackgroundTasks が呼べる形で非同期処理を実行する。
+
+    この関数は内部で新しいイベントループを作ってコルーチンを実行する。
+    """
+    try:
+        asyncio.run(_process_document_background(document_id))
+    except Exception as e:
+        logger.error(f"Background sync wrapper failed for {document_id}: {e}")

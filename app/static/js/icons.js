@@ -23,7 +23,7 @@ function createIcons() {
         const iconName = element.getAttribute('data-lucide');
         if (icons[iconName]) {
             // Create SVG with explicit size attributes
-            const svg = icons[iconName].replace('<svg ', '<svg width="16" height="16" ');
+            const svg = icons[iconName].replace('<svg ', '<svg width="14" height="14" ');
             element.innerHTML = svg;
         }
     });
@@ -40,3 +40,45 @@ if (document.readyState === 'loading') {
 } else {
     createIcons();
 }
+
+// Small utilities: copy URL and reader-mode toggle with font presets
+function setupDocumentMetaControls() {
+    document.querySelectorAll('.btn-copy').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const url = this.getAttribute('data-url') || window.location.href;
+            navigator.clipboard.writeText(url).then(() => {
+                this.textContent = '✓';
+                setTimeout(() => { this.textContent = '🔗'; }, 1200);
+            }).catch(() => { alert('URL のコピーに失敗しました。'); });
+        });
+    });
+
+    document.querySelectorAll('.btn-reader').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.body.classList.toggle('reader-mode');
+            // persist state
+            const enabled = document.body.classList.contains('reader-mode');
+            localStorage.setItem('reader-mode', enabled ? '1' : '0');
+        });
+    });
+
+    document.querySelectorAll('.font-presets button').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const size = this.getAttribute('data-size');
+            document.body.classList.remove('font-small','font-medium','font-large');
+            if (size === 'small') document.body.classList.add('font-small');
+            if (size === 'medium') document.body.classList.add('font-medium');
+            if (size === 'large') document.body.classList.add('font-large');
+            localStorage.setItem('font-size', size);
+        });
+    });
+
+    // Restore preferences
+    const savedReader = localStorage.getItem('reader-mode');
+    if (savedReader === '1') document.body.classList.add('reader-mode');
+    const savedFont = localStorage.getItem('font-size');
+    if (savedFont) document.body.classList.add(savedFont === 'small' ? 'font-small' : (savedFont === 'medium' ? 'font-medium' : 'font-large'));
+}
+
+// Initialize after icons are created
+document.addEventListener('DOMContentLoaded', setupDocumentMetaControls);

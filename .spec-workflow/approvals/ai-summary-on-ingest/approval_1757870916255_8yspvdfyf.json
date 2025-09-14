@@ -1,0 +1,12 @@
+{
+  "id": "approval_1757870916255_8yspvdfyf",
+  "title": "タスク: AI要約をURL取り込み時に事前生成してDB保存する 実装タスク",
+  "filePath": ".spec-workflow/specs/ai-summary-on-ingest/tasks.md",
+  "type": "document",
+  "status": "approved",
+  "createdAt": "2025-09-14T17:28:36.255Z",
+  "category": "spec",
+  "categoryName": "ai-summary-on-ingest",
+  "response": "承認済み",
+  "respondedAt": "2025-09-14T17:28:55.183Z"
+}
