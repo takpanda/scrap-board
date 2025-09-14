@@ -175,6 +175,35 @@ class ContentExtractor:
         except:
             return None
 
+    def prepare_text_for_summary(self, text: str, max_chars: int = 4000) -> str:
+        """要約用のテキストを準備する。
+
+        - 日本語優先のままトークン制限に合わせてトリム/チャンク結合を行う。
+        - 簡易実装: 改行で段落を区切り、先頭から順に `max_chars` に収まる長さまで連結して返す。
+        """
+        if not text:
+            return ""
+
+        # 既に十分短ければそのまま
+        if len(text) <= max_chars:
+            return text
+
+        # 段落ごとに分割して先頭から連結
+        paragraphs = [p.strip() for p in text.split('\n') if p.strip()]
+        out = []
+        cur_len = 0
+        for p in paragraphs:
+            if cur_len + len(p) + 1 > max_chars:
+                break
+            out.append(p)
+            cur_len += len(p) + 1
+
+        result = '\n\n'.join(out)
+        # 最終安全保証: 長すぎたら切る
+        if len(result) > max_chars:
+            result = result[:max_chars]
+        return result
+
 
 # グローバルエクストラクターインスタンス
 content_extractor = ContentExtractor()

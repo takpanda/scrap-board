@@ -121,6 +121,10 @@ async def get_document(
         "content_text": document.content_text,
         "hash": document.hash
     }
+
+    # 要約フィールド
+    result["short_summary"] = document.short_summary
+    result["medium_summary"] = document.medium_summary
     
     # 分類情報
     if document.classifications:

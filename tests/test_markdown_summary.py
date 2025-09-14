@@ -28,9 +28,17 @@ def override_get_db():
         db.close()
 
 
+
 app.dependency_overrides[get_db] = override_get_db
 
-client = TestClient(app)
+
+@pytest.fixture(scope="function")
+def client():
+    """Create a TestClient for each test after DB setup."""
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -78,7 +86,7 @@ def sample_document():
 
 
 @patch('app.api.routes.documents.llm_client.summarize_text')
-def test_summarize_endpoint_returns_markdown(mock_summarize, sample_document):
+def test_summarize_endpoint_returns_markdown(mock_summarize, sample_document, client):
     """要約エンドポイントがMarkdown形式のコンテンツを返すことのテスト"""
     # LLMクライアントがMarkdown形式の要約を返すように設定
     markdown_summary = "## 要約\n\nこれは**重要な**記事です。\n\n- ポイント1\n- ポイント2\n\n`コード例`もあります。"
@@ -94,7 +102,7 @@ def test_summarize_endpoint_returns_markdown(mock_summarize, sample_document):
     assert "- ポイント1" in data["short_summary"]  # リストフォーマットが保持されていることを確認
 
 
-def test_document_detail_page_includes_markdown_function(sample_document):
+def test_document_detail_page_includes_markdown_function(sample_document, client):
     """ドキュメント詳細ページにMarkdown変換関数が含まれていることのテスト"""
     response = client.get(f"/documents/{sample_document.id}")
     
@@ -110,7 +118,7 @@ def test_document_detail_page_includes_markdown_function(sample_document):
 
 
 @patch('app.api.routes.documents.llm_client.summarize_text')
-def test_summarize_with_various_markdown_formats(mock_summarize, sample_document):
+def test_summarize_with_various_markdown_formats(mock_summarize, sample_document, client):
     """様々なMarkdown形式での要約のテスト"""
     test_cases = [
         {

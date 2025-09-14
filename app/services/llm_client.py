@@ -81,6 +81,37 @@ class LLMClient:
         ]
         
         return await self.chat_completion(messages)
+
+    async def generate_summary(self, text: str, style: str = "short", timeout_sec: Optional[int] = None) -> Optional[str]:
+        """高レベルな要約生成ラッパー。
+
+        - `style`: 'short' または 'medium'
+        - `timeout_sec`: 明示的なタイムアウト（指定がなければクライアント設定を使用）
+        成功時に要約文字列、失敗時は None を返す。
+        """
+        import asyncio
+
+        t = timeout_sec or self.timeout
+        start = None
+        try:
+            start = asyncio.get_event_loop().time()
+            coro = self.summarize_text(text, summary_type=("short" if style == "short" else "medium"))
+            result = await asyncio.wait_for(coro, timeout=t)
+            elapsed = asyncio.get_event_loop().time() - start
+            logger.info(f"summary_generation_success model={self.chat_model} elapsed_ms={int(elapsed*1000)} style={style}")
+            return result
+        except asyncio.TimeoutError:
+            elapsed = None
+            try:
+                if start is not None:
+                    elapsed = int((asyncio.get_event_loop().time() - start) * 1000)
+            except Exception:
+                elapsed = None
+            logger.error(f"summary_generation_timeout model={self.chat_model} timeout_ms={t*1000} elapsed_ms={elapsed}")
+            return None
+        except Exception as e:
+            logger.error(f"summary_generation_failure model={self.chat_model} error={e}")
+            return None
     
     async def classify_content(self, title: str, content: str) -> Optional[Dict[str, Any]]:
         """コンテンツ分類を実行"""

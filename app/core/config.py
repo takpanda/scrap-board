@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     upload_dir: str = "./data/uploads"
     assets_dir: str = "./data/assets"
     max_file_size: int = 50_000_000  # 50MB
+
+    # 要約設定
+    summary_mode: str = "sync"  # sync | async
+    summary_timeout_sec: int = 8
+    short_summary_max_chars: int = 1024
+    medium_summary_max_chars: int = 4096
+    summary_model: Optional[str] = None
     
     class Config:
         env_file = ".env"

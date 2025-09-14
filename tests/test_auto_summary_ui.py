@@ -30,7 +30,6 @@ def override_get_db():
 
 
 app.dependency_overrides[get_db] = override_get_db
-client = TestClient(app)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -48,6 +47,14 @@ def setup_test_db():
     # クリーンアップ
     if os.path.exists(TEST_DB_PATH):
         os.remove(TEST_DB_PATH)
+
+
+
+@pytest.fixture(scope="function")
+def client():
+    """Create a TestClient after DB setup to ensure tables exist."""
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 @pytest.fixture
@@ -78,7 +85,7 @@ def test_document():
 
 
 @patch('app.api.routes.documents.llm_client.summarize_text')
-def test_document_detail_page_renders_with_auto_summary_section(mock_summarize, test_document):
+def test_document_detail_page_renders_with_auto_summary_section(mock_summarize, test_document, client):
     """ドキュメント詳細ページが要約セクションを表示状態でレンダリングされることを確認"""
     # Test document detail page
     response = client.get(f"/documents/{test_document.id}")
@@ -104,7 +111,7 @@ def test_document_detail_page_renders_with_auto_summary_section(mock_summarize, 
     assert 'class="hidden section-content' in html_content
 
 
-def test_summary_section_structure_in_html(test_document):
+def test_summary_section_structure_in_html(test_document, client):
     """要約セクションが正しい構造でHTMLに含まれることを確認"""
     # Get page HTML
     response = client.get(f"/documents/{test_document.id}")
