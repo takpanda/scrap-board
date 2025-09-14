@@ -1,0 +1,774 @@
+/* Dify-inspired Clean Design for Document Detail Page */
+
+/* Root Variables - Dify Authentic Color Palette */
+:root {
+    /* Dify Primary Brand Colors */
+    --dify-primary: #1C64F2;     /* Dify's signature blue */
+    --dify-primary-light: #3F83F8;
+    --dify-primary-hover: #1A56DB;
+    --dify-primary-dark: #1E429F;
+    
+    /* Dify Secondary Colors */
+    --dify-secondary: #8B5CF6;   /* Purple accent for badges */
+    --dify-accent: #06B6D4;      /* Cyan for highlights */
+    
+    /* Dify Gray Scale - Warmer tones */
+    --dify-gray-50: #FAFBFC;     /* Very light background */
+    --dify-gray-100: #F1F3F4;    /* Card backgrounds */
+    --dify-gray-200: #E4E7EA;    /* Borders */
+    --dify-gray-300: #D0D4D9;    /* Dividers */
+    --dify-gray-400: #9AA0A6;    /* Placeholder text */
+    --dify-gray-500: #6C7378;    /* Secondary text */
+    --dify-gray-600: #4A5056;    /* Primary text light */
+    --dify-gray-700: #2D3338;    /* Primary text */
+    --dify-gray-800: #1F2328;    /* Headers */
+    --dify-gray-900: #0F1419;    /* Strong emphasis */
+    
+    /* Dify Semantic Colors */
+    --dify-success: #16A34A;     /* Green for success states */
+    --dify-warning: #F59E0B;     /* Amber for warnings */
+    --dify-error: #DC2626;       /* Red for errors */
+    --dify-info: #0EA5E9;        /* Sky blue for info */
+    
+    /* Dify Borders & Shadows */
+    --dify-border-light: #E4E7EA;
+    --dify-border: #D0D4D9;
+    --dify-border-strong: #9AA0A6;
+    
+    /* Dify Shadows - Subtle & Clean */
+    --dify-shadow-xs: 0 1px 2px 0 rgb(31 35 40 / 0.04);
+    --dify-shadow-sm: 0 1px 3px 0 rgb(31 35 40 / 0.06), 0 1px 2px -1px rgb(31 35 40 / 0.04);
+    --dify-shadow: 0 4px 8px -2px rgb(31 35 40 / 0.08), 0 2px 4px -2px rgb(31 35 40 / 0.06);
+    --dify-shadow-md: 0 8px 16px -4px rgb(31 35 40 / 0.1), 0 4px 8px -4px rgb(31 35 40 / 0.08);
+    --dify-shadow-lg: 0 16px 24px -4px rgb(31 35 40 / 0.12), 0 8px 16px -8px rgb(31 35 40 / 0.1);
+    
+    /* Dify Surface Colors */
+    --dify-surface: #FFFFFF;
+    --dify-surface-hover: #FAFBFC;
+    --dify-surface-active: #F1F3F4;
+}
+
+/* Document Container - Dify Clean Background */
+.document-container {
+    background: var(--dify-gray-50);
+    min-height: 100vh;
+}
+
+/* Dify-style Cards with Authentic Styling */
+.dify-card {
+    background: var(--dify-surface);
+    border: 1px solid var(--dify-border-light);
+    border-radius: 12px;
+    box-shadow: var(--dify-shadow-sm);
+    transition: all 0.15s ease-out;
+}
+
+.dify-card:hover {
+    box-shadow: var(--dify-shadow);
+    border-color: var(--dify-border);
+    transform: translateY(-1px);
+}
+
+/* Header Card - Refined Dify Style */
+.dify-header-card {
+    background: var(--dify-surface);
+    border: 1px solid var(--dify-border-light);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    transition: all 0.2s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.dify-header-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--dify-primary) 0%, var(--dify-accent) 50%, var(--dify-secondary) 100%);
+    opacity: 0.8;
+}
+
+.dify-header-card:hover {
+    box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.12), 0 2px 6px 0 rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
+/* Navigation Back Button - Dify Style */
+.dify-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--dify-gray-600);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    transition: all 0.15s ease-out;
+    margin-bottom: 2rem;
+    background: var(--dify-surface);
+    border: 1px solid var(--dify-border-light);
+}
+
+.dify-back-btn:hover {
+    background: var(--dify-surface-hover);
+    color: var(--dify-gray-700);
+    border-color: var(--dify-border);
+    box-shadow: var(--dify-shadow-xs);
+}
+
+/* Typography - Dify Clean */
+.dify-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--dify-gray-900);
+    line-height: 1.25;
+    margin-bottom: 1.5rem;
+}
+
+.dify-section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--dify-gray-800);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dify-section-title::before {
+    content: '';
+    width: 3px;
+    height: 20px;
+    background: linear-gradient(135deg, var(--dify-primary) 0%, var(--dify-primary-light) 100%);
+    border-radius: 2px;
+}
+
+/* Meta Information - Dify Style */
+.dify-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.dify-meta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--dify-gray-100);
+    color: var(--dify-gray-600);
+    padding: 0.375rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid var(--dify-border-light);
+    transition: all 0.15s ease-out;
+}
+
+.dify-meta-badge:hover {
+    background: var(--dify-surface-hover);
+    border-color: var(--dify-border);
+}
+
+/* Tags - Refined Dify Style (Better Spacing) */
+.dify-tag-primary {
+    background: var(--dify-primary);
+    color: white;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    box-shadow: 0 1px 3px 0 rgba(28, 100, 242, 0.2);
+    transition: all 0.15s ease-out;
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.dify-tag-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px 0 rgba(28, 100, 242, 0.3);
+}
+
+.dify-tag-secondary {
+    background: var(--dify-gray-50);
+    color: var(--dify-gray-600);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    border: 1px solid var(--dify-border-light);
+    transition: all 0.15s ease-out;
+    display: inline-flex;
+    align-items: center;
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.dify-tag-secondary:hover {
+    background: var(--dify-surface-hover);
+    color: var(--dify-gray-700);
+    border-color: var(--dify-border);
+}
+
+/* Buttons - Refined Dify Style (Smaller) */
+.dify-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.15s ease-out;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    line-height: 1.25;
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.dify-btn-primary {
+    background: var(--dify-primary);
+    color: white;
+    border-color: var(--dify-primary);
+    box-shadow: 0 1px 3px 0 rgba(28, 100, 242, 0.2);
+}
+
+.dify-btn-primary:hover {
+    background: var(--dify-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px 0 rgba(28, 100, 242, 0.3);
+}
+
+.dify-btn-secondary {
+    background: var(--dify-surface);
+    color: var(--dify-primary);
+    border-color: var(--dify-border);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.dify-btn-secondary:hover {
+    background: var(--dify-surface-hover);
+    border-color: var(--dify-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.1);
+}
+
+.dify-btn-outline {
+    background: transparent;
+    color: var(--dify-gray-600);
+    border-color: var(--dify-border);
+    box-shadow: none;
+}
+
+.dify-btn-outline:hover {
+    background: var(--dify-surface-hover);
+    color: var(--dify-gray-700);
+    border-color: var(--dify-border-strong);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Action Button Grid - Refined Layout */
+.dify-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    align-items: center;
+}
+
+/* Content Sections - Dify Style */
+.dify-content-card {
+    background: var(--dify-surface);
+    border: 1px solid var(--dify-border-light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--dify-shadow-sm);
+    transition: all 0.15s ease-out;
+}
+
+.dify-content-card:hover {
+    box-shadow: var(--dify-shadow);
+    border-color: var(--dify-border);
+}
+
+.dify-content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--dify-border-light);
+}
+
+.dify-toggle-btn {
+    background: var(--dify-gray-100);
+    color: var(--dify-gray-600);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--dify-border-light);
+    cursor: pointer;
+    transition: all 0.15s ease-out;
+}
+
+.dify-toggle-btn:hover {
+    background: var(--dify-surface-hover);
+    color: var(--dify-gray-700);
+    border-color: var(--dify-border);
+    box-shadow: var(--dify-shadow-xs);
+}
+
+/* Content Text - Dify Style */
+.dify-content-text {
+    background: var(--dify-gray-50);
+    border: 1px solid var(--dify-border-light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    color: var(--dify-gray-700);
+    line-height: 1.7;
+    font-size: 1rem;
+}
+
+/* Summary Section - Dify Accent */
+.dify-summary-container {
+    background: linear-gradient(135deg, var(--dify-gray-50) 0%, var(--dify-surface) 100%);
+    border: 1px solid var(--dify-border-light);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.dify-summary-badge {
+    background: linear-gradient(135deg, var(--dify-secondary) 0%, #A855F7 100%);
+    color: white;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--dify-shadow-xs);
+}
+
+.dify-summary-content {
+    color: var(--dify-gray-700);
+    line-height: 1.7;
+    font-size: 1rem;
+}
+
+/* Similar Documents Grid Container */
+#similar-documents {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    width: 100%;
+}
+
+/* Override for responsive grid */
+@media (min-width: 640px) {
+    #similar-documents {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 768px) {
+    #similar-documents {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    #similar-documents {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1280px) {
+    #similar-documents {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (min-width: 1536px) {
+    #similar-documents {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}
+
+/* Similar Documents - Horizontal Compact Cards */
+.dify-similar-card {
+    background: var(--dify-surface);
+    border: 1px solid var(--dify-border-light);
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.15s ease-out;
+    position: relative;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.dify-similar-card:hover {
+    box-shadow: var(--dify-shadow);
+    border-color: var(--dify-border);
+    transform: translateY(-1px);
+}
+
+.dify-similar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.dify-similar-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--dify-text-primary);
+    line-height: 1.4;
+    margin-bottom: 0.375rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    word-break: break-word;
+}
+
+.dify-similar-title a {
+    color: var(--dify-gray-900);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.dify-similar-title a:hover {
+    color: var(--dify-primary);
+}
+
+.dify-similarity-score {
+    background: var(--dify-success);
+    color: white;
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+    height: fit-content;
+}
+
+.dify-similar-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    flex-shrink: 0;
+}
+
+.dify-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1875rem;
+    font-size: 0.6875rem;
+    color: var(--dify-gray-500);
+}
+
+.dify-similar-preview {
+    margin-bottom: 0.75rem;
+    color: var(--dify-gray-600);
+    font-size: 0.75rem;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+}
+
+.dify-similar-actions {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: auto;
+    flex-shrink: 0;
+    width: 100%;
+    padding-top: 0.375rem;
+}
+
+.dify-action-link {
+    text-decoration: none;
+    color: var(--dify-primary);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    flex: 1;
+    text-align: center;
+    transition: all 0.15s ease-out;
+    cursor: pointer;
+    white-space: nowrap;
+    min-width: 0;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    border: 1px solid transparent;
+}
+
+.dify-action-primary {
+    background: var(--dify-primary);
+    color: white;
+    border-color: var(--dify-primary);
+}
+
+.dify-action-primary:hover {
+    background: var(--dify-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(28, 100, 242, 0.3);
+}
+
+.dify-action-secondary {
+    background: var(--dify-gray-100);
+    color: var(--dify-gray-700);
+    border: 1px solid var(--dify-border);
+}
+
+.dify-action-secondary:hover {
+    background: var(--dify-gray-200);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading States */
+.dify-loading-line {
+    height: 1rem;
+    background: linear-gradient(90deg, var(--dify-gray-200) 25%, var(--dify-gray-300) 50%, var(--dify-gray-200) 75%);
+    background-size: 200% 100%;
+    border-radius: 4px;
+    animation: dify-shimmer 1.5s infinite;
+}
+
+@keyframes dify-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Empty State */
+.dify-empty-state {
+    grid-column: 1 / -1;
+    background: white;
+    border: 1px solid var(--dify-border);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+}
+
+.dify-empty-icon {
+    color: var(--dify-gray-400);
+    margin-bottom: 1rem;
+}
+
+.dify-empty-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--dify-gray-900);
+    margin: 0 0 0.5rem 0;
+}
+
+.dify-empty-description {
+    color: var(--dify-gray-600);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Error State */
+.dify-error-container {
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.dify-error-icon {
+    color: var(--dify-error);
+}
+
+.dify-error-text {
+    color: #DC2626;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dify-title {
+        font-size: 1.75rem;
+    }
+    
+    .dify-actions {
+        flex-direction: column;
+        gap: 0.375rem;
+    }
+    
+    .dify-btn {
+        justify-content: center;
+        padding: 0.5rem 0.875rem;
+        font-size: 0.75rem;
+    }
+    
+    .dify-similar-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .dify-similar-actions {
+        flex-direction: row;
+        gap: 0.25rem;
+        justify-content: space-between;
+    }
+    
+    .dify-similar-card {
+        padding: 0.875rem;
+        min-height: 140px;
+    }
+    
+    .dify-similar-title {
+        font-size: 0.75rem;
+        min-height: 1.5em;
+    }
+    
+    .dify-similar-preview {
+        font-size: 0.6875rem;
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+    }
+}
+
+/* Focus States for Accessibility */
+.dify-btn:focus,
+.dify-toggle-btn:focus {
+    outline: 2px solid var(--dify-primary);
+    outline-offset: 2px;
+}
+
+/* Document Meta Styles - Dify */
+.dify-document-meta {
+    margin-bottom: 1.5rem;
+}
+
+.dify-meta-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.dify-font-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.dify-font-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--dify-border-light);
+    border-radius: 8px;
+    background: var(--dify-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease-out;
+    color: var(--dify-gray-600);
+}
+
+.dify-font-btn:hover {
+    background: var(--dify-surface-hover);
+    border-color: var(--dify-border);
+    color: var(--dify-gray-700);
+}
+
+.dify-font-btn.active {
+    background: var(--dify-primary);
+    border-color: var(--dify-primary);
+    color: white;
+    box-shadow: var(--dify-shadow-xs);
+}
+
+/* Loading Animations - Dify Style */
+.dify-loading-line {
+    height: 16px;
+    background: linear-gradient(90deg, var(--dify-gray-200) 25%, var(--dify-gray-100) 50%, var(--dify-gray-200) 75%);
+    background-size: 200% 100%;
+    border-radius: 4px;
+    animation: dify-shimmer 1.5s infinite;
+}
+
+@keyframes dify-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Smooth Transitions - Dify Timing */
+* {
+    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+/* Large Screen Optimization for Similar Cards */
+@media (min-width: 1536px) {
+    .dify-similar-card {
+        height: 130px;
+        padding: 0.875rem;
+    }
+    
+    .dify-similar-title {
+        font-size: 0.8125rem;
+    }
+    
+    .dify-similar-preview {
+        font-size: 0.75rem;
+    }
+}

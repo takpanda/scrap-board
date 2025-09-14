@@ -1,0 +1,46 @@
+<div class="dify-document-meta" role="region" aria-label="Document metadata">
+  <h1 class="dify-title">{{ document.title }}</h1>
+  
+  <div class="dify-meta-grid">
+    {% if document.published_at %}
+      <div class="dify-meta-badge">
+        <i data-lucide="calendar" class="w-4 h-4"></i>
+        <time datetime="{{ document.published_at.isoformat() }}">{{ document.published_at.strftime('%Y-%m-%d') }}</time>
+      </div>
+    {% endif %}
+    {% if document.source %}
+      <div class="dify-meta-badge">
+        <i data-lucide="globe" class="w-4 h-4"></i>
+        <span>{{ document.source }}</span>
+      </div>
+    {% endif %}
+    {% if document.author %}
+      <div class="dify-meta-badge">
+        <i data-lucide="user" class="w-4 h-4"></i>
+        <span>{{ document.author }}</span>
+      </div>
+    {% endif %}
+  </div>
+  
+  <div class="dify-meta-actions">
+    <button class="dify-btn dify-btn-outline" aria-label="Copy URL" data-url="{{ request.url }}">
+      <i data-lucide="link" class="w-4 h-4"></i>
+      <span>URLをコピー</span>
+    </button>
+    
+    <div class="dify-font-controls">
+      <span class="text-sm font-medium text-gray-600 mr-3">文字サイズ:</span>
+      <div class="flex bg-gray-100 rounded-lg p-1">
+        <button class="dify-font-btn" data-size="small">
+          <i data-lucide="minus" class="w-3 h-3"></i>
+        </button>
+        <button class="dify-font-btn active" data-size="medium">
+          <i data-lucide="type" class="w-3 h-3"></i>
+        </button>
+        <button class="dify-font-btn" data-size="large">
+          <i data-lucide="plus" class="w-3 h-3"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
