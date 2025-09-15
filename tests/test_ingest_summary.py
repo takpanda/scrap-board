@@ -29,7 +29,7 @@ def test_ingest_url_saves_summary(tmp_path, monkeypatch):
     monkeypatch.setattr("app.services.llm_client.llm_client.generate_summary", fake_generate)
 
     with TestClient(app) as client:
-        response = client.post("/api/ingest/url", data={"url": sample_content["url"]})
+        response = client.post("/api/ingest/url", data={"url": sample_content["url"], "force": "true"})
         assert response.status_code == 200
         data = response.json()
         assert "document_id" in data

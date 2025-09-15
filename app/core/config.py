@@ -34,7 +34,7 @@ class Settings(BaseSettings):
 
     # 要約設定
     summary_mode: str = "sync"  # sync | async
-    summary_timeout_sec: int = 8
+    summary_timeout_sec: int = 30
     short_summary_max_chars: int = 1024
     medium_summary_max_chars: int = 4096
     summary_model: Optional[str] = None
