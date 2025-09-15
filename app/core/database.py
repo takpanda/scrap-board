@@ -6,6 +6,7 @@ from typing import Generator
 import uuid
 
 from app.core.config import settings
+import os
 
 # データベースエンジン
 engine = create_engine(
@@ -19,9 +20,51 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # ベースクラス
 Base = declarative_base()
 
-
+# Keep track of engines we've ensured tables for (avoid repeated create_all calls)
 def get_db() -> Generator[Session, None, None]:
     """データベースセッションを取得"""
+    # Ensure we operate on the sessionmaker/engine that tests may have set up.
+    # If SessionLocal already has a bound engine, use that. Otherwise create
+    # an engine from the active DB URL (env override preferred) and bind
+    # a new SessionLocal to it.
+    global SessionLocal, engine
+    bound_engine = getattr(SessionLocal, "bind", None)
+    # If there's no bound engine, or the bound engine uses a different
+    # DB URL than the one in the environment, recreate the engine so
+    # tests that set `DB_URL` at runtime are respected.
+    db_url = os.environ.get("DB_URL") or settings.db_url
+    current_engine_url = None
+    try:
+        if bound_engine is not None and hasattr(bound_engine, 'url'):
+            current_engine_url = str(bound_engine.url)
+    except Exception:
+        current_engine_url = None
+
+    if bound_engine is None or (db_url and current_engine_url and db_url != current_engine_url) or (bound_engine is not None and current_engine_url is None):
+        # prefer env var so pytest_configure/test fixtures can control DB
+        db_url = os.environ.get("DB_URL") or settings.db_url
+        try:
+            from sqlalchemy import create_engine as _create_engine
+
+            new_engine = _create_engine(
+                db_url,
+                connect_args={"check_same_thread": False} if "sqlite" in db_url else {},
+            )
+            engine = new_engine
+            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=new_engine)
+            bound_engine = new_engine
+        except Exception:
+            # fall back to existing module-level engine if creation fails
+            bound_engine = globals().get("engine")
+
+    # Ensure tables exist on the bound engine before creating sessions.
+    try:
+        if bound_engine is not None:
+            Base.metadata.create_all(bind=bound_engine)
+    except Exception:
+        # best-effort only
+        pass
+
     db = SessionLocal()
     try:
         yield db
@@ -137,4 +180,51 @@ class Feedback(Base):
 
 def create_tables():
     """データベーステーブルを作成"""
-    Base.metadata.create_all(bind=engine)
+    # Create missing tables/columns for development/testing environments.
+    # Use the DB URL from the environment (if set) so pytest-configured DBs
+    # are respected even if `settings` was initialized earlier.
+    try:
+        db_url = os.environ.get("DB_URL") or settings.db_url
+        from sqlalchemy import create_engine as _create_engine
+
+        create_engine_kwargs = {"connect_args": {"check_same_thread": False}} if "sqlite" in db_url else {}
+        local_engine = _create_engine(db_url, **create_engine_kwargs)
+        Base.metadata.create_all(bind=local_engine)
+    except Exception:
+        # best-effort fallback to module-level engine
+        try:
+            Base.metadata.create_all(bind=engine)
+        except Exception:
+            pass
+
+    # If using SQLite, ensure new summary columns exist on prebuilt DB files.
+    # Some test databases are committed to the repo and may lack the new columns.
+    try:
+        from urllib.parse import urlparse
+        import sqlite3
+        from app.core.config import settings
+
+        if settings.db_url.startswith("sqlite"):
+            # Extract path from sqlite URL like sqlite:///./test.db
+            db_path = settings.db_url.replace("sqlite:///", "")
+            if db_path and os.path.exists(db_path):
+                conn = sqlite3.connect(db_path)
+                cur = conn.cursor()
+                cur.execute("PRAGMA table_info(documents);")
+                existing_cols = {r[1] for r in cur.fetchall()} if cur else set()
+
+                needed = [
+                    ("short_summary", "TEXT"),
+                    ("medium_summary", "TEXT"),
+                    ("summary_generated_at", "TEXT"),
+                    ("summary_model", "TEXT"),
+                ]
+
+                for col, coltype in needed:
+                    if col not in existing_cols:
+                        cur.execute(f"ALTER TABLE documents ADD COLUMN {col} {coltype};")
+                conn.commit()
+                conn.close()
+    except Exception:
+        # Best-effort only — don't fail application start if migration step cannot run.
+        pass

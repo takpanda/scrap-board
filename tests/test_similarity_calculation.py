@@ -9,16 +9,16 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.main import app
 from app.core.database import Base, get_db, Document, Classification, Embedding
 
 # Mark all tests in this file as unit tests
 pytestmark = pytest.mark.unit
 
-# テスト用インメモリデータベース
+# Test DB setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_similarity_calculation.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 def override_get_db():
     try:
@@ -27,15 +27,20 @@ def override_get_db():
     finally:
         db.close()
 
-app.dependency_overrides[get_db] = override_get_db
-
 
 @pytest.fixture
 def client():
-    # テスト用データベースの作成
+    # Ensure DB schema exists for this test file
     Base.metadata.create_all(bind=engine)
-    with TestClient(app) as test_client:
+
+    # Import app lazily so dependency overrides apply correctly
+    from app.main import app as _app
+
+    _app.dependency_overrides[get_db] = override_get_db
+
+    with TestClient(_app) as test_client:
         yield test_client
+
     # テスト後にクリーンアップ
     Base.metadata.drop_all(bind=engine)
 
