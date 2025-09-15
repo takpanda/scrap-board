@@ -28,10 +28,19 @@ async def ingest_url(
     """URLからコンテンツを取り込み"""
     
     # 重複チェック
-    if not force:
-        existing = db.query(Document).filter(Document.url == url).first()
-        if existing:
+    existing = db.query(Document).filter(Document.url == url).first()
+    if existing:
+        if not force:
             return {"message": "URL already exists", "document_id": existing.id}
+        else:
+            # force が指定されている場合は既存レコードを削除してから再作成する
+            try:
+                db.delete(existing)
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Failed to delete existing document {existing.id} for force ingest: {e}")
+                raise HTTPException(status_code=500, detail="Failed to overwrite existing document")
     
     # コンテンツ抽出
     content_data = await content_extractor.extract_from_url(url)
