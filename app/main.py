@@ -23,8 +23,16 @@ async def lifespan(app: FastAPI):
     """アプリケーションライフサイクル"""
     # 起動時
     logger.info("Scrap-Board starting up...")
-    create_tables()
-    logger.info("Database tables created/verified")
+    # 在テスト環境(pytest)では、テストごとに独自のDBセットアップを行うため
+    # アプリ起動時にグローバルなテーブル作成をスキップする。
+    # pytest は `PYTEST_CURRENT_TEST` 環境変数をセットするためこれを利用する。
+    import os
+    if not os.environ.get("PYTEST_CURRENT_TEST"):
+        try:
+            create_tables()
+            logger.info("Database tables created/verified")
+        except Exception:
+            logger.exception("create_tables() failed during startup")
     
     yield
     

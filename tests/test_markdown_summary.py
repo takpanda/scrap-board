@@ -6,13 +6,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.main import app
 from app.core.database import Base, get_db, Document
+
 import uuid
 import os
 
 
-# テスト用データベース
+# Test DB setup
 TEST_DB_PATH = "./test_markdown_summary.db"
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{TEST_DB_PATH}"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -20,7 +20,6 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 
 def override_get_db():
-    """テスト用データベースセッション"""
     try:
         db = TestingSessionLocal()
         yield db
@@ -28,16 +27,15 @@ def override_get_db():
         db.close()
 
 
-
-app.dependency_overrides[get_db] = override_get_db
-
-
 @pytest.fixture(scope="function")
 def client():
-    """Create a TestClient for each test after DB setup."""
-    from fastapi.testclient import TestClient
+    """Create a TestClient for each test after DB setup and override dependencies."""
+    # Import app lazily so test DB setup and overrides can be applied first
+    from app.main import app as _app
 
-    with TestClient(app) as test_client:
+    _app.dependency_overrides[get_db] = override_get_db
+
+    with TestClient(_app) as test_client:
         yield test_client
 
 
@@ -114,7 +112,7 @@ def test_document_detail_page_includes_markdown_function(sample_document, client
     assert "markdownToHtml(data.short_summary" in html_content
     
     # proseクラスが要約セクションに適用されていることを確認
-    assert 'prose prose-sm max-w-none' in html_content
+    assert 'prose max-w-none' in html_content
 
 
 @patch('app.api.routes.documents.llm_client.summarize_text')

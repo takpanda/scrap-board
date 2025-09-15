@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.11]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-playwright
+          playwright install --with-deps
+
+      - name: Prepare test DB env
+        run: |
+          mkdir -p data
+          echo "DB_URL=sqlite:///./test.db" > .env.ci
+          export DB_URL=sqlite:///./test.db
+
+      - name: Run tests
+        env:
+          DB_URL: sqlite:///./test.db
+        run: |
+          pytest -q
+
+      - name: Upload test results (pytest junit)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-failures
+          path: junit-*.xml

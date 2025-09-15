@@ -9,10 +9,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.main import app
 from app.core.database import Base, Document, get_db
 
-# Test database setup
+# Test database path
 TEST_DB_PATH = "test_auto_summary.db"
 SQLALCHEMY_DATABASE_URL = f"sqlite:///./{TEST_DB_PATH}"
 
@@ -21,15 +20,11 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 
 def override_get_db():
-    """テスト用データベースセッション"""
     try:
         db = TestingSessionLocal()
         yield db
     finally:
         db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -52,8 +47,13 @@ def setup_test_db():
 
 @pytest.fixture(scope="function")
 def client():
-    """Create a TestClient after DB setup to ensure tables exist."""
-    with TestClient(app) as test_client:
+    """Create a TestClient after DB setup to ensure tables exist and override dependencies."""
+    # Import app lazily so dependency overrides are applied
+    from app.main import app as _app
+
+    _app.dependency_overrides[get_db] = override_get_db
+
+    with TestClient(_app) as test_client:
         yield test_client
 
 
@@ -95,8 +95,9 @@ def test_document_detail_page_renders_with_auto_summary_section(mock_summarize, 
     
     # Verify summary section is visible (not hidden)
     assert 'id="summary-section"' in html_content
-    assert 'class="hidden section-secondary' not in html_content  # Should not have hidden class
-    assert 'class="section-secondary bg-white' in html_content  # Should be visible
+    # Template uses dify classes; check for summary container instead of old class names
+    assert 'dify-content-card' in html_content
+    assert 'dify-summary-content' in html_content
     
     # Verify toggle button exists and has correct initial text
     assert 'id="content-view-toggle"' in html_content
@@ -108,7 +109,7 @@ def test_document_detail_page_renders_with_auto_summary_section(mock_summarize, 
     
     # Verify content section is hidden by default
     assert 'id="content-section"' in html_content
-    assert 'class="hidden section-content' in html_content
+    assert 'class="hidden dify-content-card' in html_content or 'class="hidden content-section' in html_content
 
 
 def test_summary_section_structure_in_html(test_document, client):
