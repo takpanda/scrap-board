@@ -130,19 +130,20 @@
                 'その他': 'tag-other'
             } %}
 
+            {% set ns = namespace(autostart_done=False) %}
             {% for document in documents %}
                 <div class="doc-card card-like bg-white rounded-xl border border-mist p-6 hover:shadow-lg transition-shadow">
                     <div class="flex items-center gap-4">
                         <div class="flex-1 min-w-0">
-                            <a href="/documents/{{ document.id }}" class="doc-title inline-flex items-center gap-3 text-lg font-semibold text-ink hover:text-emerald transition-colors truncate">
+                            <a href="/documents/{{ document.id }}" class="doc-title inline-flex items-center gap-2 text-lg font-semibold text-ink hover:text-emerald transition-colors truncate">
                                 <img
                                     src="{% if document.thumbnail_url %}/data/{{ document.thumbnail_url }}{% else %}/static/images/default-thumbnail.svg{% endif %}?v={{ document.updated_at.isoformat() if document.updated_at else '1' }}"
                                     alt="thumbnail"
                                     loading="lazy"
-                                    class="dify-thumb"
-                                    style="width:1.125rem;height:1.125rem;object-fit:cover;border-radius:6px;flex:0 0 auto;"
+                                    class="dify-thumb mr-2 w-4 h-4"
+                                    style="object-fit:cover;border-radius:6px;flex:0 0 auto;"
                                 />
-                                <span class="truncate">{{ document.title }}</span>
+                                &nbsp;<span class="truncate">{{ document.title }}</span>
                             </a>
                             <div class="article-divider mt-2 w-full h-1 bg-gray-400 rounded"></div>
 
@@ -191,9 +192,14 @@
 
                             {# Show AI-generated short summary if available, otherwise fall back to content_text preview #}
                             {% if document.short_summary %}
-                            <p class="mt-3 text-sm text-graphite leading-relaxed line-clamp-3">{{ document.short_summary|safe }}</p>
+                            <div class="mt-3 text-sm text-graphite leading-relaxed line-clamp-3" data-md-inline="{{ document.short_summary|e }}"></div>
+                            {# Hidden autostart marker for the first AI summary (no visible button) #}
+                            {% if not ns.autostart_done %}
+                                <span data-md-autostart="true" data-md="{{ document.short_summary|e }}" data-title="{{ document.title|e }}" class="hidden"></span>
+                                {% set ns.autostart_done = true %}
+                            {% endif %}
                             {% else %}
-                            <p class="mt-3 text-sm text-graphite leading-relaxed line-clamp-3">{{ document.content_text[:300] }}{% if document.content_text|length > 300 %}...{% endif %}</p>
+                            <div class="mt-3 text-sm text-graphite leading-relaxed line-clamp-3" data-md-inline="{{ (document.content_text[:300] ~ ('...' if document.content_text|length > 300 else ''))|e }}"></div>
                             {% endif %}
                         </div>
 
@@ -251,4 +257,18 @@
 <script>
     createIcons();
 </script>
+<!-- markdown-it from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+<script src="/static/js/markdown-preview.js"></script>
+<!-- Markdown Preview Modal -->
+<div id="md-preview-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center pt-12 px-4" aria-hidden="true">
+    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="relative bg-white rounded-lg shadow-lg max-w-3xl w-full z-10 overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 border-b">
+            <h3 id="md-preview-title" class="text-lg font-semibold text-ink">Markdown プレビュー</h3>
+            <button id="md-preview-close" class="text-graphite hover:text-ink px-2 py-1" aria-label="閉じる">✕</button>
+        </div>
+        <div id="md-preview-body" class="prose max-h-[60vh] overflow-auto p-4 text-graphite"></div>
+    </div>
+</div>
 {% endblock %}
