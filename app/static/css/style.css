@@ -380,6 +380,57 @@
     animation: spin 0.8s linear infinite;
 }
 
+/* Header action right-side wrapper to align copy and font controls next to primary actions */
+.dify-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: nowrap; /* prevent buttons from breaking into multiple lines on wide screens */
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.dify-actions > * {
+    flex: 0 0 auto; /* prevent children from growing or shrinking unexpectedly */
+}
+
+.dify-actions-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto; /* push to the right within flex container */
+    white-space: nowrap;
+}
+
+/* Prevent individual buttons from shrinking too much; allow container to scroll horizontally if needed */
+.dify-actions .dify-btn,
+.dify-actions-right .dify-btn,
+.dify-actions .dify-font-controls {
+    flex-shrink: 0;
+}
+
+.dify-actions > .dify-actions-right {
+    margin-left: auto !important; /* stronger ensure right-side group is pushed to the end */
+}
+
+/* Ensure meta actions don't overflow on small screens */
+@media (max-width: 640px) {
+    /* Allow wrapping on narrow screens to avoid overflow */
+    .dify-actions {
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 0.5rem;
+    }
+    .dify-actions-right {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+}
+}
 @keyframes spin {
     to {
         transform: translate(-50%, -50%) rotate(360deg);
@@ -684,6 +735,36 @@
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 2px solid rgba(43, 182, 115, 0.1);
+}
+
+/* Strong overrides to keep header action buttons on a single line */
+.dify-header-card .dify-actions {
+    flex-wrap: nowrap !important;
+    gap: 0.5rem !important;
+    margin-top: 0 !important;
+    align-items: center !important;
+}
+
+.dify-header-card .dify-actions > * {
+    flex: 0 0 auto !important;
+}
+
+.dify-header-card .dify-actions-right {
+    margin-left: auto !important;
+    display: inline-flex !important;
+    white-space: nowrap !important;
+}
+
+/* Slightly reduce button padding to prevent wrapping when space is tight */
+.dify-header-card .dify-actions .dify-btn,
+.dify-header-card .dify-actions-right .dify-btn {
+    padding: 0.5rem 0.75rem !important;
+}
+
+.dify-header-card .dify-font-controls {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
 }
 
 .content-text-enhanced {

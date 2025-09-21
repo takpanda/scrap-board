@@ -55,6 +55,29 @@
                     <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
                     <span>全文を表示</span>
                 </button>
+                
+                                    <!-- Right-side actions: Copy URL and font controls -->
+                                    <div class="dify-actions-right">
+                                        <button class="dify-btn dify-btn-outline copy-url-btn" aria-label="Copy URL" data-url="{{ request.url }}">
+                                            <i data-lucide="link" class="w-4 h-4"></i>
+                                            <span>URLをコピー</span>
+                                        </button>
+
+                                        <div class="dify-font-controls">
+                                            <span class="text-sm font-medium text-gray-600 mr-3">文字サイズ:</span>
+                                            <div class="flex bg-gray-100 rounded-lg p-1">
+                                                <button class="dify-font-btn" data-size="small">
+                                                    <i data-lucide="minus" class="w-3 h-3"></i>
+                                                </button>
+                                                <button class="dify-font-btn active" data-size="medium">
+                                                    <i data-lucide="type" class="w-3 h-3"></i>
+                                                </button>
+                                                <button class="dify-font-btn" data-size="large">
+                                                    <i data-lucide="plus" class="w-3 h-3"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
             </div>
         </div>
         
