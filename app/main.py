@@ -61,6 +61,8 @@ app = FastAPI(
 
 # 静的ファイル
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+# Serve uploaded/generated data assets (thumbnails, uploads)
+app.mount("/data", StaticFiles(directory="data"), name="data")
 
 # テンプレート
 templates = Jinja2Templates(directory="app/templates")

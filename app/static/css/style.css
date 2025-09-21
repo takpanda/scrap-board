@@ -308,6 +308,21 @@
     }
 }
 
+/* Ensure desktop layout: show nav and hide mobile toggle */
+@media (min-width: 769px) {
+    .nav {
+        display: flex !important;
+    }
+    .mobile-menu-btn, .action-mobile-toggle {
+        display: inline-flex !important;
+    }
+    .actions .add-text {
+        display: inline !important;
+    }
+    .actions .add-icon {
+        display: none !important;
+    }
+}
 /* Feedback button styles */
 .dify-feedback-btn {
     display: inline-flex;
@@ -398,11 +413,97 @@
 
 .dify-actions-right {
     display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-left: auto; /* push to the right within flex container */
-    white-space: nowrap;
+
+/* Wider similar document cards: use responsive grid to allow larger card width */
+.dify-similar-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
 }
+
+@media (min-width: 768px) {
+    .dify-similar-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.25rem;
+    }
+
+    /* Make each similar card take more horizontal space and improve text wrapping */
+    .dify-similar-card {
+        padding: 1.5rem;
+        border-radius: 0.875rem;
+        word-break: break-word;
+        white-space: normal;
+    }
+}
+
+/* Smaller action buttons inside similar document cards */
+.dify-similar-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.dify-action-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.375rem 0.6rem; /* smaller padding */
+    font-size: 0.8125rem; /* slightly smaller text */
+    border-radius: 0.5rem;
+    text-decoration: none;
+    border: 1px solid transparent;
+}
+
+.dify-action-link i {
+    width: 1rem; /* smaller icon */
+    height: 1rem;
+}
+
+.dify-action-primary {
+    background: #eef6ff;
+    color: #1f4ed8;
+    border-color: #dbeafe;
+}
+
+.dify-action-secondary {
+    background: #ffffff;
+    color: #374151;
+    border-color: #e5e7eb;
+}
+
+/* Title with thumbnail layout */
+.dify-title-with-thumb {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important; /* center vertically by default */
+    gap: 0.75rem;
+}
+
+/* Make thumbnail height dependent on title font-size: use em units so it scales */
+.dify-title {
+    font-size: 1.75rem; /* slightly larger title as in screenshot */
+    line-height: 1.05;
+    margin: 0;
+}
+
+.dify-thumb {
+    width: calc(1.75rem * 1.2); /* width proportional to title font-size */
+    height: calc(1.75rem * 1.2);
+    object-fit: cover;
+    border-radius: 8px;
+    flex: 0 0 auto;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.dify-thumb.dify-thumb-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
 
 /* Prevent individual buttons from shrinking too much; allow container to scroll horizontally if needed */
 .dify-actions .dify-btn,
@@ -429,7 +530,6 @@
         justify-content: flex-end;
         gap: 0.5rem;
     }
-}
 }
 @keyframes spin {
     to {
@@ -868,6 +968,19 @@
     gap: 2rem;
 }
 
+/* Prevent left group and actions from flexing unexpectedly */
+.header-content > .flex.items-center.space-x-6 {
+    flex: none;
+}
+
+.header-content .actions {
+    flex: none;
+    margin-left: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .logo {
     font-size: 1.5rem;
     font-weight: 700;
@@ -992,60 +1105,7 @@
     }
 }
 
-/* Mobile Menu Styles */
-.mobile-menu-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem;
-    color: #6b7280;
-    border: none;
-    background: none;
-    border-radius: 0.375rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.mobile-menu-btn:hover {
-    background: #f9fafb;
-    color: #374151;
-}
-
-.mobile-nav {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.mobile-nav.show {
-    display: block;
-}
-
-.mobile-nav-content {
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.mobile-nav-content a {
-    color: #6b7280;
-    text-decoration: none;
-    font-weight: 500;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    transition: all 0.2s ease;
-}
-
-.mobile-nav-content a:hover {
-    color: #374151;
-    background: #f9fafb;
-}
+/* mobile menu removed: related styles deleted */
 
 .search-container {
     flex: 1;
@@ -1277,10 +1337,14 @@ body.font-large .prose { font-size: 18px; }
     .feedback-right { grid-column: 1 / -1; }
 }
 
-/* Reduce icon sizes globally */
-[data-lucide] svg { width: 14px !important; height: 14px !important; }
-[data-lucide] { width: 14px !important; height: 14px !important; display:inline-flex; align-items:center; }
-/* Smaller action buttons in document header */
+    .nav {
+        display: none !important;
+    }
+
+    /* show mobile menu button on small viewports */
+    .mobile-menu-btn {
+        display: flex;
+    }
 .document-actions a,
 .document-actions button {
     padding: 0.45rem 0.6rem !important;
@@ -1779,5 +1843,85 @@ button *, button span, button [data-lucide] {
     .stats {
         grid-template-columns: repeat(2, 1fr);
         gap: 1rem;
+    }
+}
+
+/* Strong overrides to ensure thumbnail sits to the left of the title */
+.dify-header-card .dify-title-with-thumb {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 0.6rem !important;
+}
+
+.dify-header-card .dify-title-with-thumb .dify-thumb {
+    display: block !important;
+    flex: 0 0 auto !important;
+    height: calc(1.75rem * 1.2) !important;
+    width: auto !important;
+}
+
+.dify-header-card .dify-title-with-thumb .dify-title {
+    margin: 0 !important;
+    display: block !important;
+}
+
+/* Use grid to enforce left-right layout for thumbnail + title */
+.dify-header-card .dify-title-with-thumb {
+    display: grid !important;
+    grid-template-columns: auto 1fr !important;
+    align-items: center !important;
+    gap: 0.6rem !important;
+}
+
+.dify-header-card .dify-title-with-thumb .dify-thumb {
+    width: calc(1.75rem * 1.2) !important;
+    height: calc(1.75rem * 1.2) !important;
+    object-fit: cover !important;
+}
+
+}
+
+/* Final override: ensure thumbnail is always left of title and vertically centered */
+.dify-title-with-thumb, .dify-header-card .dify-title-with-thumb {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+}
+
+.dify-title-with-thumb .dify-thumb, .dify-header-card .dify-title-with-thumb .dify-thumb {
+    width: 56px !important;
+    height: 56px !important;
+    min-width: 56px !important;
+    object-fit: cover !important;
+    border-radius: 8px !important;
+}
+
+.dify-title-with-thumb .dify-title, .dify-header-card .dify-title-with-thumb .dify-title {
+    margin: 0 !important;
+    line-height: 1 !important;
+}
+
+/* Separator under title area */
+.dify-title-with-thumb {
+    padding-bottom: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+    border-bottom: 1px solid rgba(14,20,26,0.06) !important;
+}
+
+/* Slightly reduce padding on very small screens so line doesn't overflow */
+@media (max-width: 420px) {
+    .dify-title-with-thumb {
+        padding-bottom: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+        gap: 0.5rem !important;
+    }
+    .dify-title-with-thumb .dify-thumb {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
     }
 }

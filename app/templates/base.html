@@ -30,7 +30,7 @@
                 </a>
                 
                 <!-- Navigation -->
-                <nav class="nav hidden md:flex">
+                <nav class="nav">
                     <a href="/documents">ドキュメント</a>
                     <a href="/collections">コレクション</a>
                 </nav>
@@ -46,33 +46,19 @@
             </div>
             
             <!-- Actions -->
-            <div class="flex items-center space-x-3">
+            <div class="actions flex items-center space-x-3 relative">
                 <button 
                     onclick="showModal()"
-                    class="btn btn-primary"
+                    class="btn btn-primary action-add"
                 >
-                    <span class="hidden sm:inline">+ 追加</span>
-                    <span class="sm:hidden">+</span>
+                    <span class="add-text">+ 追加</span>
+                    <span class="add-icon">+</span>
                 </button>
                 
-                <!-- Mobile Menu Button -->
-                <button class="mobile-menu-btn md:hidden" onclick="toggleMobileMenu()">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                        <line x1="3" y1="12" x2="21" y2="12"></line>
-                        <line x1="3" y1="18" x2="21" y2="18"></line>
-                    </svg>
-                </button>
+                <!-- mobile menu removed -->
             </div>
         </div>
         
-        <!-- Mobile Navigation -->
-        <div id="mobile-menu" class="mobile-nav md:hidden">
-            <nav class="mobile-nav-content">
-                <a href="/documents">ドキュメント</a>
-                <a href="/collections">コレクション</a>
-            </nav>
-        </div>
     </header>
     
     <!-- Main Content -->
@@ -215,23 +201,7 @@
             }
         });
         
-        // Mobile menu toggle function
-        function toggleMobileMenu() {
-            const mobileMenu = document.getElementById('mobile-menu');
-            mobileMenu.classList.toggle('show');
-        }
-        
-        // Close mobile menu when clicking outside
-        document.addEventListener('click', function(event) {
-            const mobileMenu = document.getElementById('mobile-menu');
-            const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
-            
-            if (mobileMenu && mobileMenuBtn && 
-                !mobileMenu.contains(event.target) && 
-                !mobileMenuBtn.contains(event.target)) {
-                mobileMenu.classList.remove('show');
-            }
-        });
+        // mobile menu removed - no toggle functions remain
     </script>
 </body>
 </html>
