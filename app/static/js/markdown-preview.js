@@ -40,7 +40,10 @@ function renderInlineMarkdown(root=document) {
     const p = ensureParser();
     (root.querySelectorAll ? root.querySelectorAll('[data-md-inline]') : []).forEach(el => {
         const md = el.getAttribute('data-md-inline') || '';
-        el.innerHTML = p.renderInline(md);
+        // Use full render so block-level Markdown (headers, lists, paragraphs)
+        // are preserved in the preview area. `renderInline` strips block
+        // elements which caused headings and other blocks to not appear.
+        el.innerHTML = p.render(md);
     });
 }
 
