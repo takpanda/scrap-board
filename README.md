@@ -102,6 +102,27 @@ EMBED_MODEL=your-local-embed-model
 TIMEOUT_SEC=30
 ```
 
+## Periodic External Ingest — ポストプロセッシング
+
+- **目的**: ドキュメントを取り込んだ直後に非同期で要約（短いサマリ）と埋め込み（ベクトル）を生成し、検索とUI表示に即座に反映できるようにします。
+- **実装概要**: `app/services/postprocess.py` にて、挿入後に `kick_postprocess_async(document_id)` を呼び出し、バックグラウンドスレッドで `llm_client.generate_summary` と `llm_client.create_embedding` を実行します。これは取り込み経路（`app/services/ingest_worker.py`）から呼ばれます。
+- **データベース**: 開発用SQLiteではスキーマ互換性のため `app/core/database.py` の `create_tables()` が追加カラム（`source`, `original_url`, `thumbnail_url`, `fetched_at`, `short_summary` など）を確認・作成します。
+
+### 確認手順（ローカル）
+
+- 仮想環境をアクティブにする (fish):
+	- `source .venv/bin/activate.fish`
+- 手動テストスクリプト:
+	- `python scripts/test_postprocess.py` を実行すると、テスト用ドキュメントを挿入してポストプロセスの結果（短い要約と埋め込みの保存）を標準出力で確認できます。
+- 自動テスト:
+	- `pytest tests/test_postprocess.py -q` でユニットテストを実行できます（テストは `llm_client` をモックして高速に実行します）。
+
+### 運用上の注意
+
+- 現状は軽量なデーモンスレッドで非同期処理を行っています。高負荷・大量取り込みを行う場合は、Celery/RQ などのワーカーキューを導入して処理の信頼性と再試行を担保してください。
+- 埋め込みの永続化先は現在SQLiteのテーブルです。将来的にはFAISSやMilvus、Weaviateなどのベクトルストア統合を検討してください。
+
+
 ## ライセンス
 
 MIT License

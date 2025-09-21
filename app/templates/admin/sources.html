@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Emergency CSS for button visibility -->
+<link rel="stylesheet" href="/static/css/emergency-fix.css">
+
+<div class="max-w-7xl mx-auto px-6 py-8">
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">ソース管理</h1>
+        <p class="mt-2 text-gray-600">フィードや外部ソースの登録・スケジュール・有効/無効の管理を行います。</p>
+      </div>
+      <div class="text-sm text-gray-500">
+        合計: <span id="source-count" class="font-semibold text-gray-900">{{ sources|length }}</span> 件
+      </div>
+    </div>
+    
+    <!-- Search and Filter -->
+    <div class="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+      <div class="flex flex-col sm:flex-row gap-4">
+        <div class="flex-1">
+          <div class="relative">
+            <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+            <input 
+              id="search-input" 
+              type="text" 
+              placeholder="ソース名で検索..." 
+              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            >
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <select id="type-filter" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+            <option value="">全タイプ</option>
+            <option value="rss">RSS</option>
+            <option value="qiita">Qiita</option>
+            <option value="hatena">Hatena</option>
+            <option value="other">Other</option>
+          </select>
+          <select id="status-filter" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+            <option value="">全状態</option>
+            <option value="enabled">有効</option>
+            <option value="disabled">無効</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+    <!-- Main content -->
+    <div class="lg:col-span-3">
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div class="p-6 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">登録済みソース</h2>
+        </div>
+        <div class="p-6">
+          <div id="sources-list" hx-get="/api/admin/sources/?html=1" hx-trigger="load" hx-swap="outerHTML:closest #sources-list">
+            {% if sources %}
+              {% include 'admin/_sources_list.html' %}
+            {% else %}
+              <div class="text-center py-12 text-gray-500">
+                <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-4 text-gray-300"></i>
+                <p>登録されたソースがありません</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="lg:col-span-1">
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm sticky top-6">
+        <div class="p-6 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+            <i data-lucide="plus-circle" class="w-5 h-5 mr-2 text-emerald-600"></i>
+            新規ソース
+          </h2>
+        </div>
+        <div class="p-6">
+          <p class="text-sm text-gray-600 mb-6">RSS等の外部ソースを登録してください。cronスケジュールは省略可能です。</p>
+          
+          <form id="create-source-form" method="post" action="/api/admin/sources/?html=1" hx-post="/api/admin/sources/?html=1" hx-swap="outerHTML:closest #sources-list" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                ソース名 <span class="text-red-500">*</span>
+              </label>
+              <input 
+                name="name" 
+                required 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" 
+                placeholder="例: Tech Blog RSS" 
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                タイプ <span class="text-red-500">*</span>
+              </label>
+              <select 
+                name="type" 
+                required 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+              >
+                <option value="rss">RSS</option>
+                <option value="qiita">Qiita</option>
+                <option value="hatena">Hatena</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                cronスケジュール（任意）
+              </label>
+              <input 
+                name="cron_schedule" 
+                placeholder="例: 0 3 * * * または @daily" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" 
+              />
+              <p class="mt-1 text-xs text-gray-500">空欄の場合は手動実行のみ</p>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                URL（任意）
+              </label>
+              <input
+                name="url"
+                placeholder="例: https://example.com/feed.xml"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              />
+              <p class="mt-1 text-xs text-gray-500">フェードやAPIのエンドポイントURLを指定します（任意）。</p>
+            </div>
+            
+            <button 
+              type="submit" 
+              class="w-full bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors font-medium flex items-center justify-center"
+              style="color: white !important; font-weight: 500 !important; background-color: #059669 !important; min-height: 40px !important;"
+              data-confirm="このソースを作成します。よろしいですか？"
+            >
+              <i data-lucide="plus" class="w-4 h-4 mr-2 flex-shrink-0" style="color: white !important; fill: white !important; stroke: white !important;"></i>
+              <span style="color: white !important; font-size: 14px !important; font-weight: 500 !important; display: inline-block !important;">ソースを作成</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+<script>
+  // Initialize icons
+  createIcons();
+
+  // Debug: Check if button text is visible
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Admin page loaded');
+    
+    // Wait a bit for CSS to load
+    setTimeout(() => {
+      // Check all buttons
+      const buttons = document.querySelectorAll('button');
+      console.log(`Found ${buttons.length} buttons`);
+      
+      buttons.forEach((btn, i) => {
+        const text = btn.textContent.trim();
+        const spans = btn.querySelectorAll('span');
+        const computedStyle = getComputedStyle(btn);
+        
+        console.log(`Button ${i}: text="${text}", spans=${spans.length}`);
+        console.log(`Button ${i} color: ${computedStyle.color}, bg: ${computedStyle.backgroundColor}`);
+        
+        // Force visibility for submit buttons
+        if (btn.type === 'submit') {
+          console.log('Found submit button, forcing styles...');
+          btn.style.color = 'white';
+          btn.style.backgroundColor = '#059669';
+          btn.style.minHeight = '40px';
+          btn.style.border = '2px solid red';
+          btn.style.fontFamily = 'system-ui, sans-serif';
+          
+          spans.forEach(span => {
+            span.style.color = 'white';
+            span.style.fontWeight = '500';
+            span.style.fontSize = '14px';
+            span.style.display = 'inline-block';
+            span.style.opacity = '1';
+            span.style.visibility = 'visible';
+            console.log(`Forced styling on span: "${span.textContent}"`);
+          });
+          
+          // Add test text if button appears empty
+          if (!text || text.length < 3) {
+            console.warn('Button appears empty, adding fallback text');
+            btn.innerHTML = '<span style="color: white; font-size: 14px;">ソースを作成</span>';
+          }
+        }
+      });
+      
+      // Specifically check the create button
+      const createBtn = document.querySelector('button[type="submit"]');
+      if (createBtn) {
+        console.log('Create button found:', createBtn.textContent);
+        console.log('Create button innerHTML:', createBtn.innerHTML);
+        console.log('Create button computed styles:', {
+          color: getComputedStyle(createBtn).color,
+          backgroundColor: getComputedStyle(createBtn).backgroundColor,
+          fontSize: getComputedStyle(createBtn).fontSize,
+          fontFamily: getComputedStyle(createBtn).fontFamily
+        });
+      } else {
+        console.error('Submit button not found!');
+      }
+    }, 100);
+  });
+
+  // Search and filter functionality
+  function initSearchAndFilter() {
+    const searchInput = document.getElementById('search-input');
+    const typeFilter = document.getElementById('type-filter');
+    const statusFilter = document.getElementById('status-filter');
+    const sourceCount = document.getElementById('source-count');
+
+    function filterSources() {
+      const searchTerm = searchInput.value.toLowerCase();
+      const typeValue = typeFilter.value;
+      const statusValue = statusFilter.value;
+      
+      const cards = document.querySelectorAll('.source-card');
+      let visibleCount = 0;
+
+      cards.forEach(card => {
+        const name = card.dataset.sourceName || '';
+        const type = card.dataset.sourceType || '';
+        const status = card.dataset.sourceStatus || '';
+
+        const matchesSearch = name.includes(searchTerm);
+        const matchesType = !typeValue || type === typeValue;
+        const matchesStatus = !statusValue || status === statusValue;
+
+        if (matchesSearch && matchesType && matchesStatus) {
+          card.style.display = 'flex';
+          visibleCount++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      sourceCount.textContent = visibleCount;
+    }
+
+    searchInput.addEventListener('input', filterSources);
+    typeFilter.addEventListener('change', filterSources);
+    statusFilter.addEventListener('change', filterSources);
+  }
+
+  // Form validation for cron schedule
+  function validateCronFormat(cronString) {
+    if (!cronString.trim()) return true; // Empty is allowed
+    
+    // Simple cron validation (5 or 6 fields)
+    const parts = cronString.trim().split(/\s+/);
+    if (parts.length < 5 || parts.length > 6) return false;
+    
+    // Check for common cron shortcuts
+    const shortcuts = ['@yearly', '@annually', '@monthly', '@weekly', '@daily', '@hourly'];
+    if (shortcuts.includes(cronString.trim())) return true;
+    
+    return true; // Basic validation passed
+  }
+
+  function initFormValidation() {
+    // Validate create form
+    const createForm = document.getElementById('create-source-form');
+    if (createForm) {
+      const cronInput = createForm.querySelector('input[name="cron_schedule"]');
+      if (cronInput) {
+        cronInput.addEventListener('input', function() {
+          const isValid = validateCronFormat(this.value);
+          if (isValid) {
+            this.classList.remove('border-red-300');
+            this.classList.add('border-mist');
+          } else {
+            this.classList.remove('border-mist');
+            this.classList.add('border-red-300');
+          }
+        });
+      }
+    }
+
+    // Validate edit forms (dynamic)
+    document.addEventListener('input', function(e) {
+      if (e.target.name === 'cron_schedule' && e.target.closest('.cron-form')) {
+        const isValid = validateCronFormat(e.target.value);
+        if (isValid) {
+          e.target.classList.remove('border-red-300');
+          e.target.classList.add('border-mist');
+        } else {
+          e.target.classList.remove('border-mist');
+          e.target.classList.add('border-red-300');
+        }
+      }
+    });
+  }
+
+  // Initialize icons
+  function initIcons() {
+    if (typeof createIcons === 'function') {
+      createIcons();
+    } else {
+      console.warn('lucide createIcons function not available');
+      // Add fallback text for buttons without visible icons
+      document.querySelectorAll('button[title]').forEach(btn => {
+        if (!btn.textContent.trim()) {
+          btn.textContent = btn.getAttribute('title') || btn.getAttribute('aria-label') || '操作';
+        }
+      });
+    }
+  }
+
+  // Initialize after DOM content loaded
+  document.addEventListener('DOMContentLoaded', function() {
+    initIcons();
+    initSearchAndFilter();
+    initFormValidation();
+  });
+
+  // Global confirm handler for buttons/forms with data-confirm
+  function initConfirmHandlers() {
+    if (window.__confirmHandlersInitialized) return;
+    window.__confirmHandlersInitialized = true;
+
+    // Attach global handlers once
+    document.addEventListener('click', function(e) {
+    // Normalize starting node: climb out of text nodes if needed
+    let node = e.target;
+    while (node && node.nodeType !== 1) {
+      node = node.parentNode;
+    }
+    if (!node) return;
+
+    // Find nearest ancestor element with data-confirm
+    let el = null;
+    if (typeof node.closest === 'function') {
+      el = node.closest('[data-confirm]');
+    } else {
+      let cur = node;
+      while (cur) {
+        if (cur.getAttribute && cur.getAttribute('data-confirm')) {
+          el = cur;
+          break;
+        }
+        cur = cur.parentElement;
+      }
+    }
+    if (!el) return;
+
+    // If it's a form submit button inside a form, let submit handler handle it
+    const message = el.getAttribute('data-confirm');
+    if (!message) return;
+
+    if (el.tagName === 'BUTTON' && el.type === 'submit' && el.form) {
+      return;
+    }
+
+    // Prevent default action and show modal asynchronously
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    showConfirmModal(message).then(function(confirmed) {
+      if (!confirmed) return;
+
+      // Temporarily remove data-confirm to avoid recursion
+      const prev = el.getAttribute('data-confirm');
+      el.removeAttribute('data-confirm');
+
+      try {
+        if (el.tagName === 'A' && el.href) {
+          window.location.href = el.href;
+        } else if (el.tagName === 'BUTTON' && el.type === 'submit' && el.form) {
+          // Submit the form programmatically
+          if (typeof el.form.requestSubmit === 'function') {
+            el.form.requestSubmit();
+          } else {
+            el.form.submit();
+          }
+        } else {
+          // Try to re-dispatch a click
+          el.click();
+        }
+      } finally {
+        // Restore attribute after short delay
+        setTimeout(() => {
+          if (prev) el.setAttribute('data-confirm', prev);
+        }, 50);
+      }
+    });
+    }, true);
+
+    // Form submit interception to handle data-confirm on submit buttons
+    document.addEventListener('submit', function(e) {
+      const form = e.target;
+      // Find submitter if supported (HTML5) or fallback to button[type=submit]
+      let submitter = null;
+      try { submitter = e.submitter || form.querySelector('button[type="submit"]'); } catch (err) { submitter = form.querySelector('button[type="submit"]'); }
+      if (!submitter) return;
+      const msg = submitter.getAttribute('data-confirm') || form.getAttribute('data-confirm');
+      if (!msg) return;
+
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      showConfirmModal(msg).then(function(confirmed) {
+        if (!confirmed) return;
+
+        // Temporarily remove data-confirm to avoid recursion
+        const prev = submitter.getAttribute('data-confirm') || form.getAttribute('data-confirm');
+        if (submitter.getAttribute('data-confirm')) submitter.removeAttribute('data-confirm');
+        if (form.getAttribute('data-confirm')) form.removeAttribute('data-confirm');
+
+        try {
+          if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
+        } finally {
+          setTimeout(() => {
+            if (prev) {
+              // Prefer restoring on submitter
+              if (submitter) submitter.setAttribute('data-confirm', prev);
+              else form.setAttribute('data-confirm', prev);
+            }
+          }, 50);
+        }
+      });
+    }, true);
+  }
+
+  // Simple in-page confirmation modal
+  function showConfirmModal(message) {
+    return new Promise(function(resolve) {
+      let modal = document.getElementById('inpage-confirm-modal');
+      if (!modal) {
+        // Create modal HTML
+        modal = document.createElement('div');
+        modal.id = 'inpage-confirm-modal';
+        modal.style.position = 'fixed';
+        modal.style.left = '0';
+        modal.style.top = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.4)';
+        modal.style.zIndex = '9999';
+
+        modal.innerHTML = `
+          <div style="background:#fff;padding:20px;border-radius:8px;max-width:480px;width:90%;box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+            <div id="inpage-confirm-message" style="margin-bottom:16px;color:#111;font-size:15px"></div>
+            <div style="display:flex;justify-content:flex-end;gap:8px">
+              <button id="inpage-confirm-cancel" style="padding:8px 12px;background:#f3f4f6;border-radius:6px;border:1px solid #e5e7eb;">キャンセル</button>
+              <button id="inpage-confirm-ok" style="padding:8px 12px;background:#059669;color:#fff;border-radius:6px;border:1px solid #059669;">実行</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('inpage-confirm-cancel').addEventListener('click', function() {
+          modal.style.display = 'none';
+          resolve(false);
+        });
+        document.getElementById('inpage-confirm-ok').addEventListener('click', function() {
+          modal.style.display = 'none';
+          resolve(true);
+        });
+      }
+
+      const msgEl = document.getElementById('inpage-confirm-message');
+      msgEl.textContent = message || '実行しますか？';
+      modal.style.display = 'flex';
+    });
+  }
+
+  // Form submit interception to handle data-confirm on submit buttons
+  
+  // Initialize confirm handlers and ensure they're present after HTMX swaps
+  document.addEventListener('DOMContentLoaded', function() {
+    initConfirmHandlers();
+  });
+
+  // Ensure handlers are attached even if DOMContentLoaded already fired
+  initConfirmHandlers();
+
+  // Re-initialize after HTMX updates
+  document.addEventListener('htmx:afterSwap', function() {
+    initIcons();
+    initSearchAndFilter();
+    initConfirmHandlers();
+  });
+</script>

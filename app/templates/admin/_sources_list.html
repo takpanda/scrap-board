@@ -1,0 +1,104 @@
+<div class="space-y-4">
+  {% for s in sources %}
+  <div class="source-card bg-white rounded-lg border border-gray-200 p-4 hover:border-emerald-300 hover:shadow-md transition-all duration-200" data-source-id="{{ s.id }}" data-source-name="{{ s.name|lower }}" data-source-type="{{ s.type }}" data-source-status="{{ 'enabled' if s.enabled else 'disabled' }}">
+    <div class="flex items-center justify-between">
+      <!-- Left: Main info -->
+      <div class="flex items-center space-x-4 flex-1">
+        {% set icon = 'rss' if s.type == 'rss' else 'code' if s.type == 'qiita' else 'bookmark' if s.type == 'hatena' else 'file-text' %}
+        <div class="flex-shrink-0">
+          <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+            <i data-lucide="{{ icon }}" class="w-5 h-5 text-emerald-600"></i>
+          </div>
+        </div>
+        
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center space-x-3">
+            <h3 class="text-lg font-semibold text-gray-900 truncate">{{ s.name }}</h3>
+            <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
+              {{ s.type }}
+            </span>
+          </div>
+          
+          <div class="mt-1 flex items-center space-x-4 text-sm text-gray-500">
+            <span class="cron-display">
+              <i data-lucide="clock" class="w-4 h-4 inline mr-1"></i>
+              {{ s.cron_schedule or '手動実行' }}
+            </span>
+            <span>ID: {{ s.id }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Status and actions -->
+      <div class="flex items-center space-x-3">
+        <!-- Status -->
+        <div>
+          {% if s.enabled %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+              <i data-lucide="check-circle" class="w-4 h-4 mr-1"></i>
+              有効
+            </span>
+          {% else %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+              <i data-lucide="pause-circle" class="w-4 h-4 mr-1"></i>
+              無効
+            </span>
+          {% endif %}
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex items-center space-x-2">
+          <button type="button" class="edit-btn px-3 py-1.5 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors border border-gray-200 text-sm flex items-center" aria-label="編集 {{ s.name }}" title="編集" style="color: #374151 !important;">
+            <i data-lucide="edit-2" class="w-4 h-4 mr-1 flex-shrink-0"></i>
+            <span style="color: inherit !important;">編集</span>
+          </button>
+          
+          <button hx-put="/api/admin/sources/{{ s.id }}?html=1" hx-vals='{"enabled": {{ 0 if s.enabled else 1 }}}' hx-swap="outerHTML:closest #sources-list" class="px-3 py-1.5 text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors border border-gray-200 text-sm flex items-center" aria-label="状態切替 {{ s.name }}" title="{{ '無効化' if s.enabled else '有効化' }}" style="color: #374151 !important;" data-confirm="{{ 'このソースを無効化します。よろしいですか？' if s.enabled else 'このソースを有効化します。よろしいですか？' }}">
+            <i data-lucide="{{ 'eye-off' if s.enabled else 'eye' }}" class="w-4 h-4 mr-1 flex-shrink-0"></i>
+            <span style="color: inherit !important;">{{ '無効化' if s.enabled else '有効化' }}</span>
+          </button>
+          
+          <button hx-delete="/api/admin/sources/{{ s.id }}?html=1" hx-swap="outerHTML:closest #sources-list" class="px-3 py-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors border border-red-200 text-sm flex items-center" aria-label="削除 {{ s.name }}" title="削除" style="color: #dc2626 !important;" data-confirm="このソースを削除します。復元できません。よろしいですか？">
+            <i data-lucide="trash-2" class="w-4 h-4 mr-1 flex-shrink-0"></i>
+            <span style="color: inherit !important;">削除</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit form (hidden by default) -->
+    <div class="cron-form mt-4 p-4 bg-gray-50 rounded-lg border-l-4 border-emerald-400" style="display:none;">
+      <form hx-put="/api/admin/sources/{{ s.id }}?html=1" hx-swap="outerHTML:closest #sources-list" class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">cron スケジュール</label>
+          <input name="cron_schedule" value="{{ s.cron_schedule or '' }}" placeholder="例: 0 3 * * * または @daily" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" />
+          <p class="mt-1 text-xs text-gray-500">空欄の場合は手動実行のみになります</p>
+        </div>
+        
+        <input type="hidden" name="name" value="{{ s.name }}" />
+        <input type="hidden" name="type" value="{{ s.type }}" />
+        <input type="hidden" name="enabled" value="{{ 1 if s.enabled else 0 }}" />
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">URL</label>
+          <input name="url" value="{{ s.config_map.url if s.config_map and s.config_map.url else (s.config_map.get('url') if s.config_map else '') }}" placeholder="例: https://example.com/feed.xml" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" />
+          <p class="mt-1 text-xs text-gray-500">フェードやAPIエンドポイントのURLを指定します（任意）。</p>
+        </div>
+        
+        <div class="flex items-center space-x-2">
+          <button type="submit" class="inline-flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors" style="color: white !important; background-color: #059669 !important;" data-confirm="この変更を保存します。よろしいですか？">
+            <i data-lucide="save" class="w-4 h-4 mr-1 flex-shrink-0"></i>
+            <span style="color: white !important;">保存</span>
+          </button>
+          <button type="button" class="cancel-edit inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors" style="color: #374151 !important; background-color: #f3f4f6 !important;">
+            <i data-lucide="x" class="w-4 h-4 mr-1 flex-shrink-0"></i>
+            <span style="color: inherit !important;">キャンセル</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Edit/Cancel handlers are bound by app/static/js/htmx-minimal.js -->
+</div>

@@ -218,6 +218,10 @@ def create_tables():
                     ("medium_summary", "TEXT"),
                     ("summary_generated_at", "TEXT"),
                     ("summary_model", "TEXT"),
+                    ("source", "TEXT"),
+                    ("original_url", "TEXT"),
+                    ("thumbnail_url", "TEXT"),
+                    ("fetched_at", "TEXT"),
                 ]
 
                 for col, coltype in needed:

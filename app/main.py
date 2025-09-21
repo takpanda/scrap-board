@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, Form, File, UploadFile, Depends, HTTPExcep
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 import os
 import logging
@@ -11,7 +12,8 @@ from markdown_it import MarkdownIt
 
 from app.core.config import settings
 from app.core.database import get_db, create_tables
-from app.api.routes import documents, ingest, collections, utils
+from app.services.scheduler import start_scheduler, stop_scheduler
+from app.api.routes import documents, ingest, collections, utils, admin_sources
 
 # ログ設定
 logging.basicConfig(level=getattr(logging, settings.log_level))
@@ -33,11 +35,21 @@ async def lifespan(app: FastAPI):
             logger.info("Database tables created/verified")
         except Exception:
             logger.exception("create_tables() failed during startup")
+        try:
+            start_scheduler()
+            logger.info("Scheduler started")
+        except Exception:
+            logger.exception("Failed to start scheduler")
     
     yield
     
     # 終了時
     logger.info("Scrap-Board shutting down...")
+    try:
+        stop_scheduler()
+        logger.info("Scheduler stopped")
+    except Exception:
+        logger.exception("Failed to stop scheduler")
 
 
 # FastAPIアプリケーション
@@ -69,6 +81,7 @@ app.include_router(documents.router, prefix="/api/documents", tags=["documents"]
 app.include_router(ingest.router, prefix="/api/ingest", tags=["ingest"])
 app.include_router(collections.router, prefix="/api/collections", tags=["collections"])
 app.include_router(utils.router, prefix="/api", tags=["utils"])
+app.include_router(admin_sources.router)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -164,6 +177,20 @@ async def reader_mode(
 async def health_check():
     """ヘルスチェック"""
     return {"status": "healthy", "version": settings.app_version}
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_sources_page(request: Request, db: Session = Depends(get_db)):
+    """ソース管理ページ（HTMX を使った CRUD UI を提供）"""
+    # サーバー側で一覧を取得して初回レンダリングに含める（JSが無効な環境向けフォールバック）
+    try:
+        result = db.execute(text("SELECT id,name,type,config,enabled,cron_schedule,last_fetched_at FROM sources"))
+        rows = result.fetchall()
+        sources = [dict(r._mapping) for r in rows]
+    except Exception:
+        sources = []
+
+    return templates.TemplateResponse("admin/sources.html", {"request": request, "sources": sources})
 
 
 if __name__ == "__main__":
