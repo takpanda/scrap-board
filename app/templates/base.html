@@ -115,6 +115,29 @@
         .doc-title-text { word-break: break-word; }
     </style>
     <style>
+        /* Defensive: ensure article cards and their children cannot force horizontal overflow
+           Apply to documents container articles to avoid affecting other pages like reader. */
+        #documents-container article, #documents-container article * {
+            box-sizing: border-box;
+            min-width: 0; /* allow children to shrink */
+            max-width: 100%; /* prevent child from exceeding card width */
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        #documents-container article img { max-width: 100%; height: auto; }
+        #documents-container article p, #documents-container article a, #documents-container article .prose {
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            max-width: 100%;
+        }
+        /* Ensure pill badges don't force width and truncate gracefully */
+        .pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+        .nowrap-tag { max-width: 8.5rem; }
+        @media (max-width: 640px) {
+            .nowrap-tag { max-width: 6.5rem; }
+        }
+    </style>
+    <style>
         /* Ensure thumbnail inside title container keeps a visible right margin
            even when global sb-card/grid rules apply. Use !important to override
            any competing rules from other stylesheets. */
