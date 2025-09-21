@@ -190,14 +190,16 @@
                             {% if document.classifications %}
                                 <div class="mt-3 flex items-start mb-3 tag-container" style="gap: 0.5rem;">
                                 {% set cat = document.classifications[0].primary_category %}
-                                    <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 whitespace-nowrap md:max-w-full {{ category_class_map.get(cat, 'bg-mist text-graphite') }}" title="{{ cat }}" aria-label="カテゴリ: {{ cat }}">
-                                    <i data-lucide="tag" class="w-3 h-3"></i>
-                                    <span class="">{{ cat }}</span>
+                                    <span class="pill nowrap-tag {{ category_class_map.get(cat, 'bg-mist text-graphite') }}" title="{{ cat }}" aria-label="カテゴリ: {{ cat }}">
+                                    <i data-lucide="tag" class="w-4 h-4 text-current"></i>
+                                    <span class="leading-none">{{ cat }}</span>
                                 </span>
                                 {% if document.classifications[0].tags %}
+                                    <div class="flex flex-wrap items-center gap-2">
                                     {% for tag in document.classifications[0].tags[:3] %}
-                                    <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 bg-mist/80 text-graphite whitespace-nowrap" title="{{ tag }}" aria-label="タグ: {{ tag }}">{{ tag }}</span>
+                                    <span class="pill nowrap-tag bg-mist/90 text-graphite" title="{{ tag }}" aria-label="タグ: {{ tag }}">{{ tag }}</span>
                                     {% endfor %}
+                                    </div>
                                 {% endif %}
                             </div>
                             {% endif %}
