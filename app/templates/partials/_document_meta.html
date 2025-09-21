@@ -1,13 +1,12 @@
 <div class="dify-document-meta" role="region" aria-label="Document metadata">
-  <div class="dify-title-with-thumb" style="display:flex;flex-direction:row;align-items:center;gap:.75rem;">
+  <div class="dify-title-with-thumb flex items-center gap-3">
     <img
       src="{% if document.thumbnail_url %}/data/{{ document.thumbnail_url }}{% else %}/static/images/default-thumbnail.svg{% endif %}?v={{ document.updated_at.isoformat() if document.updated_at else '1' }}"
       alt="thumbnail"
-      class="dify-thumb"
+      class="dify-thumb w-14 h-14 flex-shrink-0 rounded-md object-cover"
       loading="lazy"
-      style="width:56px;height:56px;min-width:56px;object-fit:cover;border-radius:8px;display:block;"
     />
-    <h1 class="dify-title" style="margin:0;line-height:1;">{{ document.title }}</h1>
+    <h1 class="dify-title min-w-0 truncate" style="margin:0;line-height:1;">{{ document.title }}</h1>
   </div>
   
   <div class="dify-meta-grid">
@@ -20,7 +19,7 @@
     {% if document.source %}
       <div class="dify-meta-badge">
         <i data-lucide="globe" class="w-4 h-4"></i>
-        <span>{{ document.source }}</span>
+        <span>{{ '手動' if document.source == 'manual' else document.source }}</span>
       </div>
     {% endif %}
     {% if document.author %}

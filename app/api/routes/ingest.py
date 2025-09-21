@@ -58,6 +58,12 @@ async def ingest_url(
         logger.debug("Thumbnail fetch failed for %s", url)
 
     document = Document(**content_data)
+    # 手動取り込みであることを明示的に記録
+    try:
+        document.source = "manual"
+    except Exception:
+        # 安全側: もし Document に source 属性がない場合は無視
+        logger.debug("Document model has no 'source' attribute; skipping manual source tag")
     db.add(document)
     db.commit()
     db.refresh(document)
@@ -118,6 +124,11 @@ async def ingest_pdf(
         
         # ドキュメント保存
         document = Document(**content_data)
+        # 手動取り込みであることを明示的に記録
+        try:
+            document.source = "manual"
+        except Exception:
+            logger.debug("Document model has no 'source' attribute; skipping manual source tag")
         db.add(document)
         db.commit()
         db.refresh(document)
