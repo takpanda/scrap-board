@@ -1,6 +1,20 @@
 /* Custom styles for Scrap-Board - Modern Design Update */
 /* Note: This file works alongside Tailwind CSS */
 
+/* Accessibility helpers */
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+
 /* Enhanced Color system - modern palette */
 :root {
     --ink: #0B1221;
@@ -981,17 +995,33 @@
     gap: 0.5rem;
 }
 
+/* Ensure header single-line layout behaves: logo fixed, search expands, actions fixed */
+.header-content .search-container {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.header-content .actions {
+    flex: 0 0 auto;
+}
+
 .logo {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1f2937;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     text-decoration: none;
-    letter-spacing: -0.025em;
-    transition: color 0.2s ease;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.logo img {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
 }
 
 .logo:hover {
-    color: #3b82f6;
+    opacity: 0.9;
+    transform: translateY(-1px);
 }
 
 .nav {

@@ -51,7 +51,9 @@ def test_home_page(client):
     """ホームページのテスト"""
     response = client.get("/")
     assert response.status_code == 200
-    assert "Scrap-Board" in response.text
+    # ヘッダーのテキストはSVGロゴに置き換えられたので、imgタグとlogo.svg参照を検査する
+    assert "<img" in response.text
+    assert "/static/images/logo.svg" in response.text
 
 def test_documents_page(client):
     """ドキュメントページのテスト"""

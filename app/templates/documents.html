@@ -5,12 +5,12 @@
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-8">
     <!-- Header -->
-    <div class="flex justify-between items-center mb-4">
-        <div class="w-full">
-            <h1 class="text-2xl font-bold text-ink">ドキュメント一覧</h1>
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+            <div class="flex-1 min-w-0">
+            <h1 class="text-2xl font-bold text-ink whitespace-nowrap truncate">ドキュメント一覧</h1>
         </div>
         
-        <div class="flex items-center space-x-4">
+    <div class="flex items-center space-x-4 shrink-0 mt-3 md:mt-0">
             <!-- Sort Options -->
             <select class="px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald">
                 <option value="created_desc">作成日時（新しい順）</option>
@@ -27,11 +27,15 @@
                     <i data-lucide="grid" class="w-4 h-4"></i>
                 </button>
             </div>
+            <!-- Filters Toggle -->
+            <button id="filters-toggle" aria-expanded="false" aria-label="フィルタを表示" title="フィルタ" class="ml-2 p-2 bg-white border border-mist rounded-lg text-sm hover:bg-emerald/5 transition-colors inline-flex items-center justify-center">
+                <i data-lucide="sliders" class="w-4 h-4"></i>
+            </button>
         </div>
     </div>
     
     <!-- Filters -->
-    <div class="bg-white rounded-xl border border-mist p-4 mb-6">
+    <div id="filters-panel" class="hidden bg-white rounded-xl border border-mist p-4 mb-6">
         <div class="grid md:grid-cols-4 gap-4">
             <!-- Search -->
             <div>
@@ -251,6 +255,17 @@
 
 <script>
     createIcons();
+    (function(){
+        const btn = document.getElementById('filters-toggle');
+        const panel = document.getElementById('filters-panel');
+        if (!btn || !panel) return;
+        btn.addEventListener('click', function(){
+            const nowVisible = panel.classList.toggle('hidden') === false;
+            btn.setAttribute('aria-expanded', nowVisible.toString());
+            btn.classList.toggle('bg-emerald', nowVisible);
+            btn.classList.toggle('text-white', nowVisible);
+        });
+    })();
 </script>
 <!-- markdown-it from CDN -->
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
