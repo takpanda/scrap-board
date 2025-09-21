@@ -1469,6 +1469,20 @@ body.font-large .prose { font-size: 18px; }
     box-shadow: 0 8px 20px rgba(11,18,33,0.06);
 }
 
+/* Strong, specific rules for document list dividers to ensure visibility */
+.documents-divider, .article-divider {
+    /* Use border-top instead of relying solely on height to guarantee visibility */
+    border-top: 2px solid rgba(45, 55, 72, 0.12) !important; /* subtle neutral divider */
+    min-height: 4px !important;
+    display: block !important;
+    background-clip: padding-box !important;
+}
+
+/* Slightly darker variants when using Dify classes */
+.documents-divider.dify-dark, .article-divider.dify-dark {
+    border-top-color: rgba(15, 23, 42, 0.12) !important;
+}
+
 /* Stronger tag color for primary category */
 .tag-enhanced {
     background: linear-gradient(135deg, rgba(43,182,115,0.12), rgba(43,182,115,0.06));
@@ -1487,6 +1501,33 @@ body.font-large .prose { font-size: 18px; }
 
 .source-badge {
     box-shadow: 0 4px 12px rgba(11,18,33,0.06);
+}
+
+/* Fixes for category/tag layout in document cards */
+.doc-card > .flex > .flex-1,
+.doc-card .flex-1 {
+    min-width: 0;
+}
+
+.doc-card .mt-3.flex.items-center {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.doc-card .tag-enhanced,
+.doc-card .tag-secondary {
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.doc-card .tag-enhanced {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
 }
 
 .btn-primary {

@@ -5,8 +5,10 @@
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-8">
     <!-- Header -->
-    <div class="flex justify-between items-center mb-8">
-        <h1 class="text-2xl font-bold text-ink">ドキュメント一覧</h1>
+    <div class="flex justify-between items-center mb-4">
+        <div class="w-full">
+            <h1 class="text-2xl font-bold text-ink">ドキュメント一覧</h1>
+        </div>
         
         <div class="flex items-center space-x-4">
             <!-- Sort Options -->
@@ -130,11 +132,19 @@
 
             {% for document in documents %}
                 <div class="doc-card card-like bg-white rounded-xl border border-mist p-6 hover:shadow-lg transition-shadow">
-                    <div class="flex items-start gap-4">
+                    <div class="flex items-center gap-4">
                         <div class="flex-1 min-w-0">
-                            <a href="/documents/{{ document.id }}" class="doc-title text-lg font-semibold text-ink hover:text-emerald transition-colors block truncate">
-                                {{ document.title }}
+                            <a href="/documents/{{ document.id }}" class="doc-title inline-flex items-center gap-3 text-lg font-semibold text-ink hover:text-emerald transition-colors truncate">
+                                <img
+                                    src="{% if document.thumbnail_url %}/data/{{ document.thumbnail_url }}{% else %}/static/images/default-thumbnail.svg{% endif %}?v={{ document.updated_at.isoformat() if document.updated_at else '1' }}"
+                                    alt="thumbnail"
+                                    loading="lazy"
+                                    class="dify-thumb"
+                                    style="width:1.125rem;height:1.125rem;object-fit:cover;border-radius:6px;flex:0 0 auto;"
+                                />
+                                <span class="truncate">{{ document.title }}</span>
                             </a>
+                            <div class="article-divider mt-2 w-full h-1 bg-gray-400 rounded"></div>
 
                             {% set _has_meta = false %}
                             <div class="mt-2 text-sm text-graphite">
@@ -165,12 +175,15 @@
                             </div>
 
                             {% if document.classifications %}
-                            <div class="mt-3 flex items-center gap-3 flex-wrap">
+                            <div class="mt-3 flex flex-wrap items-start mb-3" style="gap: 0.5rem;">
                                 {% set cat = document.classifications[0].primary_category %}
-                                <span class="tag-enhanced {{ category_class_map.get(cat, 'tag-other') }}">{{ cat }}</span>
+                                <span class="dify-tag-primary {{ category_class_map.get(cat, 'tag-other') }}" title="{{ cat }}" aria-label="カテゴリ: {{ cat }}">
+                                    <i data-lucide="tag" class="w-3 h-3"></i>
+                                    {{ cat }}
+                                </span>
                                 {% if document.classifications[0].tags %}
                                     {% for tag in document.classifications[0].tags[:3] %}
-                                    <span class="tag-secondary text-xs">{{ tag }}</span>
+                                    <span class="dify-tag-secondary" title="{{ tag }}" aria-label="タグ: {{ tag }}">{{ tag }}</span>
                                     {% endfor %}
                                 {% endif %}
                             </div>

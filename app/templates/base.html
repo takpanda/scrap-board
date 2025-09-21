@@ -13,6 +13,18 @@
     
     <!-- Local CSS overrides -->
     <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Inline forceful overrides to ensure dividers render (temporary) -->
+    <style id="__mcp_inline_overrides">
+        .documents-divider, .article-divider {
+            border-top: 2px solid rgba(45, 55, 72, 0.12) !important;
+            min-height: 4px !important;
+            display: block !important;
+            background-clip: padding-box !important;
+        }
+        .documents-divider.dify-dark, .article-divider.dify-dark {
+            border-top-color: rgba(15, 23, 42, 0.12) !important;
+        }
+    </style>
     
     <!-- Local HTMX-like functionality -->
     <script src="/static/js/htmx-minimal.js"></script>
