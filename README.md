@@ -126,3 +126,8 @@ TIMEOUT_SEC=30
 ## ライセンス
 
 MIT License
+
+## 変更: カードのエッジ強調スタイル
+
+- **確認方法**: サーバーを起動後、`/documents` と `/` を開き、カードの角にグラデーションの境界とホバー時のグローが表示されることを確認してください。
+- **該当ファイル**: `app/static/css/style.css` の `.card-edge`、テンプレートは `app/templates/documents.html`, `app/templates/document_detail.html`, `app/templates/index.html` にクラス適用済みです。

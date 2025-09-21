@@ -799,6 +799,49 @@
     transition: all 0.2s ease;
 }
 
+/* Fix: explicit top-level .card-edge rules
+   Some rules were written using Sass-style nesting ("& .card-edge") and
+   remained in the CSS. Browsers don't understand the leading "&" selector,
+   so add explicit, high-specificity rules that match .card-edge directly. */
+.card-edge {
+    border-width: 2px;
+    border-style: solid;
+    border-color: transparent;
+    border-image-slice: 1;
+    border-image-source: linear-gradient(90deg, var(--emerald) 0%, var(--indigo) 100%);
+    position: relative;
+    transition: box-shadow 0.22s, transform 0.18s;
+    box-shadow: rgba(16, 185, 129, 0.06) 0px 6px 18px;
+    background-clip: padding-box;
+    z-index: 0;
+    overflow: visible !important;
+}
+
+.card-edge:hover {
+    transform: translateY(-4px);
+    box-shadow: rgba(16, 185, 129, 0.12) 0px 18px 40px, rgba(90, 111, 240, 0.06) 0px 6px 18px;
+}
+
+.card-edge:focus {
+    outline: none;
+    box-shadow: rgba(16, 185, 129, 0.08) 0px 0px 0px 4px;
+}
+
+/* Apply stronger combined rules for cards and articles */
+.card-edge.card-edge,
+article.card-edge,
+.dify-content-card.card-edge,
+.dify-header-card.card-edge {
+    mask: linear-gradient(rgb(255, 255, 255), rgb(255, 255, 255)) content-box exclude, linear-gradient(rgb(255, 255, 255), rgb(255, 255, 255));
+    border-width: 2px !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-image-source: linear-gradient(90deg, var(--emerald) 0%, var(--indigo) 100%) !important;
+    border-image-slice: 1 !important;
+    box-shadow: rgba(16, 185, 129, 0.1) 0px 22px 60px !important;
+}
+
+
 .metadata-item:hover {
     border-color: rgba(43, 182, 115, 0.3);
     background: rgba(43, 182, 115, 0.02);
@@ -1417,6 +1460,56 @@ body.font-large .prose { font-size: 18px; }
 .card-like:hover {
     transform: translateY(-3px);
     box-shadow: 0 12px 28px rgba(11,18,33,0.10);
+}
+
+/* Card Edge Emphasis: gradient border + subtle glow on hover */
+.card-edge {
+    border: 2px solid transparent; /* fallback */
+    border-image-slice: 1;
+    border-image-source: linear-gradient(90deg, var(--emerald), var(--indigo));
+    position: relative;
+    transition: box-shadow 0.22s ease, transform 0.18s ease;
+    box-shadow: 0 6px 18px rgba(16,185,129,0.06);
+    background-clip: padding-box;
+    z-index: 0;
+}
+
+.card-edge:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 40px rgba(16,185,129,0.12), 0 6px 18px rgba(90,111,240,0.06);
+}
+
+.card-edge:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(16,185,129,0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card-edge,
+    .card-edge:hover {
+        transition: none !important;
+        transform: none !important;
+    }
+}
+
+/* Stronger forced visual (higher specificity) to help during verification */
+.card-edge.card-edge, article.card-edge, .dify-content-card.card-edge, .dify-header-card.card-edge {
+    border: 2px solid transparent !important;
+    -webkit-mask: linear-gradient(#fff, #fff) content-box, linear-gradient(#fff, #fff);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    border-image-source: linear-gradient(90deg, var(--emerald) 0%, var(--indigo) 100%) !important;
+    border-image-slice: 1 !important;
+}
+
+.card-edge.card-edge {
+    box-shadow: 0 22px 60px rgba(16,185,129,0.10) !important;
+}
+
+/* Ensure edge styles are not clipped by overflow or stacking context */
+.card-edge {
+    overflow: visible !important;
+    z-index: 20 !important;
 }
 
 /* Left accent bar for doc cards */

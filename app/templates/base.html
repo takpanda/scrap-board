@@ -11,8 +11,10 @@
     <!-- Dify clean styles first -->
     <link rel="stylesheet" href="/static/css/dify-clean.css">
     
-    <!-- Local CSS overrides -->
-    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Local CSS overrides (cache-busted) -->
+    <link rel="stylesheet" href="/static/css/style.css?v=2">
+    <!-- card-edge fix: loaded after main styles to ensure overrides apply -->
+    <link rel="stylesheet" href="/static/css/card-edge-fix.css?v=1">
     <!-- Mobile overflow fixes -->
     <style>
         /* Box sizing reset */
