@@ -52,6 +52,52 @@ cp .env.example .env
 python -m app.database.init
 ```
 
+### DBマイグレーション
+
+ローカル開発環境（SQLite）でスキーマ変更を適用するための手順を示します。リポジトリには簡易的なマイグレーションスクリプトが `migrations/` に含まれています。運用環境ではAlembic等の正式なマイグレーションツールを導入してください。
+
+- **バックアップ（必須）**: 変更前にデータベースファイルのバックアップを作成します。fishシェル例:
+
+```fish
+mkdir -p data/backup
+cp data/scraps.db data/backup/scraps.db.$(date +%Y%m%d%H%M%S)
+```
+
+- **利用可能なマイグレーション**: `migrations/` ディレクトリにSQLファイルや適用用スクリプトが入っています。現在のリポジトリには例として:
+
+	- `migrations/001_add_summaries_to_documents.sql`
+	- `migrations/002_add_sources_and_thumbnails.sql`
+	- `migrations/apply_migration_002.py`（Pythonでの適用例）
+
+- **マイグレーションの適用（簡易スクリプト使用）**: 付属のスクリプトを使って適用できます。
+
+```bash
+# SQLファイルを直接適用する例（sqlite3が必要）
+sqlite3 data/scraps.db < migrations/001_add_summaries_to_documents.sql
+
+# Pythonスクリプトで適用する例
+python migrations/apply_migration_002.py
+```
+
+- **Alembicを使う（推奨・運用向け）**: 将来的な運用環境では `alembic` を導入してマイグレーション管理を行ってください。簡単な導入手順:
+
+```bash
+pip install alembic
+alembic init alembic
+# alembic.ini を編集して `sqlalchemy.url` を `sqlite:///./data/scraps.db` に設定
+alembic revision --autogenerate -m "describe change"
+alembic upgrade head
+```
+
+- **確認**: マイグレーション適用後にアプリが正常に起動するか確認します。
+
+```bash
+uvicorn app.main:app --reload
+# ログとエンドポイントを確認し、`/documents` などを操作してエラーがないことを確認
+```
+
+注意: 本リポジトリの簡易スクリプトはローカル開発・手元検証向けです。データ損失を避けるため、本番環境ではダウンタイム計画、トランザクション、ロールバック戦略、そして検証済みのバックアップを必ず用意してください。
+
 ### 4. LLMサービス起動 (別プロセス)
 
 **LM Studio (推奨):**
