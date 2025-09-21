@@ -213,7 +213,7 @@ def _fetch_hatena_items(config: Dict[str, Any]):
             url = config["url"]
         else:
             # generic hot entries endpoint (best-effort)
-            url = "https://b.hatena.ne.jp/entrylist.rss"
+            url = "https://b.hatena.ne.jp/hotentry/it.rss"
 
         parsed = feedparser.parse(url)
         for e in parsed.entries[:per_page]:

@@ -13,6 +13,7 @@ from app.core.config import settings
 from datetime import datetime
 import asyncio
 from app.core.database import SessionLocal
+from app.services.ingest_worker import _ensure_thumbnail_for_url
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -48,6 +49,14 @@ async def ingest_url(
         raise HTTPException(status_code=400, detail="Failed to extract content")
     
     # ドキュメント保存
+    # Try to ensure thumbnail (reuse existing ingest worker helper)
+    try:
+        thumb = _ensure_thumbnail_for_url(db, content_data.get("url"))
+        if thumb:
+            content_data["thumbnail_url"] = thumb
+    except Exception:
+        logger.debug("Thumbnail fetch failed for %s", url)
+
     document = Document(**content_data)
     db.add(document)
     db.commit()

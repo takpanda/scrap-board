@@ -189,7 +189,12 @@
                             </div>
                             {% endif %}
 
+                            {# Show AI-generated short summary if available, otherwise fall back to content_text preview #}
+                            {% if document.short_summary %}
+                            <p class="mt-3 text-sm text-graphite leading-relaxed line-clamp-3">{{ document.short_summary|safe }}</p>
+                            {% else %}
                             <p class="mt-3 text-sm text-graphite leading-relaxed line-clamp-3">{{ document.content_text[:300] }}{% if document.content_text|length > 300 %}...{% endif %}</p>
+                            {% endif %}
                         </div>
 
                         <div class="ml-4 flex flex-col gap-2">
