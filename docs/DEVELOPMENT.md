@@ -215,3 +215,26 @@ pytest -v
 - 検索機能での日本語クエリ処理
 - カテゴリ名など UI 要素の日本語表示
 - Reader Mode での日本語フォント最適化
+
+## 再スケジューリング
+
+ポストプロセス（要約・分類・埋め込み）を再実行したい既存ドキュメントを再キュー化するスクリプトがあります。
+
+例:
+```bash
+# 影響対象を確認 (dry-run)
+env PYTHONPATH=. python scripts/reschedule_postprocess.py --dry-run --limit 20
+
+# 実際に再キュー化する
+env PYTHONPATH=. python scripts/reschedule_postprocess.py --limit 100
+```
+
+オプション:
+- `--only-summaries`: 要約が空のドキュメントのみ対象
+- `--only-classifications`: 分類がないドキュメントのみ対象
+
+ドライランの説明:
+- `--dry-run` を指定すると、実際に `postprocess_jobs` テーブルへ行を作成せず、対象となるドキュメント数とサンプルIDを表示します。
+- 安全確認用に使い、まず影響範囲を確認してから実際の再キュー化を行ってください。
+- 実行時はアプリのモジュールを読み込めるように `PYTHONPATH=.` を付けるか、仮想環境を有効化した上で実行してください。
+
