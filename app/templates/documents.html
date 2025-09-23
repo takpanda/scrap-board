@@ -118,6 +118,34 @@
                     >
                 </div>
             </div>
+            
+            <!-- Tag Filter -->
+            <div>
+                <label class="block text-sm font-medium text-graphite mb-1">タグ</label>
+                <input 
+                    type="text" 
+                    name="tag"
+                    value="{{ tag if tag is defined else '' }}"
+                    placeholder="タグで絞り込み..."
+                    class="w-full px-3 py-2 border border-mist rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald"
+                    hx-get="/documents"
+                    hx-trigger="keyup changed delay:500ms"
+                    hx-include="[name='q'], [name='category'], [name='domain'], [name='from'], [name='to']"
+                    hx-target="#documents-container"
+                    hx-push-url="true"
+                >
+            </div>
+            
+            <!-- Active Tag Display (small) -->
+            <div class="md:col-span-4">
+                {% if tag %}
+                <div class="flex items-center gap-2 mt-2">
+                    <span class="text-sm text-graphite">フィルタ中:</span>
+                    <span class="pill" style="background-color:#ffe4e6;color:#9f1239;border-color:#fecdd3">{{ tag }}</span>
+                    <a href="/documents" class="text-sm text-graphite underline ml-2">解除</a>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
     
@@ -135,6 +163,7 @@
             } %}
 
             {% set ns = namespace(autostart_done=False) %}
+            {% set selected_tag = tag if tag is defined else '' %}
             {% for document in documents %}
                 <article tabindex="0" class="w-full bg-white rounded-xl border border-mist shadow-sm hover:shadow-lg transition-shadow hover:-translate-y-1 transform will-change-transform p-4 flex flex-col h-full card-edge">
                     <header class="flex items-start gap-4 flex-wrap">
@@ -176,8 +205,19 @@
                                     {{ cat }}
                                 </span>
                                 {% if document.classifications[0].tags %}
-                                    {% for tag in document.classifications[0].tags[:3] %}
-                                        <span class="pill nowrap-tag bg-mist/80 text-graphite border border-mist">{{ tag }}</span>
+                                    {% for t in document.classifications[0].tags[:3] %}
+                                        <a
+                                            href="/documents?tag={{ t }}"
+                                            class="pill nowrap-tag inline-block {% if selected_tag and selected_tag == t %}{{ '' }}{% else %}bg-mist/80 text-graphite border border-mist{% endif %}"
+                                            {% if selected_tag and selected_tag == t %}style="background-color:#fff1f2;color:#9f1239;border-color:#fecdd3"{% endif %}
+                                            hx-get="/documents"
+                                            hx-vals='{"tag": "{{ t }}"}'
+                                            hx-target="#documents-container"
+                                            hx-push-url="true"
+                                            title="{{ t }}でフィルタ"
+                                        >
+                                            {{ t }}
+                                        </a>
                                     {% endfor %}
                                 {% endif %}
                             {% endif %}

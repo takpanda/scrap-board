@@ -116,16 +116,25 @@ async def documents_page(
     request: Request,
     q: str = "",
     category: str = "",
+    tag: str = "",
     db: Session = Depends(get_db)
 ):
     """ドキュメント一覧ページ"""
     # 基本的なクエリ（後で改善）
-    from app.core.database import Document
+    from app.core.database import Document, Classification
     
     query = db.query(Document)
     
     if q:
         query = query.filter(Document.content_text.contains(q))
+
+    # タグによるフィルタ（SQLite の JSON 配列を考慮して json_extract + LIKE を利用）
+    if tag:
+        # Join classifications and filter where the tags JSON array contains the given tag string.
+        # This uses a best-effort SQLite json_extract + LIKE check which matches '"tag"' inside the JSON array text.
+        query = query.join(Classification).filter(
+            text("json_extract(classifications.tags, '$') LIKE :tag_like")
+        ).params(tag_like=f'%"{tag}"%')
     
     documents = query.order_by(Document.created_at.desc()).limit(50).all()
     
@@ -133,7 +142,8 @@ async def documents_page(
         "request": request,
         "documents": documents,
         "q": q,
-        "category": category
+        "category": category,
+        "tag": tag
     })
 
 
