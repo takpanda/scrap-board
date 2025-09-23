@@ -1,262 +1,145 @@
+
 # ポストプロセッシング（Postprocessing）
 
-このドキュメントはリポジトリ内のポストプロセッシング機能の実装概要、処理フロー、注意点、および改善提案をまとめたものです。
+このドキュメントはリポジトリ内のポストプロセッシング機能の実装概要、処理フロー、注意点、および改善提案を現在の実装に合わせて整理したものです。
 
 ## 概要
 
 ポストプロセッシングは、ドキュメントを取り込んだ直後に非同期で実行される処理群です。主に以下を実行します：
 
 - 短い要約（short summary）の生成
-- 埋め込み（embedding）の作成と保存
+- 埋め込み（embedding）の作成と保存（現状は全文を1チャンクとして保存）
 - コンテンツ分類（classification）の実行
 
-これにより、取り込んだドキュメントが検索やUI表示で即座に利用できるようになります。
+これにより、取り込んだドキュメントが検索やUI表示で利便性を得られます。
 
-## 実装フロー（現状）
+## 現行の実装フロー（コードに基づく）
 
-- ドキュメントの挿入は `app/services/ingest_worker.py` の `_insert_document_if_new` で行われる。
-- 挿入成功時に `_insert_document_if_new` は `kick_postprocess_async(doc_id)` を呼び出す。
-- `kick_postprocess_async` は `threading.Thread` をデーモンで起動し、`_process_doc_sync(doc_id)` を実行する。
-- `_process_doc_sync` の内部では以下を順に行う：
-  1. DBから `Document` を取得
-  2. 文章を要約用に整形（`content_extractor.prepare_text_for_summary`）
-  3. `llm_client.generate_summary` を `asyncio.run` 経由で呼び、結果を `Document.short_summary` に保存
-  4. `llm_client.create_embedding` を `asyncio.run` で呼び、`Embedding` テーブルに1チャンクとして保存
-  5. `llm_client.classify_content` を `asyncio.run` で呼び、`Classification` レコードを作成
-  6. 各ステップは個別に try/except で保護され、失敗はログに記録される
+- ドキュメントの挿入は `app/services/ingest_worker.py` の `_insert_document_if_new` で行われます。
+- 挿入後、まず `enqueue_job_for_document` を呼んで `postprocess_jobs` テーブルにジョブを登録します（DB-backed キュー）。
+- ジョブ登録に失敗した場合はフォールバックで `kick_postprocess_async(doc_id)` を呼び出します。フォールバックは即時にデーモンスレッドを起動して処理を試みます。
+- 永続化されたジョブは `app/services/postprocess_queue.py` のポーリングワーカー（`run_worker`）によって取得・処理されます。
+- ワーカーはジョブを取得すると `app/services/postprocess.py` の `process_doc_once(doc_id)` を呼び出します。`process_doc_once` は (success: bool, error: Optional[str]) を返します。
 
-## 関連ファイル
-
-- `app/services/postprocess.py` — ポストプロセス本体と `kick_postprocess_async`
-- `app/services/ingest_worker.py` — ドキュメント挿入とポストプロセス呼び出し
-- `app/services/llm_client.py` — 要約、埋め込み、分類のAPI呼び出しラッパ
-- `app/core/database.py` — `Document`, `Embedding`, `Classification` のスキーマ
-- `tests/test_postprocess.py` — 単体テスト（`llm_client` をモック）
-- `scripts/test_postprocess.py` — 手動確認用スクリプト
-
-## 利点
-
-- 実装がシンプルで分かりやすく、取り込みパスがブロッキングされない。
-- テストが存在し、`llm_client` をモックすることでCIでも検証可能。
-- 最小限の構成で早期に要約／埋め込みが得られるためUX向上に貢献する。
-
-## リスク・注意点
-
-- 現在はデーモンスレッド + `asyncio.run` の組み合わせで非同期処理を実装しているため、同時実行数が増えるとスレッド数とリソース消費が増大する。
-- デーモンスレッドはプロセス終了時に強制終了されるため、シャットダウン時の未完了ジョブが失われる可能性がある。
-- 失敗時のリトライや永続的なジョブ管理がなく、一時的なLLM障害で要約/埋め込みが欠落することがある。
-- 埋め込みは全文を1チャンクで作成する単純実装で、長文の分割や複数チャンク保存は未対応。
-- 分類のJSONパースはLLMの出力形式に依存しており、不正な出力に対して脆弱である。
-
-## 改善提案（優先度付き）
-
-### 高優先度（推奨）
-
-- ワーカーキューの導入（Celery / RQ / Dramatiq など）
-  - 利点: 再試行、可視化、スケーリング、ジョブ永続化が容易になる。
-- 失敗ジョブの再試行とエラー記録
-  - 失敗時に一定回数まで自動再試行し、それでも失敗する場合は `postprocess_failures` のようなテーブルかログに保存する。
-
-### 中優先度
-
-- 埋め込みのチャンク分割
-  - 長文を複数チャンクに分割して埋め込みを生成・保存する（各チャンクを `Embedding.chunk_id` で区分）。
-- 分類結果のバリデーション
-  - JSONスキーマチェックを導入し、期待形式でなければキーワードベースのフォールバックにフォールバックする。
-
-### 低優先度
-
-- Vector DB（FAISS/Milvus/Weaviate）への移行
-- ジョブ実行時のメトリクス（Prometheus 等）の導入
-
-## 短期的にできる安全強化（実装パッチ案）
-
-- `postprocess.py` に詳細なログ（job start / job end / elapsed_ms）を追加する。
-- `kick_postprocess_async` を `ThreadPoolExecutor` ベースに変更して同時実行数を制限する。
-- Embedding 保存時に重複チェック（document_id, chunk_id）を行う。
-
-## 推奨次ステップ
-
-- 運用目標に合わせて、まずはワーカーキュー（Celery など）への移行計画を立てる。
-- すぐに着手できる改善として、`ThreadPoolExecutor` 化とログ強化を実装し、並列度のコントロールと可観測性を向上させる。
-
----
-
-作成済み: `docs/postprocessing.md`
-
-追加でこのファイルに以下を含めてほしい場合は教えてください:
-- 実際のログ出力サンプル
-- Celery を使った簡単な移行サンプルコード
-- Embedding チャンク分割のサンプル実装
-
-## ワーカーキュー導入提案
-
-ポストプロセッシングの信頼性・拡張性を高めるためにワーカーキューの導入を推奨します。ここでは候補の比較、推奨構成、移行手順の概要、注意点を示します。
-
-### 候補比較
-
-- Celery
-  - 長所: 豊富な機能（再試行、スケジューリング、結果バックエンド）、コミュニティ、既存の運用ノウハウが多い。
-  - 短所: RabbitMQ/Redisなど追加インフラが必要。設定がやや複雑。
-
-- RQ (Redis Queue)
-  - 長所: シンプルで導入が速い。Redisのみで完結。
-  - 短所: Celeryほど高度な機能はない（高度なスケジューリングやワークフロー制御は限定的）。
-
-- Dramatiq
-  - 長所: 高速でシンプル、RedisやRabbitMQをバックエンドに使用可能。自動リトライやミドルウェアが使いやすい。
-  - 短所: Celeryほど成熟したエコシステムはないが十分な機能を持つ。
-
-### 推奨
-
-開発初期〜中規模の運用であれば `Dramatiq` または `RQ` をおすすめします。理由は導入コストが低く、Redisを1つ用意すればすぐに動作するためです。運用が拡大し、複雑なワークフローやスケジューリングが必要になれば `Celery` へ移行検討してください。
-
-### 目標アーキテクチャ（例: Dramatiq + Redis）
-
-- Web/API サーバー（FastAPI）: ドキュメントをDBに挿入し、ポストプロセスジョブをキューに enqueue する
-- Redis: ブローカーとして使用
-- Worker(s): Dramatiq ワーカーがキューからジョブを取得し、LLM呼び出し・DB更新を行う
-
-フロー図（簡易）:
-
-Ingest -> DB insert -> enqueue job -> Redis -> Worker -> LLM -> DB updates
-
-### 移行手順（高レベル）
-
-1. Redis を開発環境に導入（Docker or ローカル）
-2. `dramatiq` を `requirements.txt` に追加 (`pip install dramatiq redis`)
-3. 新しいタスクモジュール `app/tasks/postprocess_tasks.py` を追加し、既存の `_process_doc_sync` ロジックを移植（非同期/同期の違いに注意）
-4. `ingest_worker._insert_document_if_new` から `kick_postprocess_async` 呼び出しを削除し、代わりにジョブを enqueue する（例: `postprocess_tasks.generate_for_document.send(doc_id)`）
-5. ワーカー起動用の systemd / docker-compose サービスを追加
-6. テスト: `tests/test_postprocess.py` を修正してジョブを同期実行または worker をテスト用に立ち上げて動作確認
-
-### サンプルコード（Dramatiq）
-
-以下は最小構成のサンプルです（詳細は実装時に調整してください）。
-
-`app/tasks/postprocess_tasks.py`:
-
-```python
-import dramatiq
-from dramatiq.brokers.redis import RedisBroker
-from app.core.database import SessionLocal, Document, Embedding, Classification
-from app.services.llm_client import llm_client
-from app.services.extractor import content_extractor
-from datetime import datetime
-import json
-
-redis_broker = RedisBroker()
-dramatiq.set_broker(redis_broker)
-
-@dramatiq.actor(max_retries=3, retry_when=lambda x: True)
-def generate_for_document(doc_id: str):
-  db = SessionLocal()
-  try:
-    doc = db.query(Document).filter(Document.id == doc_id).one_or_none()
-    if not doc:
-      return
-
-    text = content_extractor.prepare_text_for_summary(doc.content_text or "", max_chars=20000)
-    if not text:
-      return
-
-    summary = dramatiq.get_current_message().actor.loop.run_until_complete(llm_client.generate_summary(text, style="short"))
-    if summary:
-      doc.short_summary = summary[:2000]
-      doc.summary_generated_at = datetime.utcnow()
-      db.add(doc)
-      db.commit()
-
-    emb = dramatiq.get_current_message().actor.loop.run_until_complete(llm_client.create_embedding(text))
-    if emb:
-      emb_row = Embedding(document_id=doc.id, chunk_id=0, vec=json.dumps(emb), chunk_text=text[:1000])
-      db.add(emb_row)
-      db.commit()
-
-    classification_result = dramatiq.get_current_message().actor.loop.run_until_complete(
-      llm_client.classify_content(doc.title or "", (doc.content_text or "")[:2000])
-    )
-    if classification_result:
-      cls = Classification(
-        document_id=doc.id,
-        primary_category=classification_result.get("primary_category", "その他"),
-        topics=None,
-        tags=classification_result.get("tags", []),
-        confidence=classification_result.get("confidence", 0.5),
-        method="llm",
-      )
-      db.add(cls)
-      db.commit()
-  finally:
-    db.close()
-
-```
-
-注: 上記は `llm_client` が asyncio ベースであるため、actor 内での呼び出しは同期ブリッジが必要です。シンプルには `asyncio.run()` を使ってラップするか、actor を非同期で実行可能なフレームワーク（または `asyncio` 対応のブローカー）を検討してください。
-
-### テスト方針
-
-- 単体テスト: `llm_client` をモックし、ジョブ関数を同期的に実行して DB 更新を検証する。
-- 統合テスト: Redis をテスト環境で起動し、実際に `dramatiq worker` を立ち上げて end-to-end テストを行う。
-
-### 注意点
-
-- ワーカーはDBとのコネクションを独自に取得する必要がある（`SessionLocal()`）。
-- LLMへの同時接続数とAPIレート制限に注意し、ワーカ数や同時ジョブ数を制御する。
-- シャットダウン時のジョブ完了待ち（graceful shutdown）をワーカー側で実装する。
-
----
-
-このセクションは簡易提案です。実装支援（パッチ作成、`docker-compose` 追加、テスト更新）を続けますか？
-
-### DB-backed ワーカーの起動方法（開発用）
-
-開発中に簡易ワーカーを手動で実行するには、次のコマンドを使います。ワーカーは `postprocess_jobs` テーブルをポーリングしてジョブを処理します。
-
-```bash
-# 仮想環境を有効化してから
-python -m app.services.postprocess_queue
-```
-
-プロダクションではプロセスマネージャ（systemd / supervisord / Docker）で `run_worker()` を実行するプロセスを管理してください。
-
-## 処理シーケンス図 (Mermaid)
-
-以下はポストプロセッシングの主要な呼び出しフローを示すシーケンス図です。読み取り順は上→下、左から右です。
+以下は主要な流れを示すシーケンス図です（Mermaid形式）。
 
 ```mermaid
 sequenceDiagram
-  participant Ingest as Ingest Worker
-  participant DB as Database
-  participant PP as Postprocess Thread
-  participant LLM as LLM Client / API
+	participant Client
+	participant API as API(/ingest)
+	participant Ingest as ingest_worker._insert_document_if_new
+	participant DB as Database(postprocess_jobs)
+	participant Queue as postprocess_queue.run_worker
+	participant Post as postprocess.process_doc_once
+	participant LLM as llm_client
+	participant Docs as Database(documents/embeddings/classifications)
 
-  Note over Ingest,DB: ドキュメント挿入
-  Ingest->>DB: INSERT documents (if new)
-  DB-->>Ingest: OK (new id)
-  Ingest->>PP: kick_postprocess_async(doc_id)
+	Client->>API: POST /ingest (url/pdf)
+	API->>Ingest: call _insert_document_if_new
+	Ingest->>Docs: INSERT/UPDATE Document
+	Ingest->>DB: INSERT postprocess_jobs (enqueue)
 
-  Note over PP: デーモンスレッド開始
-  PP->>DB: SELECT document by id
-  DB-->>PP: document row
+	alt enqueue fails
+		Ingest->>Ingest: kick_postprocess_async(doc_id) (fallback thread)
+		Ingest->>Post: call process_doc_once(doc_id) via thread
+	else enqueue succeeds
+		Queue->>DB: poll pending jobs
+		Queue->>Post: claim job -> call process_doc_once(doc_id)
+	end
 
-  alt text empty
-    PP->>PP: log("empty text")
-  else has text
-    PP->>LLM: generate_summary(text)
-    LLM-->>PP: summary
-    PP->>DB: UPDATE documents SET short_summary, summary_generated_at, summary_model
+	Post->>LLM: generate_summary(text)
+	LLM-->>Post: summary
+	Post->>LLM: create_embedding(text)
+	LLM-->>Post: vector
+	Post->>LLM: classify_content(text)
+	LLM-->>Post: classification JSON
 
-    PP->>LLM: create_embedding(text)
-    LLM-->>PP: embedding vector
-    PP->>DB: INSERT INTO embeddings (document_id, chunk_id, vec, chunk_text)
-
-    PP->>LLM: classify_content(title, snippet)
-    LLM-->>PP: classification JSON
-    PP->>DB: INSERT INTO classifications (document_id, primary_category, tags, confidence, method)
-  end
-
-  Note over PP,DB: 各ステップは個別に try/exceptで保護
+	Post->>Docs: UPDATE Document.short_summary
+	Post->>Docs: INSERT Embedding(chunk_id=0)
+	Post->>Docs: INSERT Classification
+	Post-->>Queue: mark job success/failure
 ```
 
-図では簡易化のためエラーハンドリングや細かな前処理（text truncate、thumbnail生成など）は省略しています。
+`process_doc_once` の主な処理順序：
+
+1. 新しい SQLAlchemy エンジン／セッションを作成して `Document` を取得（環境変数 `DB_URL` を優先して接続）。
+2. `content_extractor.prepare_text_for_summary` を使って要約用テキストを準備（`settings.short_summary_max_chars` に従い切り詰め）。
+3. 要約生成: `llm_client.generate_summary` を内部ユーティリティ `_run_async` 経由で呼び出す。`_run_async` は、現在スレッドで実行中のイベントループの有無を検出して安全に `asyncio.run()` を実行する仕組みを持ち、pytest や他の非同期ランタイムと競合しないように設計されています。成功時は `Document.short_summary`、`summary_generated_at`、`summary_model` を更新してコミットします。
+4. 埋め込み生成: `llm_client.create_embedding` を同様に呼び出し、返却されたベクトルを `Embedding` テーブルに `chunk_id=0` で保存します（現状の単純実装）。
+5. 分類: `llm_client.classify_content` を呼び、JSON をパースできれば `Classification` レコードを作成して保存します。パース失敗や不正な出力はログに記録され、分類はスキップされます。
+6. 各主要ステップは個別に try/except で保護され、ステップ失敗時はログに例外を出力して `process_doc_once` は失敗フラグとエラー文字列を返します。
+
+## 関連ファイル
+
+- `app/services/postprocess.py` — ポストプロセス本体（`process_doc_once`）とフォールバック `kick_postprocess_async`。
+- `app/services/postprocess_queue.py` — DB-backed ポーリングワーカーとジョブ管理（リトライ／指数バックオフ含む）。
+- `app/services/ingest_worker.py` — ドキュメント挿入とジョブ登録（enqueue）ロジック。
+- `app/services/llm_client.py` — 要約、埋め込み、分類用の非同期 HTTP クライアントラッパー（`async def` メソッド）。
+- `app/services/extractor.py` — コンテンツ抽出ロジック（テキスト準備等）。
+- `app/core/database.py` — `Document`, `Embedding`, `Classification`, `PostprocessJob` 等のスキーマ定義。
+
+## 設計上の要点（実装に基づく）
+
+- 永続化ジョブ優先: 挿入経路はまず DB にジョブを作るため、ワーカーを常時稼働させればフォールバックのスレッド処理に依存しなくても安定して再試行が可能です。
+- `process_doc_once` は同期関数として設計されており、内部で非同期 `llm_client` を安全に呼ぶための `_run_async` ユーティリティを持ちます。これによりテスト環境のイベントループと安全に共存します。
+- `postprocess_queue.run_worker` は各ジョブが失敗すると `attempts` をインクリメントし、指数関数的に `next_attempt_at` を延ばす（バックオフ）。`attempts >= max_attempts` で `failed` にマークされます。
+
+## 利点
+
+- 実装はシンプルで理解しやすく、通常の挿入パスはブロッキングされません。
+- ジョブを DB に登録することで永続化と再試行が可能になっている（ワーカー稼働時）。
+- フォールバックのデーモンスレッドにより、enqueue に失敗した場合でも即時処理が試みられる。
+- `llm_client` は非同期実装であるため、将来的にブローカー／ワーカーを asyncio 対応にすると効率化が図れる。
+
+## リスク・注意点
+
+- `_run_async` の仕組みで既存イベントループ下でも動作する工夫はあるが、同時に多数のデーモンスレッドが起動するとスレッドと同時 LLM 呼び出しによりリソース消費が高くなる。
+- フォールバックのデーモンスレッドはプロセス終了時に強制終了されるため、シャットダウン時に未完了ジョブが失われる可能性がある。
+- `postprocess_queue` が稼働していないと、DB に残ったジョブは処理されない（enqueue は成功しているがワーカーが起動していないことに注意）。
+- 埋め込みは長文を1チャンクで処理するため、長い記事に対する意味的分割・複数チャンク検索は未対応。
+- 分類は LLM の出力を正規表現で JSON 部分を抜き出してパースするため、出力フォーマットに依存して脆弱性がある。
+
+## 改善提案（優先度付き、実装に即した案）
+
+### 高優先度
+
+- ブローカー型ワーカーへの移行（`Dramatiq` / `RQ` / `Celery` など）: 再試行、監視、スケーリング、ワーカー管理が容易になります。
+- 現状を活かす短期対処: `postprocess_queue` を systemd / Docker サービスとして常時稼働させ、DB ベースの永続化 + リトライを確実に有効化する。
+
+### 中優先度
+
+- 埋め込みのチャンク分割: 長文を文脈的に分割して複数チャンクで埋め込みを作成・保存する（`Embedding.chunk_id` を使用）。
+- 分類結果のバリデーション: JSON スキーマ検証を導入し、失敗時はキーワードベースのフォールバックを行う。
+
+### 低優先度
+
+- Vector DB（FAISS/Milvus/Weaviate）への移行による高速類似検索
+- メトリクス（Prometheus 等）とアラートの導入
+
+## 短期的にできる安全強化（実装パッチ案）
+
+- `postprocess.py` にジョブ開始／終了と総経過時間（elapsed_ms）を追加でログ出力する。
+- `kick_postprocess_async` を `ThreadPoolExecutor` ベースに移行して同時実行数を制限する短期パッチを検討する。
+- Embedding 保存時に `document_id` + `chunk_id` の重複チェックを入れて重複挿入を防ぐ。
+
+## 小さな実装差分メモ（現状との違いを要約）
+
+- `ingest_worker._insert_document_if_new` は実装上、まず `enqueue_job_for_document` による DB 登録を試み、登録に失敗した際に `kick_postprocess_async` を用いるフォールバックを行います（従来ドキュメントの説明はフォールバックのみを記載していましたが、現状はDBキューが優先されています）。
+- `postprocess_queue.run_worker` はポーリングワーカーで、`process_doc_once` の戻り値に基づき成功／失敗／再スケジュールを行います。
+- `process_doc_once` は内部で新しい DB エンジンを作る実装になっており、テスト時にモジュールレベルの古いエンジンを参照しないよう配慮されています。
+
+## 実装/運用チェックリスト
+
+- **ワーカー稼働**: `postprocess_queue.run_worker` が稼働しているかを確認する（開発では `python -m app.services.postprocess_queue`）。
+- **DB ジョブ確認**: `postprocess_jobs` テーブルに pending ジョブが残っていないかを監視する。
+- **ログ監視**: 要約・埋め込み・分類の失敗ログを確認して問題の傾向を把握する。
+
+---
+
+作成済み: `docs/postprocessing.md`（このファイル）
+
+追加でこのファイルに含めてほしい場合は教えてください:
+
+- 実際のログ出力サンプル（要約成功 / 埋め込み失敗 など）
+- `Dramatiq` を使った移行パッチ（小さなサンプルモジュールと `docker-compose` 追加）
+- 埋め込みチャンク分割のサンプル実装
