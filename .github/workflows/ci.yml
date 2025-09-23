@@ -23,7 +23,7 @@ jobs:
       - name: Install system dependencies for Playwright & fonts
         run: |
           sudo apt-get update
-          sudo apt-get install -y libnss3 libatk-bridge2.0-0 libatk1.0-0 libcups2 libxss1 libgbm1 libasound2 fonts-noto-cjk
+          sudo apt-get install -y libnss3 libatk-bridge2.0-0 libatk1.0-0 libcups2 libxss1 libgbm1 libasound2t64 fonts-noto-cjk
       - name: Install Playwright browsers
         run: |
           python -m playwright install chromium
