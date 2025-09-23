@@ -30,5 +30,18 @@ services:
   #     - ollama_data:/root/.ollama
   #   restart: unless-stopped
 
+  # Postprocess worker: DB-backed postprocess_queue polling worker
+  # Runs `postprocess_queue.run_worker` via module invocation
+  worker:
+    build: .
+    command: ["python", "-m", "app.services.postprocess_queue"]
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    environment:
+      - DB_URL=sqlite:///./data/scraps.db
+      - TIMEOUT_SEC=180
+    restart: unless-stopped
+
 # volumes:
 #   ollama_data:
