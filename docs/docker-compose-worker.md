@@ -61,3 +61,18 @@ docker compose logs -f worker
 ---
 
 作業済み: `docker-compose` 用ワーカーの追加案と起動手順
+
+## マイグレーションの適用
+
+リポジトリには簡易的なマイグレーション適用スクリプトがあり、`migrations/*.sql` を順に適用できます。開発環境で DB スキーマを更新する手順:
+
+```fish
+# DB ファイルが存在することを確認（存在しない場合は create_tables() が作成するか、新規に空ファイルを作成）
+ls -l data || mkdir -p data
+touch data/scraps.db
+
+# マイグレーションを適用
+python migrations/apply_migrations.py --db ./data/scraps.db
+```
+
+`apply_migrations.py` は `migrations/` 内の `.sql` を辞書順に実行します。今回追加した `migrations/003_create_postprocess_jobs.sql` により `postprocess_jobs` テーブルが作成されます。
