@@ -182,6 +182,30 @@ class Feedback(Base):
     document = relationship("Document", back_populates="feedbacks")
 
 
+class PostprocessJob(Base):
+    """ポストプロセス用ジョブテーブル
+
+    スキーマ:
+    - document_id: 対象ドキュメント
+    - status: pending|in_progress|failed|done
+    - attempts: 試行回数
+    - max_attempts: 最大試行回数
+    - last_error: 直近のエラーメッセージ
+    - next_attempt_at: 次回試行予定時刻
+    """
+    __tablename__ = "postprocess_jobs"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    document_id = Column(String, nullable=False, index=True)
+    status = Column(String, nullable=False, default="pending", index=True)
+    attempts = Column(Integer, nullable=False, default=0)
+    max_attempts = Column(Integer, nullable=False, default=5)
+    last_error = Column(Text, nullable=True)
+    next_attempt_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
 def create_tables():
     """データベーステーブルを作成"""
     # Create missing tables/columns for development/testing environments.
@@ -194,6 +218,14 @@ def create_tables():
         create_engine_kwargs = {"connect_args": {"check_same_thread": False}} if "sqlite" in db_url else {}
         local_engine = _create_engine(db_url, **create_engine_kwargs)
         Base.metadata.create_all(bind=local_engine)
+        # Rebind module-level engine and SessionLocal so code using
+        # `SessionLocal()` picks up the test DB when tests set `DB_URL`.
+        try:
+            globals()["engine"] = local_engine
+            globals()["SessionLocal"] = sessionmaker(autocommit=False, autoflush=False, bind=local_engine)
+        except Exception:
+            # if rebind fails, continue — the tables at least exist on local_engine
+            pass
     except Exception:
         # best-effort fallback to module-level engine
         try:

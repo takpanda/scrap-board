@@ -18,8 +18,8 @@ def goto_first_document(page: Page):
 
 
 class TestDocumentDetailUI:
-    def test_document_detail_desktop_snapshot(self, page: Page):
-        """Capture desktop snapshot of document detail page."""
+    def test_ドキュメント詳細_デスクトップ_スナップショット(self, page: Page):
+        """ドキュメント詳細ページのデスクトップ用スナップショットを取得する。"""
         page.set_viewport_size({"width": 1280, "height": 800})
         goto_first_document(page)
 
@@ -33,8 +33,8 @@ class TestDocumentDetailUI:
         import os
         assert os.path.exists(path) and os.path.getsize(path) > 0
 
-    def test_document_detail_mobile_snapshot_reader_mode(self, page: Page):
-        """Capture mobile snapshot and reader-mode toggle."""
+    def test_ドキュメント詳細_モバイル_リーダーモード(self, page: Page):
+        """モバイル表示とリーダーモード切替のスナップショットを取得する。"""
         page.set_viewport_size({"width": 390, "height": 844})
         goto_first_document(page)
 

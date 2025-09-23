@@ -174,8 +174,11 @@ def pytest_configure(config):
             app_db.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
             # Re-import app_db.get_db to ensure its closure captures the new engine
             try:
-                import importlib
-                importlib.reload(app_db)
+                # Ensure any schema-altering helpers run (adds missing columns)
+                try:
+                    app_db.create_tables()
+                except Exception:
+                    pass
             except Exception:
                 pass
         except Exception:
@@ -231,6 +234,14 @@ def test_database_override(tmp_path_factory):
         # same database as the tests.
         try:
             app_db.engine = engine
+            # Reload module and ensure create_tables ran to add any missing cols
+            try:
+                try:
+                    app_db.create_tables()
+                except Exception:
+                    pass
+            except Exception:
+                pass
         except Exception:
             # best-effort; continue even if we can't rebind engine
             pass

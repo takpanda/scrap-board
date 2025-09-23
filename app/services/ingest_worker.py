@@ -20,6 +20,8 @@ except Exception:
 from app.core.database import SessionLocal
 from app.services.extractor import content_extractor
 from app.services.postprocess import kick_postprocess_async
+from app.services.postprocess_queue import enqueue_job_for_document
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,7 @@ def _insert_document_if_new(db, doc: Dict[str, Any], source_name: str):
         existing_by_url = db.execute(text("SELECT id FROM documents WHERE url = :url"), {"url": url}).fetchone()
         if existing_by_url:
             logger.info("Skipping insert — url already exists: %s (id=%s)", url, existing_by_url[0])
+            logger.debug("Existing by URL row: %s", existing_by_url)
             return None
 
     # 2) check by hash to avoid near-duplicates when different URLs
@@ -49,6 +52,7 @@ def _insert_document_if_new(db, doc: Dict[str, Any], source_name: str):
         existing_by_hash = db.execute(text("SELECT id, url FROM documents WHERE hash = :hash"), {"hash": doc_hash}).fetchone()
         if existing_by_hash:
             logger.info("Skipping insert — hash already exists: %s (id=%s url=%s)", doc_hash, existing_by_hash[0], existing_by_hash[1])
+            logger.debug("Existing by hash row: %s", existing_by_hash)
             return None
 
     insert_sql = text(
@@ -82,10 +86,16 @@ def _insert_document_if_new(db, doc: Dict[str, Any], source_name: str):
         db.commit()
         logger.info("Inserted document %s %s", doc_id, url)
         try:
-            # kick post-processing (summary + embedding) asynchronously
-            kick_postprocess_async(doc_id)
+            # Create persistent postprocess job (DB-backed queue)
+            try:
+                enqueue_job_for_document(db, doc_id)
+            except Exception:
+                # fallback to old behavior if enqueue fails
+                logger.exception("Failed to enqueue postprocess job for %s, falling back to async thread", doc_id)
+                kick_postprocess_async(doc_id)
         except Exception:
-            logger.exception("Failed to kick postprocess for %s", doc_id)
+            db.rollback()
+            logger.exception("Failed to create postprocess job for %s", doc_id)
         return doc_id
     except Exception:
         db.rollback()

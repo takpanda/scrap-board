@@ -17,9 +17,10 @@ def test_postprocess_generates_summary_and_embedding(tmp_path, monkeypatch):
     os.environ["DB_URL"] = f"sqlite:///{db_file}"
 
     # Ensure tables are created under the test DB
-    from app.core.database import create_tables, SessionLocal, Document, Embedding
+    from app.core.database import create_tables, Document, Embedding
 
     create_tables()
+    from app.core.database import SessionLocal
 
     # Monkeypatch LLM client methods to avoid external calls
     import app.services.llm_client as llm_mod
@@ -45,9 +46,13 @@ def test_postprocess_generates_summary_and_embedding(tmp_path, monkeypatch):
         new_id = _insert_document_if_new(db, doc, "test-source")
         assert new_id is not None
 
-        # Wait up to 5 seconds for the background thread to run
+        # Wait for DB-backed postprocess job to complete (polling). This avoids
+        # relying on the legacy background thread behavior and matches the new
+        # DB-backed job queue design used in production.
+        from app.services.postprocess_queue import _acquire_job, _mark_job_done, _mark_job_failed
+
         found = False
-        for _ in range(10):
+        for _ in range(20):
             db2 = SessionLocal()
             try:
                 d = db2.query(Document).filter(Document.id == new_id).one_or_none()
@@ -56,10 +61,18 @@ def test_postprocess_generates_summary_and_embedding(tmp_path, monkeypatch):
                     assert emb_count >= 1
                     found = True
                     break
+                # try to acquire a job and process it inline to speed up tests
+                job = _acquire_job(db2)
+                if job:
+                    success, err = __import__('app.services.postprocess', fromlist=['process_doc_once']).process_doc_once(job.document_id)
+                    if success:
+                        _mark_job_done(db2, job)
+                    else:
+                        _mark_job_failed(db2, job, err or 'err')
             finally:
                 db2.close()
 
-            time.sleep(0.5)
+            time.sleep(0.25)
 
         if not found:
             pytest.fail("Postprocess did not generate summary/embedding in time")

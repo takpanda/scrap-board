@@ -11,6 +11,14 @@ from app.core.database import Base, get_db
 # Test DB setup
 TEST_DB_PATH = "./test_ingest_async_summary.db"
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{TEST_DB_PATH}"
+import os as _os
+# Remove any existing DB file to ensure schema is created fresh for the test
+try:
+    if _os.path.exists(TEST_DB_PATH):
+        _os.remove(TEST_DB_PATH)
+except Exception:
+    pass
+
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
