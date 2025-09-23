@@ -172,9 +172,7 @@
                             {% if document.created_at %}
                                 <div class="doc-date text-xs text-gray-400 mb-1">{{ document.created_at.strftime('%Y年%m月%d日') }}</div>
                             {% endif %}
-                            <a href="/documents/{{ document.id }}" class="text-lg font-semibold text-ink hover:text-emerald transition-colors block break-words">
-                                {{ document.title }}
-                            </a>
+                            <a href="/documents/{{ document.id }}" class="text-lg font-semibold text-ink hover:text-emerald transition-colors block break-words">{{ document.title }}</a>
                             <div class="mt-1 text-xs text-gray-400 truncate">
                                 {% if document.source %}
                                     <span class="pill nowrap-tag">{{ '手動' if document.source == 'manual' else document.source }}</span>
@@ -186,6 +184,9 @@
 
                     <div class="mt-3 flex-1">
                         {% if document.short_summary %}
+                            <p class="mb-2">
+                                <span class="pill nowrap-tag mr-2 inline-flex items-center" style="background-color:#f5f3ff;color:#6b21a8;border-color:rgba(107,33,168,0.12)">要約</span>
+                            </p>
                             <p class="text-sm text-graphite leading-relaxed break-words max-h-[7.5rem] overflow-auto" data-md-inline="{{ document.short_summary|e }}"></p>
                             {% if not ns.autostart_done %}
                                 <span data-md-autostart="true" data-md="{{ document.short_summary|e }}" data-title="{{ document.title|e }}" class="hidden"></span>
