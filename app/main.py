@@ -132,9 +132,18 @@ async def documents_page(
     if tag:
         # Join classifications and filter where the tags JSON array contains the given tag string.
         # This uses a best-effort SQLite json_extract + LIKE check which matches '"tag"' inside the JSON array text.
+        # SQLite may store JSON with non-ASCII characters escaped (e.g. "\\u81ea\\u52d5\\u5316").
+        # Comparing the raw column text with LIKE is more robust for matching either
+        # the UTF-8 characters or their escaped \uXXXX representations.
+        raw_like = f'%"{tag}"%'
+        def to_escaped(s: str) -> str:
+            return s.encode('unicode_escape').decode('ascii')
+        escaped_tag = to_escaped(tag)
+        escaped_like = f'%"{escaped_tag}"%'
+
         query = query.join(Classification).filter(
-            text("json_extract(classifications.tags, '$') LIKE :tag_like")
-        ).params(tag_like=f'%"{tag}"%')
+            text("(classifications.tags LIKE :raw_like OR classifications.tags LIKE :escaped_like)")
+        ).params(raw_like=raw_like, escaped_like=escaped_like)
     
     documents = query.order_by(Document.created_at.desc()).limit(50).all()
     

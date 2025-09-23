@@ -206,7 +206,9 @@
                                     {{ cat }}
                                 </span>
                                 {% if document.classifications[0].tags %}
-                                    {% for t in document.classifications[0].tags[:3] %}
+                                    {% set all_tags = document.classifications[0].tags %}
+                                    {% set display_limit = 5 %}
+                                    {% for t in all_tags[:display_limit] %}
                                         <a
                                             href="/documents?tag={{ t }}"
                                             class="pill nowrap-tag inline-block {% if selected_tag and selected_tag == t %}{{ '' }}{% else %}bg-mist/80 text-graphite border border-mist{% endif %}"
@@ -220,6 +222,25 @@
                                             {{ t }}
                                         </a>
                                     {% endfor %}
+
+                                    {% if all_tags|length > display_limit %}
+                                        <button type="button" class="pill nowrap-tag inline-block bg-mist/80 text-graphite border border-mist tag-more-toggle" aria-expanded="false" title="残りのタグを表示">+{{ all_tags|length - display_limit }}</button>
+                                        <div class="tag-more-list hidden mt-2 flex gap-2 flex-wrap">
+                                            {% for t in all_tags[display_limit:] %}
+                                                <a
+                                                    href="/documents?tag={{ t }}"
+                                                    class="pill nowrap-tag inline-block bg-mist/80 text-graphite border border-mist"
+                                                    hx-get="/documents"
+                                                    hx-vals='{"tag": "{{ t }}"}'
+                                                    hx-target="#documents-container"
+                                                    hx-push-url="true"
+                                                    title="{{ t }}でフィルタ"
+                                                >
+                                                    {{ t }}
+                                                </a>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 {% endif %}
                             {% endif %}
                         </div>
@@ -280,6 +301,31 @@
             btn.setAttribute('aria-expanded', nowVisible.toString());
             btn.classList.toggle('bg-emerald', nowVisible);
             btn.classList.toggle('text-white', nowVisible);
+        });
+    })();
+</script>
+<script>
+    // タグの「+N」トグル表示を制御
+    (function(){
+        document.addEventListener('click', function(e){
+            const btn = e.target.closest('.tag-more-toggle');
+            if (!btn) return;
+            // find the sibling .tag-more-list
+            const container = btn.parentElement;
+            if (!container) return;
+            const list = container.querySelector('.tag-more-list');
+            if (!list) return;
+            const expanded = list.classList.toggle('hidden') === false;
+            btn.setAttribute('aria-expanded', expanded.toString());
+            // Optionally change button text to '閉じる' when expanded
+            if (expanded) {
+                btn.textContent = '閉じる';
+            } else {
+                // restore to +N
+                // compute N from data in DOM: number of hidden tags
+                const moreCount = list.querySelectorAll('a').length;
+                btn.textContent = moreCount > 0 ? '+' + moreCount : '閉じる';
+            }
         });
     })();
 </script>
