@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.core.database import get_db, create_tables
 from app.services.scheduler import start_scheduler, stop_scheduler
 from app.api.routes import documents, ingest, collections, utils, admin_sources
+from app.api.routes import admin as admin_routes
 from datetime import timezone, timedelta
 try:
     from zoneinfo import ZoneInfo
@@ -113,6 +114,7 @@ app.include_router(ingest.router, prefix="/api/ingest", tags=["ingest"])
 app.include_router(collections.router, prefix="/api/collections", tags=["collections"])
 app.include_router(utils.router, prefix="/api", tags=["utils"])
 app.include_router(admin_sources.router)
+app.include_router(admin_routes.router)
 
 
 @app.get("/", response_class=HTMLResponse)

@@ -238,3 +238,39 @@ env PYTHONPATH=. python scripts/reschedule_postprocess.py --limit 100
 - 安全確認用に使い、まず影響範囲を確認してから実際の再キュー化を行ってください。
 - 実行時はアプリのモジュールを読み込めるように `PYTHONPATH=.` を付けるか、仮想環境を有効化した上で実行してください。
 
+### Dockerでの実行
+
+ローカルで Docker を使って安全に再スケジューリングを行う手順の例です。既存の `docker-compose.yml` はアプリ本体と `worker` サービスを定義していますが、単発でスクリプトを実行したい場合は以下の手順が便利です。
+
+1. イメージをビルド（プロジェクトルート）:
+```bash
+docker build -t scrap-board:local .
+```
+
+2. データディレクトリをボリュームでマウントして `dry-run` を実行:
+```bash
+docker run --rm -v "$(pwd)/data:/app/data" -v "$(pwd):/app" -w /app --env DB_URL=sqlite:///./data/scraps.db scrap-board:local \
+	/bin/sh -c "PYTHONPATH=. python scripts/reschedule_postprocess.py --dry-run --limit 20"
+```
+
+3. 確認後に実際に再キュー化する場合:
+```bash
+docker run --rm -v "$(pwd)/data:/app/data" -v "$(pwd):/app" -w /app --env DB_URL=sqlite:///./data/scraps.db scrap-board:local \
+	/bin/sh -c "PYTHONPATH=. python scripts/reschedule_postprocess.py --limit 200"
+```
+
+注意:
+- コンテナ内で `DB_URL` が正しく `sqlite` ファイルを参照していることを確認してください（ホストの `data` を `/app/data` にマウントしています）。
+- LM（LLM）への接続はコンテナ外で動かしているサービスに依存する場合があるため、スクリプト実行時は `--dry-run` を使ってまず影響を確認してください。
+
+## 管理ダッシュボード
+
+簡易的なポストプロセスジョブ監視ダッシュボードを追加しました。アプリ起動中に以下へアクセスしてください:
+
+- HTML ダッシュボード: `http://localhost:8000/admin/postprocess_jobs`
+- JSON API: `http://localhost:8000/api/admin/postprocess_jobs`
+
+ダッシュボードはジョブの状態、試行回数、次回試行予定時刻、直近のエラーメッセージを表示します。自動更新（30秒）で最新状態が反映されます。
+
+
+

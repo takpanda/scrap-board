@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Postprocess Jobs Dashboard</title>
+  <style>
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #f4f4f4; }
+    /* 状態による行の背景色 */
+    .pending { background: #fff8e1; } /* 薄い黄色 */
+    .failed, .fail { background: #ffecec; } /* 薄い赤 */
+    .in_progress { background: #fffbeb; }
+    .done { background: #effaf1; }
+  </style>
+</head>
+<body>
+  <h1>Postprocess Jobs Dashboard</h1>
+  <p>表示件数: {{ jobs|length }}</p>
+  <div>
+    フィルタ: 
+    <select id="status-filter">
+      <option value="all" {% if status == "all" %}selected{% endif %}>すべて</option>
+      <option value="pending" {% if status == "pending" %}selected{% endif %}>pending</option>
+      <option value="in_progress" {% if status == "in_progress" %}selected{% endif %}>in_progress</option>
+      <option value="failed" {% if status == "failed" %}selected{% endif %}>failed</option>
+      <option value="done" {% if status == "done" %}selected{% endif %}>done</option>
+    </select>
+    件数: <input id="limit" type="number" value="{{ limit or 100 }}" min="1" max="1000" style="width:80px" />
+    <button id="apply">適用</button>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Document ID</th>
+        <th>Status</th>
+        <th>Attempts</th>
+        <th>Next Attempt</th>
+        <th>Seconds Remaining</th>
+        <th>Last Error</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody id="jobs-body">
+    {% for j in jobs %}
+      <tr class="{{ j.status }}">
+        <td>{{ j.id }}</td>
+        <td><a href="/documents/{{ j.document_id }}">{{ j.document_id }}</a></td>
+        <td>{{ j.status }}</td>
+        <td>{{ j.attempts }} / {{ j.max_attempts }}</td>
+  <td>{{ j.next_attempt_at|to_jst }}</td>
+        <td>{{ j.seconds_remaining }}</td>
+        <td style="max-width:300px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ j.last_error }}</td>
+  <td>{{ j.created_at|to_jst }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <script>
+    // Auto-refresh JSON and update table every 30s
+    function buildQuery() {
+      const status = document.getElementById('status-filter').value;
+      const limit = document.getElementById('limit').value || 100;
+      const params = new URLSearchParams();
+      params.set('limit', limit);
+      if (status && status !== 'all') params.set('status', status);
+      return params.toString();
+    }
+
+    async function refresh() {
+      try {
+        const resp = await fetch('/api/admin/postprocess_jobs?' + buildQuery());
+        const data = await resp.json();
+        const tbody = document.getElementById('jobs-body');
+        tbody.innerHTML = '';
+        for (const j of data.jobs) {
+          const tr = document.createElement('tr');
+          tr.className = j.status;
+          tr.innerHTML = `
+            <td>${j.id}</td>
+            <td><a href="/documents/${j.document_id}">${j.document_id}</a></td>
+            <td>${j.status}</td>
+            <td>${j.attempts} / ${j.max_attempts}</td>
+            <td>${j.next_attempt_at_jst || j.next_attempt_at || ''}</td>
+            <td>${j.seconds_remaining}</td>
+            <td style="max-width:300px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${j.last_error || ''}</td>
+            <td>${j.created_at_jst || j.created_at || ''}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      } catch (e) {
+        console.error('refresh failed', e);
+      }
+    }
+
+    setInterval(refresh, 30000);
+    document.getElementById('apply').addEventListener('click', () => refresh());
+    // initial load respects template-provided status/limit
+    (function initialLoad(){
+      const sel = document.getElementById('status-filter');
+      if ("{{ status }}" && "{{ status }}" !== 'all') sel.value = "{{ status }}";
+      const l = document.getElementById('limit');
+      if ("{{ limit }}") l.value = "{{ limit }}";
+      refresh();
+    })();
+  </script>
+</body>
+</html>
