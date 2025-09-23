@@ -170,7 +170,10 @@
                         <img src="{% if document.thumbnail_url %}/data/{{ document.thumbnail_url }}{% else %}/static/images/default-thumbnail.svg{% endif %}?v={{ document.updated_at.isoformat() if document.updated_at else '1' }}" alt="thumbnail" loading="lazy" class="w-12 h-12 md:w-16 md:h-16 rounded-md object-cover flex-shrink-0" />
                         <div class="flex-1 min-w-0">
                             {% if document.created_at %}
-                                <div class="doc-date text-xs text-gray-400 mb-1">{{ document.created_at.strftime('%Y年%m月%d日') }}</div>
+                                <div class="doc-date text-xs text-gray-400 mb-1">
+                                    {{ document.created_at|to_jst('%Y年%m月%d日') }}
+                                    <span class="ml-2 text-xs text-gray-400">{{ document.created_at|to_jst('%H:%M') }}</span>
+                                </div>
                             {% endif %}
                             <a href="/documents/{{ document.id }}" class="text-lg font-semibold text-ink hover:text-emerald transition-colors block break-words">{{ document.title }}</a>
                             <div class="mt-1 text-xs text-gray-400 truncate">
