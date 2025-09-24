@@ -167,7 +167,7 @@
             {% for document in documents %}
                 <article tabindex="0" class="w-full bg-white rounded-xl border border-mist shadow-sm hover:shadow-lg transition-shadow hover:-translate-y-1 transform will-change-transform p-4 flex flex-col h-full card-edge">
                     <header class="flex items-start gap-4 flex-wrap">
-                        <img src="{% if document.thumbnail_url %}/data/{{ document.thumbnail_url }}{% else %}/static/images/default-thumbnail.svg{% endif %}?v={{ document.updated_at.isoformat() if document.updated_at else '1' }}" alt="thumbnail" loading="lazy" class="w-12 h-12 md:w-16 md:h-16 rounded-md object-cover flex-shrink-0" />
+                        <img src="{% if document.thumbnail_url %}/data/{{ document.thumbnail_url }}{% else %}/static/images/default-thumbnail.svg{% endif %}?v={{ document.updated_at.isoformat() if document.updated_at else '1' }}" alt="thumbnail" loading="lazy" class="w-12 h-12 md:w-16 md:h-16 thumb-80 rounded-md object-cover flex-shrink-0" />
                         <div class="flex-1 min-w-0">
                             {% if document.created_at %}
                                 <div class="doc-date text-xs text-gray-400 mb-1">
@@ -185,7 +185,7 @@
                         </div>
                     </header>
 
-                    <div class="mt-3 flex-1">
+                    <div class="mt-3 pt-3 border-t border-dashed border-mist documents-divider-dashed flex-1">
                         {% if document.short_summary %}
                             <p class="mb-2">
                                 <span class="pill nowrap-tag mr-2 inline-flex items-center" style="background-color:#f5f3ff;color:#6b21a8;border-color:rgba(107,33,168,0.12)">要約</span>

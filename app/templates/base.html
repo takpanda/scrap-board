@@ -176,6 +176,22 @@
         .documents-divider.dify-dark, .article-divider.dify-dark {
             border-top-color: rgba(15, 23, 42, 0.12) !important;
         }
+        /* Force visible dashed divider for document cards */
+        .documents-divider-dashed {
+            border-top: 1px dashed rgba(45,55,72,0.32) !important;
+            padding-top: 0.75rem !important;
+        }
+        /* Force thumbnail size to avoid external overrides (80%) */
+        #documents-container article header img.thumb-80 {
+            width: 2.4rem !important;
+            height: 2.4rem !important;
+        }
+        @media (min-width: 768px) {
+            #documents-container article header img.thumb-80 {
+                width: 3.2rem !important;
+                height: 3.2rem !important;
+            }
+        }
     </style>
     
     <!-- Local HTMX-like functionality -->
