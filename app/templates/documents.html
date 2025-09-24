@@ -200,7 +200,7 @@
                         </div>
                     </header>
 
-                    <div class="mt-4 pt-4 border-t border-dashed border-mist documents-divider-dashed flex-1">
+                        <div class="mt-4 pt-4 border-t border-dashed border-mist documents-divider-dashed flex-1">
                         {% if document.short_summary %}
                             <p class="mb-2">
                                 <span class="pill nowrap-tag mr-2 inline-flex items-center h-6 px-2 text-xs" style="background-color:#f5f3ff;color:#6b21a8;border-color:rgba(107,33,168,0.12)">要約</span>
@@ -262,7 +262,13 @@
                                 {% endif %}
                             {% endif %}
                             <a href="/documents/{{ document.id }}" class="text-xs bg-emerald text-white px-3 py-1 rounded-md hover:bg-emerald/90">詳細を見る</a>
+                            <!-- Bookmark icon moved inline with tags: icon-only, no border -->
+                            <button class="bookmark-btn ml-2 p-0 text-graphite hover:text-emerald inline-flex items-center" data-doc-id="{{ document.id }}" aria-pressed="false" onclick="toggleBookmark(this)">
+                                <i data-lucide="heart" class="w-4 h-4"></i>
+                                <span class="sr-only">ブックマーク</span>
+                            </button>
                         </div>
+                        
                     </footer>
                 </article>
             {% endfor %}

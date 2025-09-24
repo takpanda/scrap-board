@@ -105,6 +105,8 @@ class Document(Base):
     embeddings = relationship("Embedding", back_populates="document", cascade="all, delete-orphan")
     collection_items = relationship("CollectionItem", back_populates="document", cascade="all, delete-orphan")
     feedbacks = relationship("Feedback", back_populates="document", cascade="all, delete-orphan")
+    # ブックマークのリレーション
+    bookmarks = relationship("Bookmark", back_populates="document", cascade="all, delete-orphan")
 
 
 class Classification(Base):
@@ -268,3 +270,18 @@ def create_tables():
     except Exception:
         # Best-effort only — don't fail application start if migration step cannot run.
         pass
+
+
+# Bookmark model
+class Bookmark(Base):
+    """ブックマーク（ユーザー保存）"""
+    __tablename__ = "bookmarks"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, nullable=True, index=True)
+    document_id = Column(String, ForeignKey("documents.id"), nullable=False, index=True)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+
+    # リレーション
+    document = relationship("Document", back_populates="bookmarks")

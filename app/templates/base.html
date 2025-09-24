@@ -233,6 +233,91 @@
         </div>
         
     </header>
+    <!-- Toast notification container (Tailwind-styled, inserted early so it's available before other scripts) -->
+    <div id="toast-container" aria-live="polite" class="fixed right-6 z-[2147483000] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        (function() {
+            function svgIcon(type) {
+                if (type === 'success') return `<svg class="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+                if (type === 'error') return `<svg class="w-5 h-5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+                return `<svg class="w-5 h-5 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 6v.01"/></svg>`;
+            }
+
+            function createContainer() {
+                let c = document.getElementById('toast-container');
+                if (!c) {
+                    c = document.createElement('div');
+                    c.id = 'toast-container';
+                    c.setAttribute('aria-live', 'polite');
+                    document.body.appendChild(c);
+                }
+                /* Always enforce inline positioning and stacking so external CSS can't hide it */
+                c.style.position = 'fixed';
+                c.style.right = '1.5rem';
+                c.style.display = 'flex';
+                c.style.flexDirection = 'column';
+                c.style.gap = '0.5rem';
+                c.style.pointerEvents = 'none';
+                // Use near-maximum 32-bit signed int to outrank most site styles
+                c.style.zIndex = '2147483647';
+                // compute top based on header height if present
+                try {
+                    const hdr = document.querySelector('header');
+                    const hdrRect = hdr ? hdr.getBoundingClientRect() : null;
+                    const hdrBottom = hdrRect ? (hdrRect.top + hdrRect.height) : (window.matchMedia('(min-width: 768px)').matches ? 84 : 20);
+                    c.style.top = (hdrBottom + 8) + 'px';
+                } catch (e) {
+                    c.style.top = window.matchMedia('(min-width: 768px)').matches ? '5.25rem' : '1.25rem';
+                }
+                return c;
+            }
+
+            window.showNotification = function(message, type = 'info', timeout = 3000) {
+                const container = createContainer();
+                const toast = document.createElement('div');
+                toast.setAttribute('role', 'status');
+                // Use conservative Tailwind utilities and inline color fallbacks to maximize compatibility
+                toast.className = 'pointer-events-auto max-w-sm w-auto bg-white border rounded-lg shadow-lg px-3 py-2 flex items-start gap-3 text-gray-900';
+                toast.style.backgroundColor = toast.style.backgroundColor || 'rgba(255,255,255,0.95)';
+                toast.style.borderColor = toast.style.borderColor || 'rgba(226,232,240,1)';
+                // icon
+                const iconWrap = document.createElement('div');
+                iconWrap.className = 'flex-shrink-0 mt-0.5';
+                // provide inline-colored SVG for broad compatibility
+                if (type === 'success') {
+                    iconWrap.innerHTML = `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" style="color:#10b981"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                } else if (type === 'error') {
+                    iconWrap.innerHTML = `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" style="color:#ef4444"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                } else {
+                    iconWrap.innerHTML = `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" style="color:#0ea5e9"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 6v.01"></path></svg>`;
+                }
+                // content
+                const content = document.createElement('div');
+                content.className = 'flex-1 text-sm leading-snug';
+                content.textContent = message;
+                // append
+                toast.appendChild(iconWrap);
+                toast.appendChild(content);
+                container.appendChild(toast);
+                console.log('[toast]', type, message);
+                // animate in
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-6px)';
+                toast.style.transition = 'opacity 180ms ease, transform 180ms ease';
+                requestAnimationFrame(() => {
+                    toast.style.opacity = '1';
+                    toast.style.transform = 'translateY(0)';
+                });
+                // auto remove
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(-6px)';
+                    setTimeout(() => toast.remove(), 220);
+                }, timeout);
+            };
+        })();
+    </script>
     
     <!-- Main Content -->
     <main class="main">
@@ -374,7 +459,39 @@
             }
         });
         
+        // Bookmark toggle for listing buttons (global)
+        function toggleBookmark(btn) {
+            const docId = btn && btn.dataset && btn.dataset.docId;
+            if (!docId) return;
+            const pressed = btn.getAttribute('aria-pressed') === 'true';
+            if (!pressed) {
+                // create bookmark via POST /api/bookmarks
+                fetch('/api/bookmarks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ document_id: docId })
+                }).then(resp => {
+                    if (resp.ok) {
+                        btn.setAttribute('aria-pressed', 'true');
+                        if (window.lucide) window.lucide.createIcons();
+                        showNotification('ブックマークしました', 'success');
+                    }
+                }).catch(() => {});
+            } else {
+                // delete by document_id via query param
+                fetch(`/api/bookmarks?document_id=${encodeURIComponent(docId)}`, { method: 'DELETE' })
+                    .then(resp => {
+                        if (resp.ok) {
+                            btn.setAttribute('aria-pressed', 'false');
+                            if (window.lucide) window.lucide.createIcons();
+                            showNotification('ブックマークを解除しました', 'success');
+                        }
+                    }).catch(() => {});
+            }
+        }
+
         // mobile menu removed - no toggle functions remain
     </script>
+    
 </body>
 </html>
