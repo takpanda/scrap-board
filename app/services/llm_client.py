@@ -66,14 +66,14 @@ class LLMClient:
 記事:
 {text}
 
-要約:"""
+"""
         else:  # medium
             prompt = """以下の記事を要約してください。主要な論点と詳細を含めて分かりやすくまとめてください。出力はMarkdown形式で要約した内容のみにしてください。
 
 記事:
 {text}
 
-要約:"""
+"""
         
         messages = [
             {"role": "system", "content": "あなたは日本語の文書要約の専門家です。"},

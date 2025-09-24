@@ -178,19 +178,19 @@
                             <a href="/documents/{{ document.id }}" class="text-lg font-semibold text-ink hover:text-emerald transition-colors block break-words">{{ document.title }}</a>
                             <div class="mt-1 text-xs text-gray-400 truncate flex items-center gap-2">
                                 {% if document.source %}
-                                    <span class="pill nowrap-tag">{{ '手動' if document.source == 'manual' else document.source }}</span>
+                                    <span class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs">{{ '手動' if document.source == 'manual' else document.source }}</span>
                                 {% endif %}
                                 {% if document.domain %}
                                     <span class="inline-block truncate max-w-[12rem]">{{ document.domain }}</span>
                                     {% if document.url %}
-                                        <a href="{{ document.url }}" target="_blank" rel="noopener noreferrer" class="pill nowrap-tag inline-flex items-center bg-mist/80 text-graphite border border-mist px-2 py-0.5 text-xs">
+                                        <a href="{{ document.url }}" target="_blank" rel="noopener noreferrer" class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-mist/80 text-graphite border border-mist">
                                             <i data-lucide="external-link" class="w-4 h-4 mr-2"></i>
                                             元記事
                                         </a>
                                     {% endif %}
                                 {% else %}
                                     {% if document.url %}
-                                        <a href="{{ document.url }}" target="_blank" rel="noopener noreferrer" class="pill nowrap-tag inline-flex items-center bg-mist/80 text-graphite border border-mist px-2 py-0.5 text-xs">
+                                        <a href="{{ document.url }}" target="_blank" rel="noopener noreferrer" class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-mist/80 text-graphite border border-mist">
                                             <i data-lucide="external-link" class="w-4 h-4 mr-2"></i>
                                             元記事
                                         </a>
@@ -200,10 +200,10 @@
                         </div>
                     </header>
 
-                    <div class="mt-3 pt-3 border-t border-dashed border-mist documents-divider-dashed flex-1">
+                    <div class="mt-4 pt-4 border-t border-dashed border-mist documents-divider-dashed flex-1">
                         {% if document.short_summary %}
                             <p class="mb-2">
-                                <span class="pill nowrap-tag mr-2 inline-flex items-center" style="background-color:#f5f3ff;color:#6b21a8;border-color:rgba(107,33,168,0.12)">要約</span>
+                                <span class="pill nowrap-tag mr-2 inline-flex items-center h-6 px-2 text-xs" style="background-color:#f5f3ff;color:#6b21a8;border-color:rgba(107,33,168,0.12)">要約</span>
                             </p>
                             <p class="text-sm text-graphite leading-relaxed break-words max-h-[7.5rem] overflow-auto" data-md-inline="{{ document.short_summary|e }}"></p>
                             {% if not ns.autostart_done %}
@@ -219,7 +219,7 @@
                         <div class="flex items-center gap-2 flex-wrap max-w-full">
                             {% if document.classifications %}
                                 {% set cat = document.classifications[0].primary_category %}
-                                <span class="pill nowrap-tag {{ category_class_map.get(cat, 'bg-mist text-graphite') }}">
+                                <span class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs {{ category_class_map.get(cat, 'bg-mist text-graphite') }}">
                                     <i data-lucide="tag" class="w-4 h-4"></i>
                                     {{ cat }}
                                 </span>
@@ -229,7 +229,7 @@
                                     {% for t in all_tags[:display_limit] %}
                                         <a
                                             href="/documents?tag={{ t }}"
-                                            class="pill nowrap-tag inline-block {% if selected_tag and selected_tag == t %}{{ '' }}{% else %}bg-mist/80 text-graphite border border-mist{% endif %}"
+                                            class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs {% if selected_tag and selected_tag == t %}{{ '' }}{% else %}bg-mist/80 text-graphite border border-mist{% endif %}"
                                             {% if selected_tag and selected_tag == t %}style="background-color:#fff1f2;color:#9f1239;border-color:#fecdd3"{% endif %}
                                             hx-get="/documents"
                                             hx-vals='{"tag": "{{ t }}"}'
@@ -242,12 +242,12 @@
                                     {% endfor %}
 
                                     {% if all_tags|length > display_limit %}
-                                        <button type="button" class="pill nowrap-tag inline-block bg-mist/80 text-graphite border border-mist tag-more-toggle" aria-expanded="false" title="残りのタグを表示">+{{ all_tags|length - display_limit }}</button>
+                                        <button type="button" class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-mist/80 text-graphite border border-mist tag-more-toggle" aria-expanded="false" title="残りのタグを表示">+{{ all_tags|length - display_limit }}</button>
                                         <div class="tag-more-list hidden mt-2 flex gap-2 flex-wrap">
                                             {% for t in all_tags[display_limit:] %}
                                                 <a
                                                     href="/documents?tag={{ t }}"
-                                                    class="pill nowrap-tag inline-block bg-mist/80 text-graphite border border-mist"
+                                                    class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-mist/80 text-graphite border border-mist"
                                                     hx-get="/documents"
                                                     hx-vals='{"tag": "{{ t }}"}'
                                                     hx-target="#documents-container"
