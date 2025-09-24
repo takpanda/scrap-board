@@ -263,8 +263,8 @@
                             {% endif %}
                             <a href="/documents/{{ document.id }}" class="text-xs bg-emerald text-white px-3 py-1 rounded-md hover:bg-emerald/90">詳細を見る</a>
                             <!-- Bookmark icon moved inline with tags: icon-only, no border -->
-                            <button class="bookmark-btn ml-2 p-0 text-graphite hover:text-emerald inline-flex items-center" data-doc-id="{{ document.id }}" aria-pressed="false" onclick="toggleBookmark(this)">
-                                <i data-lucide="heart" class="w-4 h-4"></i>
+                            <button class="bookmark-btn ml-2 p-0 inline-flex items-center" data-doc-id="{{ document.id }}" aria-pressed="{{ 'true' if document.bookmarked else 'false' }}" onclick="toggleBookmark(this)">
+                                <i data-lucide="heart" class="w-4 h-4 {% if document.bookmarked %}text-rose-600{% else %}text-graphite{% endif %}" {% if document.bookmarked %}style="color: #9f1239;"{% endif %}></i>
                                 <span class="sr-only">ブックマーク</span>
                             </button>
                         </div>

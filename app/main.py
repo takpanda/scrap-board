@@ -178,7 +178,16 @@ async def documents_page(
         ).params(raw_like=raw_like, escaped_like=escaped_like)
     
     documents = query.order_by(Document.created_at.desc()).limit(50).all()
-    
+    # Attach a transient `bookmarked` attribute to each Document instance so
+    # templates can easily check bookmark state (document.bookmarked).
+    for d in documents:
+        try:
+            d.bookmarked = bool(d.bookmarks and len(d.bookmarks) > 0)
+        except Exception:
+            # Best-effort only: if relationship not loaded or access fails,
+            # default to False.
+            d.bookmarked = False
+
     return templates.TemplateResponse("documents.html", {
         "request": request,
         "documents": documents,
@@ -200,7 +209,12 @@ async def document_detail(
     document = db.query(Document).filter(Document.id == document_id).first()
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+    # Expose transient bookmarked attribute for templates
+    try:
+        document.bookmarked = bool(document.bookmarks and len(document.bookmarks) > 0)
+    except Exception:
+        document.bookmarked = False
+
     return templates.TemplateResponse("document_detail.html", {
         "request": request,
         "document": document

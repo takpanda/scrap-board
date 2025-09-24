@@ -27,7 +27,10 @@ const icons = {
     'pause-circle': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>',
     'code': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16,18 22,12 16,6"></polyline><polyline points="8,6 2,12 8,18"></polyline></svg>',
     'rss': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg>',
+    // Outline heart (used as default)
     'heart': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l8.84 8.84 8.84-8.84a5.5 5.5 0 0 0 0-7.78z"></path></svg>',
+    // Filled heart (used when we want the icon fully colored)
+    'heart-filled': '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6.01 4.01 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 17.99 4 20 6.01 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>',
     'bookmark': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>',
     'search': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.35-4.35"></path></svg>',
     'plus-circle': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>',
@@ -65,10 +68,29 @@ function createIcons() {
             // Get the SVG string
             let svgString = icons[iconName];
             
+            // If this is a heart icon and parent indicates bookmarked, use filled heart
+            let useFilledHeart = false;
+            try {
+                // Check for classes or inline style on the element indicating bookmarked state
+                if (iconName === 'heart') {
+                    // aria-pressed or class text-rose-600 or inline color style
+                    const pressed = element.getAttribute('aria-pressed') === 'true';
+                    const hasRoseClass = (element.className || '').indexOf('text-rose') !== -1;
+                    const inlineColor = (element.getAttribute('style') || '').indexOf('#9f1239') !== -1;
+                    if (pressed || hasRoseClass || inlineColor) {
+                        useFilledHeart = true;
+                        svgString = icons['heart-filled'];
+                    }
+                }
+
+            } catch (e) {
+                // ignore
+            }
+
             // Ensure the SVG has proper size and styling
             svgString = svgString.replace(
                 '<svg ',
-                '<svg width="16" height="16" style="display: block; flex-shrink: 0; color: inherit; stroke: currentColor; fill: none;" '
+                (useFilledHeart ? '<svg width="16" height="16" style="display: block; flex-shrink: 0; color: inherit; stroke: currentColor; fill: currentColor;" ' : '<svg width="16" height="16" style="display: block; flex-shrink: 0; color: inherit; stroke: currentColor; fill: none;" ')
             );
             
             // Set the innerHTML
@@ -97,7 +119,7 @@ function createIcons() {
                 svg.style.flexShrink = '0';
                 svg.style.color = 'inherit';
                 svg.style.stroke = 'currentColor';
-                svg.style.fill = 'none';
+                svg.style.fill = useFilledHeart ? 'currentColor' : 'none';
             }
             
             console.log(`Icon ${iconName} created successfully`);

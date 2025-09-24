@@ -36,7 +36,7 @@
                     data-doc-id="{{ document.id }}"
                     title="ブックマーク"
                 >
-                    <i data-lucide="heart" class="w-5 h-5"></i>
+                    <i data-lucide="heart" class="w-5 h-5 {% if document.bookmarked %}text-rose-600{% else %}text-graphite{% endif %}" {% if document.bookmarked %}style="color: #9f1239;"{% endif %}></i>
                 </button>
             </div>
             {% endif %}
