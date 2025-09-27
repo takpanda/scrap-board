@@ -1,6 +1,0 @@
-CREATE TABLE documents (
-  id INTEGER PRIMARY KEY,
-  title TEXT,
-  content TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
