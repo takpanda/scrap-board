@@ -20,8 +20,9 @@
         } %}
         {% set ns = namespace(autostart_done=False) %}
         {% set selected_tag = '' %}
-        {% for document in documents %}
-        <article tabindex="0" class="w-full bg-white rounded-xl border border-mist shadow-sm hover:shadow-lg transition-shadow hover:-translate-y-1 transform will-change-transform p-4 flex flex-col h-full card-edge">
+    {% for document in documents %}
+      <div class="my-3" style="margin-block:0.5rem !important;">
+  <article tabindex="0" class="w-full bg-white rounded-xl border border-mist shadow-sm hover:shadow-lg transition-shadow hover:-translate-y-1 transform will-change-transform p-4 flex flex-col h-full card-edge">
           <header class="flex items-start gap-4 flex-wrap">
             <img src="{% if document.thumbnail_url %}/data/{{ document.thumbnail_url }}{% else %}/static/images/default-thumbnail.svg{% endif %}?v={{ document.updated_at.isoformat() if document.updated_at else '1' }}" alt="thumbnail" loading="lazy" class="w-12 h-12 md:w-16 md:h-16 thumb-80 rounded-md object-cover flex-shrink-0" />
             <div class="flex-1 min-w-0">
@@ -87,6 +88,7 @@
             </div>
           </footer>
         </article>
+          </div>
         {% endfor %}
       </div>
 
@@ -129,4 +131,4 @@
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
     <script src="/static/js/markdown-preview.js"></script>
   {% endblock %}
-<script src="/static/js/markdown-preview.js"></script>
+
