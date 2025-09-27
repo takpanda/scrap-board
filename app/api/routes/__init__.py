@@ -1,4 +1,4 @@
-from . import documents, ingest, collections, utils, bookmarks
+from . import documents, ingest, collections, utils, bookmarks, bookmarks_only
 from . import admin_sources
 
 __all__ = [
@@ -7,5 +7,6 @@ __all__ = [
 	"collections",
 	"utils",
 	"bookmarks",
+	"bookmarks_only",
 	"admin_sources",
 ]

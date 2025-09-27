@@ -1,0 +1,16 @@
+{
+  "id": "snapshot_1758954700619_fsmaf0rbo",
+  "approvalId": "approval_1758954700614_14h5dd231",
+  "approvalTitle": "design: bookmarked-articles-page",
+  "version": 1,
+  "timestamp": "2025-09-27T06:31:40.619Z",
+  "trigger": "initial",
+  "status": "pending",
+  "content": "# Design: bookmarked-articles-page\n\n## 概要\nこの設計では、ユーザーがブックマークした記事のみを一覧表示する専用ページを実装する方法を記述します。実装は FastAPI と Jinja2 テンプレートを使い、既存のデータモデルと認証を再利用します。\n\n## コンポーネント\n- ルート: `GET /bookmarks` （または `/bookmarks/only`）\n- テンプレート: `app/templates/bookmarks_only.html`\n- サービス: `app/services/bookmark_service.py`（既存があれば利用、無ければ軽量な関数を `app/services/__init__.py` に追加）\n- 既存テーブル: `bookmarks` (user_id, document_id, created_at), `documents`\n\n## ルーティングとコントローラ\n- ルート定義ファイル: `app/api/routes/bookmarks.py`\n- 処理フロー:\n  1. 現在のユーザーを取得（既存の auth/session ユーティリティを使用）\n  2. 指定ページ（query param `page`, default=1）を受け取りページネーション情報を決定\n  3. `bookmark_service.get_user_bookmarked_documents(user_id, page, per_page)` を呼び出す\n  4. テンプレート `bookmarks_only.html` にドキュメント一覧とページネーション情報を渡す\n\n## DBクエリ（高レベル）\n- SQLAlchemy または既存のDBラッパーを利用して、次のようなクエリを実装:\n  - Join `bookmarks` と `documents` on document_id\n  - Filter by `bookmarks.user_id == current_user.id`\n  - Order by `bookmarks.created_at DESC`\n  - Limit/Offset を使用してページネーション\n\n## テンプレート設計（`bookmarks_only.html`）\n- ヘッダー: ページタイトル（例: 「ブックマーク」）\n- 記事カード（リスト）: タイトル（リンク）、サムネイル（存在する場合）、短い要約（truncate）、ドメイン、ブックマーク日時\n- ページネーション UI: 前へ/次へボタン（既存のスタイルを再利用）\n- 空の場合: 日本語のプレースホルダメッセージ\n\n## ページネーション\n- `per_page` は環境または設定で決定（初期値: 20）\n- UI はシンプルな前後ナビゲーション\n\n## テスト計画\n- 単体テスト: `bookmark_service.get_user_bookmarked_documents` の DB クエリの戻り値を検証\n- 統合テスト: `GET /bookmarks` に対し、ログインユーザーのブックマークのみ表示されることを確認\n- UI スナップショット (playwright テストが既にあれば追加)\n\n## セキュリティ/権限\n- 他ユーザーのブックマークを表示しない\n- 未ログインユーザーはリダイレクトまたは空のメッセージを表示（既存挙動に合わせる）\n\n## 変更ファイル一覧\n- app/api/routes/bookmarks.py (新規)\n- app/services/bookmark_service.py (新規または拡張)\n- app/templates/bookmarks_only.html (新規)\n- tests/test_bookmarks_only_page.py (新規)\n\n## 実装マイルストーン\n1. ルートとサービス実装（ローカルで手動確認）\n2. テンプレート実装\n3. 単体/統合テスト追加\n4. PR 作成とレビュー\n",
+  "fileStats": {
+    "size": 3127,
+    "lines": 57,
+    "lastModified": "2025-09-27T06:31:32.306Z"
+  },
+  "comments": []
+}

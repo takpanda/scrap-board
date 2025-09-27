@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold text-ink">ブックマーク</h1>
+    <div class="text-sm text-graphite">合計: {{ total if total is defined else (documents|length if documents else 0) }}</div>
+  </div>
+
+  <div id="bookmarks-container">
+    {% if documents and documents|length > 0 %}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {% set category_class_map = {
+          'テック/AI': 'bg-emerald-100 text-emerald-800',
+          'ソフトウェア開発': 'bg-indigo-100 text-indigo-800',
+          'ビジネス': 'bg-amber-100 text-amber-800',
+          'セキュリティ': 'bg-red-100 text-red-800',
+          '研究': 'bg-sky-100 text-sky-800',
+          'その他': 'bg-mist text-graphite'
+        } %}
+        {% set ns = namespace(autostart_done=False) %}
+        {% set selected_tag = '' %}
+        {% for document in documents %}
+        <article tabindex="0" class="w-full bg-white rounded-xl border border-mist shadow-sm hover:shadow-lg transition-shadow hover:-translate-y-1 transform will-change-transform p-4 flex flex-col h-full card-edge">
+          <header class="flex items-start gap-4 flex-wrap">
+            <img src="{% if document.thumbnail_url %}/data/{{ document.thumbnail_url }}{% else %}/static/images/default-thumbnail.svg{% endif %}?v={{ document.updated_at.isoformat() if document.updated_at else '1' }}" alt="thumbnail" loading="lazy" class="w-12 h-12 md:w-16 md:h-16 thumb-80 rounded-md object-cover flex-shrink-0" />
+            <div class="flex-1 min-w-0">
+              {% if document.created_at %}
+                <div class="doc-date text-xs text-gray-400 mb-1">
+                  {{ document.created_at|to_jst('%Y年%m月%d日') }}
+                  <span class="ml-2 text-xs text-gray-400">{{ document.created_at|to_jst('%H:%M') }}</span>
+                </div>
+              {% endif %}
+              <a href="/documents/{{ document.id }}" class="text-lg font-semibold text-ink hover:text-emerald transition-colors block break-words">{{ document.title }}</a>
+              <div class="mt-1 text-xs text-gray-400 truncate flex items-center gap-2">
+                {% if document.domain %}
+                  <span class="inline-block truncate max-w-[12rem]">{{ document.domain }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </header>
+
+          <div class="mt-4 pt-4 border-t border-dashed border-mist documents-divider-dashed flex-1">
+            {% if document.short_summary %}
+              <p class="mb-2">
+                <span class="pill nowrap-tag mr-2 inline-flex items-center h-6 px-2 text-xs" style="background-color:#f5f3ff;color:#6b21a8;border-color:rgba(107,33,168,0.12)">要約</span>
+              </p>
+              <p class="text-sm text-graphite leading-relaxed break-words max-h-[7.5rem] overflow-auto" data-md-inline="{{ document.short_summary|e }}"></p>
+              {% if not ns.autostart_done %}
+                <span data-md-autostart="true" data-md="{{ document.short_summary|e }}" data-title="{{ document.title|e }}" class="hidden"></span>
+                {% set ns.autostart_done = true %}
+              {% endif %}
+            {% else %}
+              <p class="text-sm text-graphite leading-relaxed break-words max-h-[7.5rem] overflow-auto" data-md-inline="{{ (document.content_text[:300] ~ ('...' if document.content_text|length > 300 else ''))|e }}"></p>
+            {% endif %}
+          </div>
+
+          <footer class="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2 flex-wrap max-w-full">
+              {% if document.classifications %}
+                {% set cat = document.classifications[0].primary_category %}
+                <span class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs {{ category_class_map.get(cat, 'bg-mist text-graphite') }}">
+                  <i data-lucide="tag" class="w-4 h-4"></i>
+                  {{ cat }}
+                </span>
+                {% if document.classifications[0].tags %}
+                  {% set all_tags = document.classifications[0].tags %}
+                  {% set display_limit = 5 %}
+                  {% for t in all_tags[:display_limit] %}
+                    <a href="/documents?tag={{ t }}" class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-mist/80 text-graphite border border-mist" hx-get="/documents" hx-vals='{"tag": "{{ t }}"}' hx-target="#bookmarks-container" hx-push-url="true" title="{{ t }}でフィルタ">{{ t }}</a>
+                  {% endfor %}
+                  {% if all_tags|length > display_limit %}
+                    <button type="button" class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-mist/80 text-graphite border border-mist tag-more-toggle" aria-expanded="false" title="残りのタグを表示">+{{ all_tags|length - display_limit }}</button>
+                    <div class="tag-more-list hidden mt-2 flex gap-2 flex-wrap">
+                      {% for t in all_tags[display_limit:] %}
+                        <a href="/documents?tag={{ t }}" class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-mist/80 text-graphite border border-mist" hx-get="/documents" hx-vals='{"tag": "{{ t }}"}' hx-target="#bookmarks-container" hx-push-url="true" title="{{ t }}でフィルタ">{{ t }}</a>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+              <a href="/documents/{{ document.id }}" class="text-xs bg-emerald text-white px-3 py-1 rounded-md hover:bg-emerald/90">詳細を見る</a>
+              <button class="bookmark-btn ml-2 p-0 inline-flex items-center" data-doc-id="{{ document.id }}" aria-pressed="{{ 'true' if document.bookmarked else 'false' }}" onclick="toggleBookmark(this)">
+                <i data-lucide="heart" class="w-4 h-4 {% if document.bookmarked %}text-rose-600{% else %}text-graphite{% endif %}" {% if document.bookmarked %}style="color: #9f1239;"{% endif %}></i>
+                <span class="sr-only">ブックマーク</span>
+              </button>
+            </div>
+          </footer>
+        </article>
+        {% endfor %}
+      </div>
+
+      <!-- Pagination -->
+      <div class="mt-8 flex justify-center">
+        <div class="flex space-x-2">
+          {% if page and page > 1 %}
+            <a href="?page={{ page - 1 }}&per_page={{ per_page }}" class="px-4 py-2 bg-white border border-mist rounded-lg hover:bg-mist transition-colors">前へ</a>
+          {% else %}
+            <button class="px-4 py-2 bg-white border border-mist rounded-lg text-gray-300" disabled>前へ</button>
+          {% endif %}
+
+          {% set current_page = page if page is defined else 1 %}
+          <button class="px-4 py-2 bg-emerald text-white rounded-lg">{{ current_page }}</button>
+
+          {% if (page is not defined and total and total > per_page) or (page is defined and (page * per_page) < total) %}
+            <a href="?page={{ (page if page is defined else 1) + 1 }}&per_page={{ per_page }}" class="px-4 py-2 bg-white border border-mist rounded-lg hover:bg-mist transition-colors">次へ</a>
+          {% else %}
+            <button class="px-4 py-2 bg-white border border-mist rounded-lg text-gray-300" disabled>次へ</button>
+          {% endif %}
+        </div>
+      </div>
+
+    {% else %}
+      <div class="text-center py-12">
+        <div class="w-16 h-16 bg-mist rounded-full flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="bookmark" class="w-8 h-8 text-graphite"></i>
+        </div>
+        <h3 class="text-lg font-semibold text-ink mb-2">ブックマークした記事はありません</h3>
+        <p class="text-graphite mb-4">気に入った記事を見つけたら、ハートアイコンでブックマークしておきましょう。</p>
+        <a href="/documents" class="bg-emerald text-white px-6 py-3 rounded-lg hover:bg-emerald/90 transition-colors">ドキュメント一覧へ</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+    <script>
+      createIcons && createIcons();
+    </script>
+    <!-- markdown-it from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <script src="/static/js/markdown-preview.js"></script>
+  {% endblock %}
+<script src="/static/js/markdown-preview.js"></script>
