@@ -56,21 +56,9 @@
                             class="dify-toggle-btn"
                         >
                             <span>全文を表示</span>
-                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
                         </button>
                     </div>
 
-                    <div id="content-preview" class="prose max-w-none break-words">
-                        <div class="dify-content-text">
-                            {{ document.content_md[:500] | markdown | safe }}{% if document.content_md|length > 500 %}<span class="text-gray-400">...</span>{% endif %}
-                        </div>
-                    </div>
-
-                    <div id="content-full" class="hidden prose max-w-none break-words">
-                        <div class="dify-content-text">
-                            {{ document.content_md | safe }}
-                        </div>
-                    </div>
                 </div>
 
                 <div class="dify-content-card card-edge mt-6">
@@ -119,43 +107,10 @@
         </div>
 
         <script>
+            // Minimal JS required for this page (kept concise)
             let summaryLoaded = false;
             let fullContentVisible = false;
             let showingSummary = true;
-
-            function markdownToHtml(text) {
-                if (!text) return '';
-                return text
-                    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>')
-                    .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-4 mb-2">$1</h2>')
-                    .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-4 mb-2">$1</h1>')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
-                    .replace(/__(.*?)__/g, '<strong class="font-semibold">$1</strong>')
-                    .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-                    .replace(/_(.*?)_/g, '<em class="italic">$1</em>')
-                    .replace(/```(.*?)```/gs, '<code class="bg-gray-100 px-2 py-1 rounded text-sm font-mono">$1</code>')
-                    .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 rounded text-sm font-mono">$1</code>')
-                    .replace(/^[\-\*] (.*$)/gim, '<li class="ml-4">• $1</li>')
-                    .replace(/\n\n/g, '<br><br>')
-                    .replace(/\n/g, '<br>');
-            }
-
-            function autoLoadSummary() {
-                const content = document.getElementById('summary-content');
-                if (!content || summaryLoaded) return;
-
-                fetch(`/api/documents/{{ document.id }}/summarize`, { method: 'POST' })
-                    .then(response => response.json())
-                    .then(data => {
-                        const summaryHtml = markdownToHtml(data.short_summary || '要約の生成に失敗しました。');
-                        content.innerHTML = `<div class="dify-summary-container"><div class="dify-summary-badge"><span>AI生成要約</span></div><div class="dify-summary-content">${summaryHtml}</div></div>`;
-                        summaryLoaded = true;
-                        if (window.lucide) window.lucide.createIcons();
-                    })
-                    .catch(() => {
-                        content.innerHTML = `<div class="dify-error-container"><p class="dify-error-text">要約の生成中にエラーが発生しました。</p></div>`;
-                    });
-            }
 
             function toggleContentView() {
                 const summarySection = document.getElementById('summary-section');
@@ -206,7 +161,6 @@
                 const docId = btn && btn.dataset && btn.dataset.docId;
                 if (!docId) return;
                 const pressed = btn.getAttribute('aria-pressed') === 'true';
-                const method = pressed ? 'DELETE' : 'POST';
 
                 if (!pressed) {
                     fetch('/api/bookmarks', {
@@ -243,208 +197,3 @@
 </div>
 
 {% endblock %}
-
-                    // Italic text (*italic* や _italic_)
-                    .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-                    .replace(/_(.*?)_/g, '<em class="italic">$1</em>')
-
-                    // Code blocks (```code```)
-                    .replace(/```(.*?)```/gs, '<code class="bg-gray-100 px-2 py-1 rounded text-sm font-mono">$1</code>')
-
-                    // Inline code (`code`)
-                    .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 rounded text-sm font-mono">$1</code>')
-
-                    // Lists (- item や * item)
-                    .replace(/^[\-\*] (.*$)/gim, '<li class="ml-4">• $1</li>')
-
-                    // Line breaks (double newlines become <br>)
-                    .replace(/\n\n/g, '<br><br>')
-                    .replace(/\n/g, '<br>');
-            }
-
-            // Auto-load summary on page load
-            function autoLoadSummary() {
-                const content = document.getElementById('summary-content');
-
-                if (!summaryLoaded) {
-                    // Load summary via AI
-                    fetch(`/api/documents/{{ document.id }}/summarize`, {
-                        method: 'POST'
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        const summaryHtml = markdownToHtml(data.short_summary || '要約の生成に失敗しました。');
-                        content.innerHTML = `
-                            <div class="dify-summary-container">
-                                <div class="dify-summary-badge">
-                                    <span>AI生成要約</span>
-                                </div>
-                                <div class="dify-summary-content">${summaryHtml}</div>
-                            </div>
-                        `;
-                        summaryLoaded = true;
-                    })
-                    .catch(error => {
-                        content.innerHTML = `
-                            <div class="dify-error-container">
-                                <div class="dify-error-icon">
-                                    <i data-lucide="alert-circle" class="w-5 h-5"></i>
-                                </div>
-                                <p class="dify-error-text">要約の生成中にエラーが発生しました。</p>
-                            </div>
-                        `;
-                    });
-                }
-            }
-
-            // Toggle between summary view and full content view
-            function toggleContentView() {
-                const summarySection = document.getElementById('summary-section');
-                const contentSection = document.getElementById('content-section');
-                const toggleButton = document.getElementById('content-view-toggle');
-                const toggleIcon = toggleButton.querySelector('i');
-                const toggleText = toggleButton.querySelector('span');
-
-                if (showingSummary) {
-                    // Switch to full content view
-                    summarySection.classList.add('hidden');
-                    contentSection.classList.remove('hidden');
-                    toggleText.textContent = '要約に戻る';
-                    toggleIcon.setAttribute('data-lucide', 'arrow-left');
-                    showingSummary = false;
-                } else {
-                    // Switch to summary view
-                    summarySection.classList.remove('hidden');
-                    contentSection.classList.add('hidden');
-                    toggleText.textContent = '全文を表示';
-                    toggleIcon.setAttribute('data-lucide', 'file-text');
-                    showingSummary = true;
-                }
-
-                // Re-initialize lucide icons after changing them
-                if (window.lucide) {
-                    window.lucide.createIcons();
-                }
-            }
-
-            function toggleFullContent() {
-                const preview = document.getElementById('content-preview');
-                const full = document.getElementById('content-full');
-                const toggle = document.getElementById('content-toggle');
-                const toggleText = toggle.querySelector('span');
-
-                if (fullContentVisible) {
-                    preview.classList.remove('hidden');
-                    full.classList.add('hidden');
-                    toggleText.textContent = '全文を表示';
-                    fullContentVisible = false;
-                } else {
-                    preview.classList.add('hidden');
-                    full.classList.remove('hidden');
-                    toggleText.textContent = '概要に戻る';
-                    fullContentVisible = true;
-                }
-            }
-
-            // Initialize icons and auto-load summary
-            document.addEventListener('DOMContentLoaded', function() {
-                if (window.lucide) {
-                    lucide.createIcons();
-                }
-                // Auto-load summary only when no saved short_summary exists
-                const docData = document.getElementById('doc-data');
-                const hasShortSummary = docData && docData.dataset.hasShortSummary === '1';
-                if (!hasShortSummary) {
-                    autoLoadSummary(); // Auto-load summary on page load
-                }
-            });
-        </script>
-        {% endblock %}
-                            .then(data => {
-                                const summaryHtml = markdownToHtml(data.short_summary || '要約の生成に失敗しました。');
-                                content.innerHTML = `
-                                    <div class="dify-summary-container">
-                                        <div class="dify-summary-badge">
-                                            <span>AI生成要約</span>
-                                        </div>
-                                        <div class="dify-summary-content">${summaryHtml}</div>
-                                    </div>
-                                `;
-                                summaryLoaded = true;
-                            })
-                            .catch(error => {
-                                content.innerHTML = `
-                                    <div class="dify-error-container">
-                                        <div class="dify-error-icon">
-                                            <i data-lucide="alert-circle" class="w-5 h-5"></i>
-                                        </div>
-                                        <p class="dify-error-text">要約の生成中にエラーが発生しました。</p>
-                                    </div>
-                                `;
-                            });
-                        }
-                    }
-    
-                    // Toggle between summary view and full content view
-                    function toggleContentView() {
-                        const summarySection = document.getElementById('summary-section');
-                        const contentSection = document.getElementById('content-section');
-                        const toggleButton = document.getElementById('content-view-toggle');
-                        const toggleIcon = toggleButton.querySelector('i');
-                        const toggleText = toggleButton.querySelector('span');
-        
-                        if (showingSummary) {
-                            // Switch to full content view
-                            summarySection.classList.add('hidden');
-                            contentSection.classList.remove('hidden');
-                            toggleText.textContent = '要約に戻る';
-                            toggleIcon.setAttribute('data-lucide', 'arrow-left');
-                            showingSummary = false;
-                        } else {
-                            // Switch to summary view
-                            summarySection.classList.remove('hidden');
-                            contentSection.classList.add('hidden');
-                            toggleText.textContent = '全文を表示';
-                            toggleIcon.setAttribute('data-lucide', 'file-text');
-                            showingSummary = true;
-                        }
-        
-                        // Re-initialize lucide icons after changing them
-                        if (window.lucide) {
-                            window.lucide.createIcons();
-                        }
-                    }
-    
-                    function toggleFullContent() {
-                        const preview = document.getElementById('content-preview');
-                        const full = document.getElementById('content-full');
-                        const toggle = document.getElementById('content-toggle');
-                        const toggleText = toggle.querySelector('span');
-        
-                        if (fullContentVisible) {
-                            preview.classList.remove('hidden');
-                            full.classList.add('hidden');
-                            toggleText.textContent = '全文を表示';
-                            fullContentVisible = false;
-                        } else {
-                            preview.classList.add('hidden');
-                            full.classList.remove('hidden');
-                            toggleText.textContent = '概要に戻る';
-                            fullContentVisible = true;
-                        }
-                    }
-    
-                    // Initialize icons and auto-load summary
-                    document.addEventListener('DOMContentLoaded', function() {
-                        if (window.lucide) {
-                            lucide.createIcons();
-                        }
-                        // Auto-load summary only when no saved short_summary exists
-                        const docData = document.getElementById('doc-data');
-                        const hasShortSummary = docData && docData.dataset.hasShortSummary === '1';
-                        if (!hasShortSummary) {
-                            autoLoadSummary(); // Auto-load summary on page load
-                        }
-                    });
-                </script>
-                {% endblock %}
