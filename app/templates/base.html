@@ -478,7 +478,20 @@
                 }).then(resp => {
                     if (resp.ok) {
                         btn.setAttribute('aria-pressed', 'true');
-                        if (window.lucide) window.lucide.createIcons();
+                        btn.setAttribute('data-bookmarked', 'true');
+                        // update icon and svg if present
+                        const icon = btn.querySelector('i[data-lucide="heart"]');
+                        const svg = btn.querySelector('svg');
+                        if (icon) {
+                            icon.classList.remove('text-graphite');
+                            icon.classList.add('text-rose-600');
+                            icon.style.color = '#9f1239';
+                        }
+                        if (svg) {
+                            svg.classList.remove('text-graphite');
+                            svg.classList.add('text-rose-600');
+                            svg.style.color = '#9f1239';
+                        }
                         showNotification('ブックマークしました', 'success');
                     }
                 }).catch(() => {});
@@ -488,7 +501,20 @@
                     .then(resp => {
                         if (resp.ok) {
                             btn.setAttribute('aria-pressed', 'false');
-                            if (window.lucide) window.lucide.createIcons();
+                            btn.setAttribute('data-bookmarked', 'false');
+                            // update icon and svg if present
+                            const icon = btn.querySelector('i[data-lucide="heart"]');
+                            const svg = btn.querySelector('svg');
+                            if (icon) {
+                                icon.classList.remove('text-rose-600');
+                                icon.classList.add('text-graphite');
+                                icon.style.color = '';
+                            }
+                            if (svg) {
+                                svg.classList.remove('text-rose-600');
+                                svg.classList.add('text-graphite');
+                                svg.style.color = '';
+                            }
                             showNotification('ブックマークを解除しました', 'success');
                         }
                     }).catch(() => {});

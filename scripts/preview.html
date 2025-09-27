@@ -609,7 +609,22 @@
                 }).then(resp => {
                     if (resp.ok) {
                         btn.setAttribute('aria-pressed', 'true');
-                        if (window.lucide) window.lucide.createIcons();
+                        btn.setAttribute('data-bookmarked', 'true');
+                        // Update inner icon color/class immediately so reload isn't required
+                        const icon = btn.querySelector('i[data-lucide="heart"]');
+                        const svg = btn.querySelector('svg');
+                        if (icon) {
+                            icon.classList.remove('text-graphite');
+                            icon.classList.add('text-rose-600');
+                            icon.style.color = '#9f1239';
+                        }
+                        if (svg) {
+                            svg.classList.remove('text-graphite');
+                            svg.classList.add('text-rose-600');
+                            svg.style.color = '#9f1239';
+                        }
+                        // If lucide is present, avoid re-creating icons here because it may overwrite inline styles;
+                        // instead, ensure the rendered svg is updated (done above).
                         showNotification('ブックマークしました', 'success');
                     }
                 }).catch(() => {});
@@ -619,7 +634,21 @@
                     .then(resp => {
                         if (resp.ok) {
                             btn.setAttribute('aria-pressed', 'false');
-                            if (window.lucide) window.lucide.createIcons();
+                            btn.setAttribute('data-bookmarked', 'false');
+                            // Update inner icon color/class immediately so reload isn't required
+                            const icon = btn.querySelector('i[data-lucide="heart"]');
+                            const svg = btn.querySelector('svg');
+                            if (icon) {
+                                icon.classList.remove('text-rose-600');
+                                icon.classList.add('text-graphite');
+                                icon.style.color = '';
+                            }
+                            if (svg) {
+                                svg.classList.remove('text-rose-600');
+                                svg.classList.add('text-graphite');
+                                svg.style.color = '';
+                            }
+                            // avoid re-creating icons here for the same reason
                             showNotification('ブックマークを解除しました', 'success');
                         }
                     }).catch(() => {});
