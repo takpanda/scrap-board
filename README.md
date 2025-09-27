@@ -169,6 +169,93 @@ TIMEOUT_SEC=30
 - 埋め込みの永続化先は現在SQLiteのテーブルです。将来的にはFAISSやMilvus、Weaviateなどのベクトルストア統合を検討してください。
 
 
+### 実行方法（手順）
+
+以下はローカル開発環境で「定期外部取り込み（Periodic External Ingest）」を有効にし、動作確認するための手順です。fishシェル向けのコマンド例を含みます。
+
+前提:
+- Python 仮想環境（例: `.venv`）を用意していること
+- LLM サービス（LM Studio や Ollama 等）が起動しており、`.env` に `CHAT_API_BASE` / `EMBED_API_BASE` 等が設定されていること
+
+1) 仮想環境を有効化（fish）
+
+```fish
+source .venv/bin/activate.fish
+```
+
+2) 依存パッケージのインストール（必要な場合）
+
+```fish
+pip install -r requirements.txt
+```
+
+3) 環境変数ファイルを用意
+
+```fish
+cp .env.example .env
+# .envを編集してLMのエンドポイント(CHAT_API_BASE, EMBED_API_BASE等)を設定
+```
+
+4) サーバ起動（Scheduler が起動し、`sources` テーブルに登録された cron に従って取り込みが実行されます）
+
+```fish
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+- サーバ起動ログに "Scheduler started" が出ていることを確認してください。
+
+5) `sources` の登録
+- 管理UI (http://localhost:8000/admin) でソースを追加するか、SQLite に直接行を追加します。
+- `sources` の主なカラム: `id, name, type, config, enabled, cron_schedule`
+- 例（sqlite3 で直接追加、Qiita ユーザを毎時取得する場合の例）:
+
+```fish
+sqlite3 data/scraps.db "INSERT INTO sources (name,type,config,enabled,cron_schedule) VALUES ('qiita-user','qiita','{\"user\":\"someuser\",\"per_page\":10}',1,'0 * * * *');"
+```
+
+6) ポストプロセスワーカーを常駐させる（推奨）
+
+開発時はアプリのフォールバックで短時間のスレッド処理が動きますが、永続的にリトライやバックオフを効かせるには DB キューのワーカーを起動してください。
+
+```fish
+# 別ターミナルで
+python -m app.services.postprocess_queue
+```
+
+ワーカーは `postprocess_jobs` テーブルのジョブをポーリングして処理します。
+
+7) 手動テスト（即時動作確認）
+
+```fish
+python scripts/test_postprocess.py
+```
+
+このスクリプトはテスト用ドキュメントを挿入し、数秒待って `short_summary` や `embeddings` を DB から確認します。
+
+8) Docker での起動
+
+`docker-compose.yml` には `app` と `worker` のサービス定義が含まれています。LM サービスは別途準備してください。
+
+```fish
+docker-compose up -d --build
+docker-compose logs -f app
+docker-compose logs -f worker
+```
+
+トラブルシューティング（よくある点）:
+- Scheduler が起動していない: `uvicorn` ログに "Scheduler started" があるか確認。pytest 実行時はスケジューラがスキップされる実装があります。
+- `sources` がスケジュールされない: `enabled` が 1 か、`cron_schedule` が正しい crontab 式かを確認。
+- Postprocess ジョブが処理されない: `postprocess_jobs` テーブルに `pending` ジョブが存在するか、ワーカーが起動しているかを確認。
+- LLM への接続失敗: `.env` のエンドポイントとモデル名、LM サービスの稼働状況を確認。
+
+短いチェックリスト:
+- 仮想環境を有効化
+- `.env` を設定
+- `uvicorn` を起動して Scheduler が立ち上がることを確認
+- `sources` を追加（UI/DB）
+- ワーカーを起動（または docker-compose でworkerを立てる）
+
+
 ## 変更: カードのエッジ強調スタイル
 
 - **確認方法**: サーバーを起動後、`/documents` と `/` を開き、カードの角にグラデーションの境界とホバー時のグローが表示されることを確認してください。
