@@ -54,6 +54,10 @@ def start_scheduler():
 
 def stop_scheduler():
     try:
-        scheduler.shutdown()
+        # Only shutdown if scheduler is running to avoid SchedulerNotRunningError
+        if getattr(scheduler, "running", False):
+            scheduler.shutdown()
+        else:
+            logger.debug("Scheduler not running; skip shutdown")
     except Exception:
         logger.exception("Failed to shutdown scheduler")

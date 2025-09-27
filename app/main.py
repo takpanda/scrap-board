@@ -31,21 +31,30 @@ async def lifespan(app: FastAPI):
     """アプリケーションライフサイクル"""
     # 起動時
     logger.info("Scrap-Board starting up...")
-    # 在テスト環境(pytest)では、テストごとに独自のDBセットアップを行うため
-    # アプリ起動時にグローバルなテーブル作成をスキップする。
-    # pytest は `PYTEST_CURRENT_TEST` 環境変数をセットするためこれを利用する。
-    import os
-    if not os.environ.get("PYTEST_CURRENT_TEST"):
-        try:
-            create_tables()
-            logger.info("Database tables created/verified")
-        except Exception:
-            logger.exception("create_tables() failed during startup")
-        try:
-            start_scheduler()
-            logger.info("Scheduler started")
-        except Exception:
-            logger.exception("Failed to start scheduler")
+    # Ensure tables exist at application startup. Some tests import the app
+    # module directly and use TestClient(), which means the app may be used
+    # before pytest fixtures have a chance to create tables. Create tables
+    # here in a best-effort manner so TestClient-based tests see the schema.
+    try:
+        create_tables()
+        logger.info("Database tables created/verified (startup)")
+    except Exception:
+        logger.exception("create_tables() failed during startup")
+
+    # Start scheduler only when not running under pytest collection/execution
+    # If running under pytest, scheduler start is best-effort and may be skipped
+    try:
+        import os as _os
+        if not _os.environ.get("PYTEST_CURRENT_TEST"):
+            try:
+                start_scheduler()
+                logger.info("Scheduler started")
+            except Exception:
+                logger.exception("Failed to start scheduler")
+        else:
+            logger.debug("pytest detected: skipping scheduler start")
+    except Exception:
+        logger.exception("Error while deciding whether to start scheduler")
     
     yield
     
