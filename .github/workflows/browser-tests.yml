@@ -38,7 +38,7 @@ jobs:
 
       - name: Apply SQL migrations
         run: |
-          python migrations/apply_migrations.py --db ./test.db || true
+          python migrations/apply_migrations.py --db ./test.db
 
       - name: Run browser tests
         env:

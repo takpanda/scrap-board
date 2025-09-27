@@ -30,12 +30,26 @@ jobs:
 
       - name: Apply SQL migrations
         run: |
-          python migrations/apply_migrations.py --db ./test.db || true
+          python migrations/apply_migrations.py --db ./test.db
+
+      - name: Verify migrations applied
+        run: |
+          # Ensure core tables exist; fail the job if migrations didn't create them
+          echo "Checking for expected tables in test.db"
+          missing=0
+          for t in documents bookmarks postprocess_jobs; do
+            sqlite3 test.db "SELECT name FROM sqlite_master WHERE type='table' AND name='${t}';" | grep -q "${t}" || missing=1
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "ERROR: One or more expected tables are missing after migrations"
+            sqlite3 test.db ".schema" || true
+            exit 1
+          fi
 
       - name: Run tests
         env:
           DB_URL: sqlite:///./test.db
         run: |
-          pytest -q -m "not browser" || true
+          pytest -q -m "not browser"
       
       # Browser tests are intentionally not run on push/PR to keep CI fast.

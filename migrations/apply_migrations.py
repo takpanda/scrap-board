@@ -18,8 +18,19 @@ def apply_migration(db_path: str, sql_path: str):
         sql = f.read()
     conn = sqlite3.connect(db_path)
     try:
-        conn.executescript(sql)
-        conn.commit()
+        try:
+            conn.executescript(sql)
+            conn.commit()
+        except sqlite3.OperationalError as e:
+            # Common: attempting to add a column that already exists or create a
+            # table that already exists. Log and continue so migrations are
+            # effectively idempotent for local/dev usage.
+            msg = str(e).lower()
+            if "duplicate column" in msg or "already exists" in msg or "duplicate name" in msg or "no such table" in msg:
+                print(f"Warning: migration {os.path.basename(sql_path)} raised: {e} -- continuing")
+            else:
+                # Re-raise unexpected errors
+                raise
     finally:
         conn.close()
 

@@ -60,7 +60,41 @@ def get_db() -> Generator[Session, None, None]:
     # Ensure tables exist on the bound engine before creating sessions.
     try:
         if bound_engine is not None:
-            Base.metadata.create_all(bind=bound_engine)
+            # If the bound engine does not have the core tables (e.g. documents),
+            # recreate an engine bound to the current DB URL so tests that
+            # swap DBs at runtime are respected.
+            try:
+                # Quick check for documents table presence (SQLite specific path)
+                conn = bound_engine.connect()
+                try:
+                    res = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='documents'")
+                    has_documents = bool(res.fetchall())
+                except Exception:
+                    # If the inspection query fails (non-sqlite dialect), fall back
+                    has_documents = True
+                finally:
+                    conn.close()
+            except Exception:
+                has_documents = False
+
+            if not has_documents:
+                # Recreate engine from env DB URL so it points to the DB with tables
+                try:
+                    db_url = os.environ.get("DB_URL") or settings.db_url
+                    from sqlalchemy import create_engine as _create_engine
+
+                    new_engine = _create_engine(db_url, connect_args={"check_same_thread": False} if "sqlite" in db_url else {})
+                    engine = new_engine
+                    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=new_engine)
+                    bound_engine = new_engine
+                except Exception:
+                    pass
+
+            # Ensure tables exist on the (new) bound engine before creating sessions.
+            try:
+                Base.metadata.create_all(bind=bound_engine)
+            except Exception:
+                pass
     except Exception:
         # best-effort only
         pass
