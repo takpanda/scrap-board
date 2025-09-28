@@ -561,8 +561,59 @@
         function toggleBookmark(btn) {
             const docId = btn && btn.dataset && btn.dataset.docId;
             if (!docId) return;
+
+            // helper to update UI immediately
+            function updateButtonUI(button, bookmarked) {
+                button.setAttribute('aria-pressed', bookmarked ? 'true' : 'false');
+                button.setAttribute('data-bookmarked', bookmarked ? 'true' : 'false');
+                const icon = button.querySelector('i[data-lucide="heart"]');
+                const svg = button.querySelector('svg');
+                if (bookmarked) {
+                    // selected style (match tag selected)
+                    try {
+                        button.classList.remove('bg-mist/80', 'text-graphite', 'border', 'border-mist');
+                    } catch (e) {}
+                    button.style.backgroundColor = '#fff1f2';
+                    button.style.color = '#9f1239';
+                    button.style.borderColor = '#fecdd3';
+                    if (icon) {
+                        icon.classList.remove('text-graphite');
+                        icon.classList.add('text-rose-600');
+                        icon.style.color = '#9f1239';
+                    }
+                    if (svg) {
+                        svg.classList.remove('text-graphite');
+                        svg.classList.add('text-rose-600');
+                        svg.style.color = '#9f1239';
+                    }
+                } else {
+                    // unselected style
+                    try {
+                        button.classList.add('bg-mist/80', 'text-graphite', 'border', 'border-mist');
+                    } catch (e) {}
+                    button.style.backgroundColor = '';
+                    button.style.color = '';
+                    button.style.borderColor = '';
+                    if (icon) {
+                        icon.classList.remove('text-rose-600');
+                        icon.classList.add('text-graphite');
+                        icon.style.color = '';
+                    }
+                    if (svg) {
+                        svg.classList.remove('text-rose-600');
+                        svg.classList.add('text-graphite');
+                        svg.style.color = '';
+                    }
+                }
+            }
+
             const pressed = btn.getAttribute('aria-pressed') === 'true';
-            if (!pressed) {
+            const willBeBookmarked = !pressed;
+
+            // Optimistically update UI
+            updateButtonUI(btn, willBeBookmarked);
+
+            if (willBeBookmarked) {
                 // create bookmark via POST /api/bookmarks
                 fetch('/api/bookmarks', {
                     method: 'POST',
@@ -570,47 +621,31 @@
                     body: JSON.stringify({ document_id: docId })
                 }).then(resp => {
                     if (resp.ok) {
-                        btn.setAttribute('aria-pressed', 'true');
-                        btn.setAttribute('data-bookmarked', 'true');
-                        // update icon and svg if present
-                        const icon = btn.querySelector('i[data-lucide="heart"]');
-                        const svg = btn.querySelector('svg');
-                        if (icon) {
-                            icon.classList.remove('text-graphite');
-                            icon.classList.add('text-rose-600');
-                            icon.style.color = '#9f1239';
-                        }
-                        if (svg) {
-                            svg.classList.remove('text-graphite');
-                            svg.classList.add('text-rose-600');
-                            svg.style.color = '#9f1239';
-                        }
                         showNotification('ブックマークしました', 'success');
+                    } else {
+                        // revert UI on failure
+                        updateButtonUI(btn, false);
+                        showNotification('ブックマークに失敗しました', 'error');
                     }
-                }).catch(() => {});
+                }).catch(() => {
+                    updateButtonUI(btn, false);
+                    showNotification('ネットワークエラーでブックマークできませんでした', 'error');
+                });
             } else {
                 // delete by document_id via query param
                 fetch(`/api/bookmarks?document_id=${encodeURIComponent(docId)}`, { method: 'DELETE' })
                     .then(resp => {
                         if (resp.ok) {
-                            btn.setAttribute('aria-pressed', 'false');
-                            btn.setAttribute('data-bookmarked', 'false');
-                            // update icon and svg if present
-                            const icon = btn.querySelector('i[data-lucide="heart"]');
-                            const svg = btn.querySelector('svg');
-                            if (icon) {
-                                icon.classList.remove('text-rose-600');
-                                icon.classList.add('text-graphite');
-                                icon.style.color = '';
-                            }
-                            if (svg) {
-                                svg.classList.remove('text-rose-600');
-                                svg.classList.add('text-graphite');
-                                svg.style.color = '';
-                            }
                             showNotification('ブックマークを解除しました', 'success');
+                        } else {
+                            // revert UI on failure
+                            updateButtonUI(btn, true);
+                            showNotification('ブックマーク解除に失敗しました', 'error');
                         }
-                    }).catch(() => {});
+                    }).catch(() => {
+                        updateButtonUI(btn, true);
+                        showNotification('ネットワークエラーでブックマーク解除できませんでした', 'error');
+                    });
             }
         }
 

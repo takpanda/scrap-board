@@ -67,17 +67,52 @@ cp data/scraps.db data/backup/scraps.db.$(date +%Y%m%d%H%M%S)
 
 	- `migrations/001_add_summaries_to_documents.sql`
 	- `migrations/002_add_sources_and_thumbnails.sql`
-	- `migrations/apply_migration_002.py`（Pythonでの適用例）
 
-- **マイグレーションの適用（簡易スクリプト使用）**: 付属のスクリプトを使って適用できます。
+**マイグレーションの適用（ローカル開発向け推奨）**: 付属の Python スクリプト `migrations/apply_migrations.py` を使うことを推奨します。スクリプトは `migrations/*.sql` を辞書順に読み、順に適用します。ローカル向けに idempotent（既に存在するカラムやテーブルで発生する一般的なエラーは警告として無視）に動作するよう設計されています。
+
+注意: 事前に必ずデータベースのバックアップを取り、本番環境では Alembic 等の正式なマイグレーション運用を推奨します。
+
+使い方例（fish シェル）:
+
+```fish
+# 仮想環境を有効化
+source .venv/bin/activate.fish
+
+# migrations ディレクトリ内のSQLをすべて適用（既定DBパス）
+python migrations/apply_migrations.py --db ./data/scraps.db
+
+# もしくは sqlite3 で単一ファイルを適用する場合（補助的な方法）
+sqlite3 data/scraps.db < migrations/002_add_sources_and_thumbnails.sql
+```
+
+スクリプトの挙動:
+- `migrations/*.sql` を辞書順に適用します。
+- 既知の "already exists" / "duplicate column" 等のエラーは警告としてログ出力し、処理を継続します（ローカル開発での再実行を想定）。
+- 想定外のエラーが出た場合はスクリプトは例外を投げます。ログとバックアップを確認してください。
+
+Docker コンテナでの実行例:
+
+ローカルで Docker / docker-compose を使っている場合、コンテナ内でマイグレーションを実行することができます。以下はよく使うパターンの例です。コンテナ内の作業ディレクトリはリポジトリのルート（例: `/app`）にマウントされている前提です。
+
+- コンテナを一時起動してマイグレーションを実行（`docker-compose` を使用）:
 
 ```bash
-# SQLファイルを直接適用する例（sqlite3が必要）
-sqlite3 data/scraps.db < migrations/001_add_summaries_to_documents.sql
-
-# Pythonスクリプトで適用する例
-python migrations/apply_migration_002.py
+# データボリュームが ./data をマウントしている前提
+docker-compose run --rm app \
+	python migrations/apply_migrations.py --db /app/data/scraps.db
 ```
+
+- 既に `app` コンテナが起動している場合（稼働中コンテナへ exec）:
+
+```bash
+# コンテナ名は `docker-compose ps` などで確認
+docker exec -it scrap-board-app-1 \
+	python migrations/apply_migrations.py --db ./data/scraps.db
+```
+
+注意事項:
+- Docker コンテナ内のパス（上例では `/app/data/scraps.db`）は `docker-compose.yml` でホスト側 `./data` がどのパスにマウントされているかに依存します。必要に応じてパスを調整してください。
+- 本番環境ではマイグレーション適用前に必ずバックアップを取得し、メンテナンスウィンドウやトランザクション戦略を検討してください。
 
 - **Alembicを使う（推奨・運用向け）**: 将来的な運用環境では `alembic` を導入してマイグレーション管理を行ってください。簡単な導入手順:
 
