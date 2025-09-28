@@ -14,13 +14,14 @@
                 {% if document.source %}
                     <span class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs">{{ '手動' if document.source == 'manual' else document.source }}</span>
                 {% endif %}
-                {% if document.domain %}
+                    {% if document.domain %}
                     <span class="inline-block truncate max-w-[12rem]">{{ document.domain }}</span>
                     {% if document.url %}
                         <a href="{{ document.url }}" target="_blank" rel="noopener noreferrer" class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-mist/80 text-graphite border border-mist">
                             <i data-lucide="external-link" class="w-4 h-4 mr-2"></i>
                             元記事
                         </a>
+                        <a href="/documents/{{ document.id }}" class="text-xs bg-emerald text-white px-3 py-1 rounded-md hover:bg-emerald/90 ml-2">詳細を見る</a>
                     {% endif %}
                 {% else %}
                     {% if document.url %}
@@ -28,6 +29,7 @@
                             <i data-lucide="external-link" class="w-4 h-4 mr-2"></i>
                             元記事
                         </a>
+                        <a href="/documents/{{ document.id }}" class="text-xs bg-emerald text-white px-3 py-1 rounded-md hover:bg-emerald/90 ml-2">詳細を見る</a>
                     {% endif %}
                 {% endif %}
             </div>
@@ -95,7 +97,7 @@
                     {% endif %}
                 {% endif %}
             {% endif %}
-            <a href="/documents/{{ document.id }}" class="text-xs bg-emerald text-white px-3 py-1 rounded-md hover:bg-emerald/90">詳細を見る</a>
+            <!-- 詳細を見るボタンはヘッダーの元記事の右側に移動しました -->
             <button
                 class="bookmark-btn pill nowrap-tag inline-flex items-center h-6 px-2 text-xs ml-2 {% if not document.bookmarked %}bg-mist/80 text-graphite border border-mist{% endif %}"
                 data-doc-id="{{ document.id }}"
