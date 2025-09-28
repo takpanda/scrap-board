@@ -283,48 +283,136 @@
                 return c;
             }
 
-            window.showNotification = function(message, type = 'info', timeout = 3000) {
+            const MIN_VISIBLE_DURATION = 4500;
+
+            window.showNotification = function(message, type = 'info', timeout = 5200) {
                 const container = createContainer();
                 const toast = document.createElement('div');
                 toast.setAttribute('role', 'status');
-                // Use conservative Tailwind utilities and inline color fallbacks to maximize compatibility
-                toast.className = 'pointer-events-auto max-w-sm w-auto bg-white border rounded-lg shadow-lg px-3 py-2 flex items-start gap-3 text-gray-900';
-                toast.style.backgroundColor = toast.style.backgroundColor || 'rgba(255,255,255,0.95)';
-                toast.style.borderColor = toast.style.borderColor || 'rgba(226,232,240,1)';
+                const palette = {
+                    success: {
+                        accent: '#10b981',
+                        soft: 'rgba(16,185,129,0.16)',
+                        ring: 'rgba(16,185,129,0.38)',
+                        title: '完了しました'
+                    },
+                    error: {
+                        accent: '#ef4444',
+                        soft: 'rgba(239,68,68,0.18)',
+                        ring: 'rgba(239,68,68,0.4)',
+                        title: 'エラーが発生しました'
+                    },
+                    warning: {
+                        accent: '#f59e0b',
+                        soft: 'rgba(245,158,11,0.18)',
+                        ring: 'rgba(245,158,11,0.42)',
+                        title: 'ご注意ください'
+                    },
+                    info: {
+                        accent: '#0ea5e9',
+                        soft: 'rgba(14,165,233,0.18)',
+                        ring: 'rgba(14,165,233,0.35)',
+                        title: 'お知らせ'
+                    }
+                };
+                const config = palette[type] || palette.info;
+                const icons = {
+                    success: `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" style="color:currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`,
+                    error: `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" style="color:currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`,
+                    warning: `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" style="color:currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 00-7 7 7 7 0 1014 0 7 7 0 00-7-7z"></path></svg>`,
+                    info: `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" style="color:currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 6v.01"></path></svg>`
+                };
+
+                // Use Tailwind-friendly utilities alongside custom class for broad compatibility
+                toast.className = 'toast-notification pointer-events-auto max-w-sm w-auto flex items-start gap-3 text-gray-900';
+                toast.style.background = toast.style.background || 'linear-gradient(140deg, rgba(255,255,255,0.98), rgba(248,250,252,0.92))';
+                toast.style.borderColor = toast.style.borderColor || 'rgba(226,232,240,0.85)';
+                toast.style.borderWidth = toast.style.borderWidth || '1px';
+                toast.style.pointerEvents = toast.style.pointerEvents || 'auto';
+                toast.style.maxWidth = toast.style.maxWidth || '24rem';
+                toast.style.width = toast.style.width || 'auto';
+                toast.style.color = toast.style.color || '#111827';
+                toast.style.boxShadow = toast.style.boxShadow || '0 18px 45px -15px rgba(15,23,42,0.38)';
+                toast.style.padding = toast.style.padding || '0.75rem 1rem';
+                toast.style.display = toast.style.display || 'flex';
+                toast.style.alignItems = toast.style.alignItems || 'flex-start';
+                toast.style.gap = toast.style.gap || '0.75rem';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-8px)';
+                toast.style.transition = 'opacity 220ms ease, transform 220ms ease';
+                toast.dataset.state = 'entering';
+                toast.style.setProperty('--toast-accent', config.accent);
+                toast.style.setProperty('--toast-accent-soft', config.soft);
+                toast.style.setProperty('--toast-accent-ring', config.ring);
+
                 // icon
                 const iconWrap = document.createElement('div');
-                iconWrap.className = 'flex-shrink-0 mt-0.5';
-                // provide inline-colored SVG for broad compatibility
-                if (type === 'success') {
-                    iconWrap.innerHTML = `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" style="color:#10b981"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
-                } else if (type === 'error') {
-                    iconWrap.innerHTML = `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" style="color:#ef4444"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
-                } else {
-                    iconWrap.innerHTML = `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" style="color:#0ea5e9"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 6v.01"></path></svg>`;
-                }
+                iconWrap.className = 'toast-notification__icon flex-shrink-0';
+                iconWrap.innerHTML = icons[type] || icons.info;
+
                 // content
                 const content = document.createElement('div');
-                content.className = 'flex-1 text-sm leading-snug';
-                content.textContent = message;
-                // append
+                content.className = 'toast-notification__content flex-1 text-sm leading-snug';
+                const titleEl = document.createElement('p');
+                titleEl.className = 'toast-notification__title';
+                titleEl.textContent = config.title || 'お知らせ';
+                const messageEl = document.createElement('p');
+                messageEl.className = 'toast-notification__message';
+                messageEl.textContent = message;
+                content.appendChild(titleEl);
+                content.appendChild(messageEl);
+
+                // close button
+                const closeBtn = document.createElement('button');
+                closeBtn.type = 'button';
+                closeBtn.className = 'toast-notification__close';
+                closeBtn.setAttribute('aria-label', '通知を閉じる');
+                closeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+
+                // append structure
                 toast.appendChild(iconWrap);
                 toast.appendChild(content);
+                toast.appendChild(closeBtn);
                 container.appendChild(toast);
                 console.log('[toast]', type, message);
-                // animate in
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(-6px)';
-                toast.style.transition = 'opacity 180ms ease, transform 180ms ease';
+
+                const dissolve = () => {
+                    if (toast.dataset.state === 'closing') return;
+                    toast.dataset.state = 'closing';
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(-8px) scale(0.98)';
+                    setTimeout(() => toast.remove(), 260);
+                };
+
+                let removalTimer;
+                const scheduleRemoval = () => {
+                    const lifespan = Math.max(timeout, MIN_VISIBLE_DURATION);
+                    removalTimer = window.setTimeout(dissolve, lifespan);
+                };
+
+                scheduleRemoval();
+
+                closeBtn.addEventListener('click', () => {
+                    window.clearTimeout(removalTimer);
+                    dissolve();
+                });
+
+                toast.addEventListener('mouseenter', () => {
+                    window.clearTimeout(removalTimer);
+                });
+
+                toast.addEventListener('mouseleave', () => {
+                    if (toast.dataset.state !== 'closing') {
+                        window.clearTimeout(removalTimer);
+                        scheduleRemoval();
+                    }
+                });
+
                 requestAnimationFrame(() => {
+                    toast.dataset.state = 'open';
                     toast.style.opacity = '1';
                     toast.style.transform = 'translateY(0)';
                 });
-                // auto remove
-                setTimeout(() => {
-                    toast.style.opacity = '0';
-                    toast.style.transform = 'translateY(-6px)';
-                    setTimeout(() => toast.remove(), 220);
-                }, timeout);
             };
         })();
     </script>

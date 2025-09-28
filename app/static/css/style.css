@@ -97,6 +97,150 @@
     background: linear-gradient(90deg, var(--emerald), var(--emerald-light), var(--indigo));
 }
 
+/* Toast notification styling */
+.toast-notification {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 14px;
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    box-shadow: 0 18px 45px -15px rgba(15, 23, 42, 0.38), 0 12px 25px -20px rgba(15, 23, 42, 0.26);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: #111827;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    --toast-accent: #0ea5e9;
+    --toast-accent-soft: rgba(14, 165, 233, 0.16);
+    --toast-accent-ring: rgba(14, 165, 233, 0.35);
+}
+
+.toast-notification::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.toast-notification::after {
+    content: '';
+    position: absolute;
+    top: 10%;
+    bottom: 10%;
+    left: 0;
+    width: 6px;
+    border-radius: 999px;
+    background: var(--toast-accent);
+    box-shadow: 0 0 20px var(--toast-accent-soft);
+    opacity: 0.9;
+}
+
+.toast-notification[data-state="closing"] {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+}
+
+.toast-notification[data-state="open"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 24px 55px -20px rgba(15, 23, 42, 0.45);
+}
+
+.toast-notification__icon {
+    position: relative;
+    z-index: 1;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: var(--toast-accent-soft);
+    color: var(--toast-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 0 1px var(--toast-accent-ring);
+}
+
+.toast-notification__icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: inherit;
+}
+
+.toast-notification__content {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 0%;
+    min-width: 0;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: inherit;
+}
+
+.toast-notification__title {
+    font-weight: 600;
+    margin-bottom: 0.15rem;
+    letter-spacing: 0.01em;
+}
+
+.toast-notification__message {
+    opacity: 0.95;
+}
+
+.toast-notification__close {
+    position: relative;
+    z-index: 1;
+    appearance: none;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(255, 255, 255, 0.7);
+    color: rgba(71, 85, 105, 0.9);
+    border-radius: 999px;
+    width: 1.9rem;
+    height: 1.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border 0.2s ease, transform 0.2s ease;
+}
+
+.toast-notification__close:hover,
+.toast-notification__close:focus-visible {
+    background: var(--toast-accent-soft);
+    color: var(--toast-accent);
+    border-color: var(--toast-accent-ring);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.toast-notification__close svg {
+    width: 1rem;
+    height: 1rem;
+    color: inherit;
+}
+
+@keyframes toast-pop-in {
+    0% {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.96);
+    }
+    60% {
+        opacity: 1;
+        transform: translateY(2px) scale(1.01);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.toast-notification[data-state="entering"] {
+    animation: toast-pop-in 220ms cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
 /* Enhanced tags and badges */
 .premium-tag {
     background: linear-gradient(135deg, var(--emerald), var(--emerald-light));
@@ -1495,6 +1639,7 @@ body.font-large .prose { font-size: 18px; }
 /* Stronger forced visual (higher specificity) to help during verification */
 .card-edge.card-edge, article.card-edge, .dify-content-card.card-edge, .dify-header-card.card-edge {
     border: 2px solid transparent !important;
+    mask: linear-gradient(#fff, #fff) content-box, linear-gradient(#fff, #fff);
     -webkit-mask: linear-gradient(#fff, #fff) content-box, linear-gradient(#fff, #fff);
     -webkit-mask-composite: xor;
     mask-composite: exclude;

@@ -92,6 +92,15 @@ select {
 .mt-2 { margin-top: 0.5rem; }
 .mt-8 { margin-top: 2rem; }
 
+.gap-3 { gap: 0.75rem; }
+.pointer-events-auto { pointer-events: auto; }
+.max-w-sm { max-width: 24rem; }
+.w-auto { width: auto; }
+.flex-shrink-0 { flex-shrink: 0; }
+.shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+.text-gray-900 { color: #111827; }
+.leading-snug { line-height: 1.375; }
+
 .gap-4 { gap: 1rem; }
 
 /* Width and height utilities */
