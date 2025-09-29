@@ -249,20 +249,37 @@
         return Math.round(value * 100);
     }
 
+    function parseIsoTimestamp(isoString) {
+        if (typeof isoString !== "string" || !isoString) {
+            return null;
+        }
+        var normalized = isoString.trim();
+        // タイムゾーン情報が明示されていない場合はUTCとして解釈する
+        if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized)) {
+            normalized = normalized + "Z";
+        }
+        var date = new Date(normalized);
+        if (isNaN(date.getTime())) {
+            date = new Date(isoString);
+        }
+        return isNaN(date.getTime()) ? null : date;
+    }
+
     function formatTimestamp(isoString) {
         if (!isoString) {
             return "";
         }
         try {
-            var date = new Date(isoString);
-            if (isNaN(date.getTime())) {
+            var date = parseIsoTimestamp(isoString);
+            if (!date) {
                 return "";
             }
             return new Intl.DateTimeFormat("ja-JP", {
                 month: "numeric",
                 day: "numeric",
                 hour: "2-digit",
-                minute: "2-digit"
+                minute: "2-digit",
+                timeZone: "Asia/Tokyo"
             }).format(date);
         } catch (err) {
             return "";
