@@ -31,6 +31,7 @@
     environment:
       - DB_URL=sqlite:///./data/scraps.db
       - TIMEOUT_SEC=180
+      - PYTHONPATH=/app
     depends_on:
       - app
     restart: unless-stopped
@@ -39,6 +40,7 @@
 - `command` はモジュール実行で `run_worker` を呼び出します。
 - `volumes` で `./data` をマウントすることでホスト上の SQLite ファイルを共有します。
 - `preference-worker` は嗜好プロファイル・パーソナライズ済みスコアを計算するワーカーです。`preference_jobs` テーブルをポーリングし続けるため、`app` サービスと並行で常駐させてください。
+- `PYTHONPATH=/app` を設定することで、スクリプト起動時に `app` パッケージを解決できるようにしています。
 
 ## 起動手順（開発環境）
 
