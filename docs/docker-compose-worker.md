@@ -1,6 +1,6 @@
-# Docker Compose で postprocess_queue ワーカーを常駐させる
+# Docker Compose で postprocess_queue / preference_worker を常駐させる
 
-このドキュメントは `postprocess_queue.run_worker` を Docker Compose で常駐させるための最小構成と運用上の注意をまとめたものです。
+このドキュメントは `postprocess_queue.run_worker` と `scripts/run_preference_worker.py` を Docker Compose で常駐させるための最小構成と運用上の注意をまとめたものです。
 
 ## 目的
 
@@ -19,12 +19,26 @@
       - ./.env:/app/.env
     environment:
       - DB_URL=sqlite:///./data/scraps.db
-      - TIMEOUT_SEC=30
+      - TIMEOUT_SEC=180
+    restart: unless-stopped
+
+  preference-worker:
+    build: .
+    command: ["python", "scripts/run_preference_worker.py", "--interval", "2.0"]
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    environment:
+      - DB_URL=sqlite:///./data/scraps.db
+      - TIMEOUT_SEC=180
+    depends_on:
+      - app
     restart: unless-stopped
 ```
 
 - `command` はモジュール実行で `run_worker` を呼び出します。
 - `volumes` で `./data` をマウントすることでホスト上の SQLite ファイルを共有します。
+- `preference-worker` は嗜好プロファイル・パーソナライズ済みスコアを計算するワーカーです。`preference_jobs` テーブルをポーリングし続けるため、`app` サービスと並行で常駐させてください。
 
 ## 起動手順（開発環境）
 
@@ -33,6 +47,7 @@ docker compose build
 docker compose up -d
 # ワーカーのログを確認
 docker compose logs -f worker
+docker compose logs -f preference-worker
 ```
 
 ## 動作確認
@@ -46,6 +61,10 @@ docker compose logs -f worker
 - SQLite の共有制約:
   - SQLite を複数コンテナ（あるいは複数ホスト）で共有する場合、ファイルロックや同時書き込みで問題が発生する可能性があります。
   - 小規模な開発環境では問題にならないことが多いですが、本番では PostgreSQL 等のネットワーク DB に移行することを強く推奨します。
+
+- Preference ワーカーのヘルス監視:
+  - `preference_jobs` が溜まったままになっていないかを定期的に確認してください。
+  - ジョブログに `missing-documents` が頻出する場合、取り込み済みドキュメントの削除や参照不整合が疑われます。
 
 - スケーリング:
   - `worker` を複数インスタンスにスケールする場合、SQLite の制約により競合が起きやすくなります。スケールアウトするなら DB の変更とジョブブローカー（Redis/Celery 等）の導入を検討してください。

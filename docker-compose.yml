@@ -43,5 +43,19 @@ services:
       - TIMEOUT_SEC=180
     restart: unless-stopped
 
+  # Preference worker: processes preference_jobs queue for personalized ranking
+  preference-worker:
+    build: .
+    command: ["python", "scripts/run_preference_worker.py", "--interval", "2.0"]
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    environment:
+      - DB_URL=sqlite:///./data/scraps.db
+      - TIMEOUT_SEC=180
+    depends_on:
+      - app
+    restart: unless-stopped
+
 # volumes:
 #   ollama_data:
