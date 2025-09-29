@@ -1,13 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session, joinedload
+import logging
 from typing import Optional, List
-from pydantic import BaseModel
 
-from app.core.database import get_db, Bookmark, Document, create_tables
-import app.core.database as app_db
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import Session, joinedload
+
+import app.core.database as app_db
+from app.core.database import Bookmark, Document, create_tables, get_db
+from app.services.personalization_queue import schedule_profile_update
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class BookmarkCreate(BaseModel):
@@ -57,6 +61,10 @@ async def create_bookmark(payload: BookmarkCreate, db: Session = Depends(get_db)
         db.commit()
         db.refresh(bm)
 
+        job_id = schedule_profile_update(db, user_id=bm.user_id, document_id=bm.document_id)
+        if job_id:
+            logger.debug("bookmarks.create: scheduled preference job %s for document %s", job_id, bm.document_id)
+
         return {
             "id": bm.id,
             "document_id": bm.document_id,
@@ -89,6 +97,10 @@ async def create_bookmark(payload: BookmarkCreate, db: Session = Depends(get_db)
             new_db.commit()
             new_db.refresh(bm)
 
+            job_id = schedule_profile_update(new_db, user_id=bm.user_id, document_id=bm.document_id)
+            if job_id:
+                logger.debug("bookmarks.create: scheduled preference job %s for document %s (fallback)", job_id, bm.document_id)
+
             return {
                 "id": bm.id,
                 "document_id": bm.document_id,
@@ -119,8 +131,13 @@ async def delete_bookmark(bookmark_id: str, db: Session = Depends(get_db)):
             bm = new_db.query(Bookmark).filter(Bookmark.id == bookmark_id).first()
             if not bm:
                 raise HTTPException(status_code=404, detail="Bookmark not found")
+            bookmark_user_id = bm.user_id
+            bookmark_document_id = bm.document_id
             new_db.delete(bm)
             new_db.commit()
+            job_id = schedule_profile_update(new_db, user_id=bookmark_user_id, document_id=bookmark_document_id)
+            if job_id:
+                logger.debug("bookmarks.delete: scheduled preference job %s for document %s (fallback)", job_id, bookmark_document_id)
             return {"message": "deleted"}
         finally:
             if new_db:
@@ -132,8 +149,16 @@ async def delete_bookmark(bookmark_id: str, db: Session = Depends(get_db)):
     if not bm:
         raise HTTPException(status_code=404, detail="Bookmark not found")
 
+    bookmark_user_id = bm.user_id
+    bookmark_document_id = bm.document_id
+
     db.delete(bm)
     db.commit()
+
+    job_id = schedule_profile_update(db, user_id=bookmark_user_id, document_id=bookmark_document_id)
+    if job_id:
+        logger.debug("bookmarks.delete: scheduled preference job %s for document %s", job_id, bookmark_document_id)
+
     return {"message": "deleted"}
 
 
@@ -216,8 +241,13 @@ async def delete_bookmark_by_document(document_id: Optional[str] = None, db: Ses
             bm = new_db.query(Bookmark).filter(Bookmark.user_id == None, Bookmark.document_id == document_id).first()
             if not bm:
                 raise HTTPException(status_code=404, detail="Bookmark not found")
+            bookmark_user_id = bm.user_id
+            bookmark_document_id = bm.document_id
             new_db.delete(bm)
             new_db.commit()
+            job_id = schedule_profile_update(new_db, user_id=bookmark_user_id, document_id=bookmark_document_id)
+            if job_id:
+                logger.debug("bookmarks.delete_by_document: scheduled preference job %s for document %s (fallback)", job_id, bookmark_document_id)
             return {"message": "deleted"}
         finally:
             if new_db:
@@ -229,6 +259,12 @@ async def delete_bookmark_by_document(document_id: Optional[str] = None, db: Ses
     if not bm:
         raise HTTPException(status_code=404, detail="Bookmark not found")
 
+    bookmark_user_id = bm.user_id
+    bookmark_document_id = bm.document_id
+
     db.delete(bm)
     db.commit()
+    job_id = schedule_profile_update(db, user_id=bookmark_user_id, document_id=bookmark_document_id)
+    if job_id:
+        logger.debug("bookmarks.delete_by_document: scheduled preference job %s for document %s", job_id, bookmark_document_id)
     return {"message": "deleted"}

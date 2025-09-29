@@ -6,7 +6,7 @@ import pytest
 
 # Delay importing DB objects until we set DB_URL in the test function to ensure
 # SessionLocal is bound to the test SQLite file.
-from app.core.database import Document, Embedding, PostprocessJob
+from app.core.database import Document, Embedding, PostprocessJob, PreferenceJob
 
 
 async def _fake_generate_summary(text, style="short", timeout_sec=None):
@@ -85,6 +85,8 @@ def test_db_queue_job_success(tmp_path, monkeypatch):
             assert d.short_summary is not None
             emb_count = db2.query(Embedding).filter(Embedding.document_id == new_id).count()
             assert emb_count >= 1
+            preference_jobs = db2.query(PreferenceJob).filter(PreferenceJob.document_id == new_id).all()
+            assert len(preference_jobs) >= 1
         finally:
             db2.close()
     finally:

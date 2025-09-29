@@ -1,1 +1,41 @@
-# Empty file to make this directory a Python package
+"""Core database exports for convenient imports."""
+
+from .database import (
+	Base,
+	SessionLocal,
+	engine,
+	get_db,
+	create_tables,
+	Document,
+	Classification,
+	Embedding,
+	Collection,
+	CollectionItem,
+	Feedback,
+	PostprocessJob,
+	Bookmark,
+	PreferenceProfile,
+	PersonalizedScore,
+	PreferenceJob,
+	PreferenceFeedback,
+)
+
+__all__ = [
+	"Base",
+	"SessionLocal",
+	"engine",
+	"get_db",
+	"create_tables",
+	"Document",
+	"Classification",
+	"Embedding",
+	"Collection",
+	"CollectionItem",
+	"Feedback",
+	"PostprocessJob",
+	"Bookmark",
+	"PreferenceProfile",
+	"PersonalizedScore",
+	"PreferenceJob",
+	"PreferenceFeedback",
+]

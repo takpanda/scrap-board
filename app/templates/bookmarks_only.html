@@ -3,7 +3,12 @@
 {% block content %}
 <div class="max-w-7xl mx-auto py-6">
   <div class="flex items-center justify-between mb-4">
-    <h1 class="text-2xl font-bold text-ink">ブックマーク</h1>
+    <div>
+      <h1 class="text-2xl font-bold text-ink">ブックマーク</h1>
+      {% if total %}
+        <p class="text-xs text-graphite mt-1">表示範囲: {{ start_index }} - {{ end_index }} / {{ total }}</p>
+      {% endif %}
+    </div>
     <div class="text-sm text-graphite">合計: {{ total if total is defined else (documents|length if documents else 0) }}</div>
   </div>
 
@@ -29,17 +34,16 @@
       <!-- Pagination -->
       <div class="mt-8 flex justify-center">
         <div class="flex space-x-2">
-          {% if page and page > 1 %}
+          {% if has_previous %}
             <a href="?page={{ page - 1 }}&per_page={{ per_page }}" class="px-4 py-2 bg-white border border-mist rounded-lg hover:bg-mist transition-colors">前へ</a>
           {% else %}
             <button class="px-4 py-2 bg-white border border-mist rounded-lg text-gray-300" disabled>前へ</button>
           {% endif %}
 
-          {% set current_page = page if page is defined else 1 %}
-          <button class="px-4 py-2 bg-emerald text-white rounded-lg">{{ current_page }}</button>
+          <button class="px-4 py-2 bg-emerald text-white rounded-lg">{{ page }}</button>
 
-          {% if (page is not defined and total and total > per_page) or (page is defined and (page * per_page) < total) %}
-            <a href="?page={{ (page if page is defined else 1) + 1 }}&per_page={{ per_page }}" class="px-4 py-2 bg-white border border-mist rounded-lg hover:bg-mist transition-colors">次へ</a>
+          {% if has_next %}
+            <a href="?page={{ page + 1 }}&per_page={{ per_page }}" class="px-4 py-2 bg-white border border-mist rounded-lg hover:bg-mist transition-colors">次へ</a>
           {% else %}
             <button class="px-4 py-2 bg-white border border-mist rounded-lg text-gray-300" disabled>次へ</button>
           {% endif %}

@@ -9,6 +9,7 @@ from app.core.database import Document, Embedding, Classification, PostprocessJo
 from app.services.llm_client import llm_client
 from app.services.extractor import content_extractor
 from app.core.config import settings
+from app.services.personalization_queue import schedule_profile_update
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +145,10 @@ def process_doc_once(doc_id: str):
         except Exception as e:
             logger.exception("Postprocess: classification failed for %s", doc_id)
             return False, f"classification error: {e}"
+
+        job_id = schedule_profile_update(db, document_id=doc.id)
+        if job_id:
+            logger.debug("Postprocess: scheduled preference job %s for document %s", job_id, doc.id)
 
         return True, None
     except Exception:

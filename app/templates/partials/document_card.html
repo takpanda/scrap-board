@@ -1,12 +1,14 @@
 {% set container_target = container_target if container_target is defined else '#documents-container' %}
-<article tabindex="0" class="w-full bg-white rounded-xl border border-mist shadow-sm hover:shadow-lg transition-shadow hover:-translate-y-1 transform will-change-transform p-4 flex flex-col h-full card-edge my-3">
+<article tabindex="0" class="w-full bg-white rounded-xl border border-mist shadow-sm hover:shadow-lg transition-shadow hover:-translate-y-1 transform will-change-transform p-4 flex flex-col h-full card-edge my-3" data-document-id="{{ document.id }}">
     <header class="flex items-start gap-4 flex-wrap">
         <img src="{% if document.thumbnail_url %}/data/{{ document.thumbnail_url }}{% else %}/static/images/default-thumbnail.svg{% endif %}?v={{ document.updated_at.isoformat() if document.updated_at else '1' }}" alt="thumbnail" loading="lazy" class="w-12 h-12 md:w-16 md:h-16 thumb-80 rounded-md object-cover flex-shrink-0" />
         <div class="flex-1 min-w-0">
-            {% if document.created_at %}
-                <div class="doc-date text-xs text-gray-400 mb-1">
-                    {{ document.created_at|to_jst('%Y年%m月%d日') }}
-                    <span class="ml-2 text-xs text-gray-400">{{ document.created_at|to_jst('%H:%M') }}</span>
+            {% set bookmark_dt = document.bookmark_created_at if document.bookmark_created_at else document.created_at %}
+            {% if bookmark_dt %}
+                <div class="doc-date text-xs text-gray-500 mb-1 flex items-center gap-2">
+                    <span class="inline-flex items-center px-2 py-0.5 bg-mist text-graphite rounded-full text-[11px]">ブックマーク</span>
+                    <span>{{ bookmark_dt|to_jst('%Y年%m月%d日') }}</span>
+                    <span class="text-gray-400">{{ bookmark_dt|to_jst('%H:%M') }}</span>
                 </div>
             {% endif %}
             <a href="/documents/{{ document.id }}" class="text-lg font-semibold text-ink hover:text-emerald transition-colors block break-words">{{ document.title }}</a>
@@ -36,6 +38,25 @@
         </div>
     </header>
 
+    <section class="mt-3 w-full hidden" data-personalized-block aria-live="polite">
+        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-emerald-700">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>あなたへのおすすめ</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald/10 text-emerald-700 border border-emerald/20" data-personalized-rank></span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-white text-emerald-700 border border-emerald/40" data-personalized-score></span>
+        </div>
+        <p class="mt-2 text-xs text-graphite leading-relaxed" data-personalized-explanation></p>
+        <div class="mt-2 flex flex-wrap gap-2" data-personalized-components></div>
+        <p class="mt-2 text-[11px] text-graphite/70" data-personalized-updated></p>
+    </section>
+
+    <section class="mt-3 w-full hidden" data-personalized-fallback aria-live="polite">
+        <div class="flex items-center gap-2 text-xs text-graphite">
+            <i data-lucide="info" class="w-4 h-4"></i>
+            <span data-personalized-fallback-text>パーソナライズはまだ準備中です。標準順で表示しています。</span>
+        </div>
+    </section>
+
     <div class="mt-4 pt-4 border-t border-dashed border-mist documents-divider-dashed flex-1">
         {% if document.short_summary %}
             <p class="mb-2">
@@ -51,7 +72,7 @@
         {% endif %}
     </div>
 
-    <footer class="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <footer class="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 w-full">
         <div class="flex items-center gap-2 flex-wrap max-w-full">
             {% if document.classifications %}
                 {% set cat = document.classifications[0].primary_category %}
@@ -109,6 +130,33 @@
                 <i data-lucide="heart" class="w-4 h-4 mr-2 {% if document.bookmarked %}text-rose-600{% else %}text-graphite{% endif %}" {% if document.bookmarked %}style="color: #9f1239;"{% endif %}></i>
                 <span class="text-xs">ブックマーク</span>
             </button>
+            <div
+                class="flex items-center"
+                data-personalized-feedback-container
+                data-document-id="{{ document.id }}"
+                data-feedback-state="pending"
+            >
+                <button
+                    type="button"
+                    class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-white text-graphite border border-mist hover:bg-rose-50 hover:border-rose-200 transition-colors"
+                    data-personalized-feedback-button
+                    data-feedback-reason="low_relevance"
+                    hx-post="/api/documents/{{ document.id }}/personalized-feedback"
+                    hx-include="#personalized-feedback-session"
+                    hx-vals='{"reason":"low_relevance"}'
+                    hx-target="closest [data-personalized-feedback-container]"
+                    hx-swap="outerHTML"
+                    aria-label="関連性が低いとフィードバックする"
+                >
+                    <i data-lucide="thumbs-down" class="w-4 h-4 mr-2"></i>
+                    <span>関連性が低い</span>
+                </button>
+            </div>
         </div>
+        {% if document.bookmark_note %}
+            <p class="text-xs text-graphite bg-mist/60 border border-mist rounded px-3 py-2 w-full sm:w-auto">
+                <span class="font-semibold text-ink mr-1">メモ:</span>{{ document.bookmark_note }}
+            </p>
+        {% endif %}
     </footer>
 </article>

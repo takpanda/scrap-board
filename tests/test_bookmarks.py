@@ -1,7 +1,7 @@
 import json
 from fastapi.testclient import TestClient
 from app.main import app
-from app.core.database import Document
+from app.core.database import Document, PreferenceJob
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -25,6 +25,13 @@ def test_bookmark_flow(test_database_override):
     doc_id = doc.id
     db.close()
 
+    cleanup = TestingSessionLocal()
+    try:
+        cleanup.query(PreferenceJob).delete()
+        cleanup.commit()
+    finally:
+        cleanup.close()
+
     client = TestClient(app)
 
     # Create bookmark
@@ -33,6 +40,11 @@ def test_bookmark_flow(test_database_override):
     data = resp.json()
     assert data["document_id"] == doc_id
     bm_id = data["id"]
+
+    with TestingSessionLocal() as verify:
+        jobs = verify.query(PreferenceJob).order_by(PreferenceJob.created_at.asc()).all()
+        assert len(jobs) == 1
+        assert jobs[0].document_id == doc_id
 
     # List bookmarks
     resp2 = client.get("/api/bookmarks")
@@ -44,6 +56,11 @@ def test_bookmark_flow(test_database_override):
     resp3 = client.delete(f"/api/bookmarks/{bm_id}")
     assert resp3.status_code == 200
     assert resp3.json()["message"] == "deleted"
+
+    with TestingSessionLocal() as verify2:
+        jobs_after_delete = verify2.query(PreferenceJob).order_by(PreferenceJob.created_at.asc()).all()
+        assert len(jobs_after_delete) == 2
+        assert jobs_after_delete[-1].document_id == doc_id
 
     # Ensure deleted
     resp4 = client.get("/api/bookmarks")

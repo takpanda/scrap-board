@@ -6,8 +6,8 @@ import subprocess
 import time
 from threading import Thread
 
-# Global variable to track server process
-server_process = None
+# Global handles for in-process uvicorn server
+server = None
 server_thread = None
 
 
@@ -37,24 +37,48 @@ def start_test_server():
 
 @pytest.fixture(scope="session")
 def live_server(test_database_override):
-    """Start a live server for browser testing."""
-    global server_process, server_thread
-    # Start uvicorn as a subprocess with the test DB env so the server
-    # process uses the same database file created by the fixture.
-    import sys as _sys
+    """Start a live FastAPI server within the same process for browser testing."""
+    global server, server_thread
+
+    import asyncio as _asyncio
     import httpx as _httpx
+    import uvicorn
 
-    uvicorn_cmd = [_sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000", "--log-level", "error"]
-
-    env = os.environ.copy()
-    # Ensure DB_URL set by test_database_override is passed through
+    # Ensure the running process and uvicorn server use the temp test DB.
     if isinstance(test_database_override, str):
-        env["DB_URL"] = test_database_override
+        os.environ["DB_URL"] = test_database_override
+        try:
+            from app.core.config import settings as _settings
+            _settings.db_url = test_database_override
+        except Exception:
+            pass
 
-    server_process = subprocess.Popen(uvicorn_cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Build uvicorn server config bound to the already-imported FastAPI app.
+    from app.main import app as fastapi_app
 
-    # Wait for server to start
-    for _ in range(30):
+    config = uvicorn.Config(
+        fastapi_app,
+        host="127.0.0.1",
+        port=8000,
+        log_level="error",
+        loop="asyncio",
+    )
+
+    server = uvicorn.Server(config)
+
+    def _run_server():
+        loop = _asyncio.new_event_loop()
+        _asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(server.serve())
+        finally:
+            loop.close()
+
+    server_thread = Thread(target=_run_server, daemon=True)
+    server_thread.start()
+
+    # Wait for the server to become responsive
+    for _ in range(50):
         try:
             response = _httpx.get("http://localhost:8000/health", timeout=1)
             if response.status_code == 200:
@@ -62,18 +86,18 @@ def live_server(test_database_override):
         except Exception:
             time.sleep(0.2)
     else:
-        # Could not start server
-        if server_process:
-            server_process.terminate()
+        server.should_exit = True
+        server_thread.join(timeout=5)
         pytest.skip("Could not start test server")
 
     yield "http://localhost:8000"
 
-    # Teardown: terminate server process
+    # Signal server shutdown and wait for the thread to finish
     try:
-        if server_process and server_process.poll() is None:
-            server_process.terminate()
-            server_process.wait(timeout=5)
+        if server is not None:
+            server.should_exit = True
+        if server_thread is not None:
+            server_thread.join(timeout=5)
     except Exception:
         pass
 
@@ -277,6 +301,27 @@ def test_database_override(tmp_path_factory):
             db_file.unlink()
     except Exception:
         pass
+
+
+@pytest.fixture(autouse=True)
+def _reset_database_between_tests(test_database_override):
+    """Ensure each test runs against a clean SQLite database."""
+    try:
+        from sqlalchemy import create_engine
+        from app.core.database import Base
+
+        engine = create_engine(
+            test_database_override,
+            connect_args={"check_same_thread": False},
+        )
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+        yield
+    finally:
+        try:
+            engine.dispose()
+        except Exception:
+            pass
 
 
 # Note: Do NOT apply `live_server` as a global fixture here.

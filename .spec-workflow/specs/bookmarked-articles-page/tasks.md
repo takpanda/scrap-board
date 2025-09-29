@@ -1,6 +1,6 @@
 # Tasks: bookmarked-articles-page
 
-- [ ] タスク 1 - ルートとコントローラ追加
+- [x] タスク 1 - ルートとコントローラ追加
   - ファイル: `app/api/routes/bookmarks_only.py` (新規)
   - 目的: GET `/bookmarks` にアクセスするとログインユーザーのブックマーク済み記事一覧をレンダリングする
   - 成功基準:
@@ -16,26 +16,26 @@
     - _Requirements: requirements.md (ユーザーのブックマークのみ表示、ページネーション、日本語)
     - Success: route responds 200 and template rendered with bookmark items
 
-- [ ] タスク 2 - サービス/クエリ関数追加
+- [x] タスク 2 - サービス/クエリ関数追加
   - ファイル: `app/services/bookmark_service.py` (新規または既存拡張)
   - 目的: DB クエリロジックを分離し再利用可能にする
   - 成功基準:
     - `get_user_bookmarked_documents(user_id, page, per_page)` を提供
     - ページネーションと ordering を正しく適用
 
-- [ ] タスク 3 - テンプレート追加
+- [x] タスク 3 - テンプレート追加
   - ファイル: `app/templates/bookmarks_only.html` (新規)
   - 目的: 記事カード、サムネイル、要約、ドメイン、ブックマーク日時、ページネーションUIを表示
   - 成功基準:
     - 空時メッセージが日本語で表示
     - 各記事行がタイトルリンクと短いプレビューを表示
 
-- [ ] タスク 4 - ルーティング登録
+- [x] タスク 4 - ルーティング登録
   - ファイル: `app/main.py` のルータ include（必要なら）または `app/api/routes/__init__.py` への追加
   - 目的: アプリで新しいルートが有効化される
   - 成功基準: `/bookmarks` にアクセス可能
 
-- [ ] タスク 5 - 単体テスト作成
+- [x] タスク 5 - 単体テスト作成
   - ファイル: `tests/test_bookmarks_only_page.py`
   - 目的: サービスの DB クエリとページのレンダリングを検証
   - 成功基準:

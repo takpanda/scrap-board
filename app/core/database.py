@@ -1,4 +1,18 @@
-from sqlalchemy import create_engine, Column, String, Text, DateTime, Integer, Float, Boolean, ForeignKey, JSON
+from sqlalchemy import (
+    create_engine,
+    Column,
+    String,
+    Text,
+    DateTime,
+    Integer,
+    Float,
+    Boolean,
+    ForeignKey,
+    JSON,
+    Index,
+    UniqueConstraint,
+    CheckConstraint,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.sql import func
@@ -141,6 +155,21 @@ class Document(Base):
     feedbacks = relationship("Feedback", back_populates="document", cascade="all, delete-orphan")
     # ブックマークのリレーション
     bookmarks = relationship("Bookmark", back_populates="document", cascade="all, delete-orphan")
+    personalized_scores = relationship(
+        "PersonalizedScore",
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
+    preference_feedbacks = relationship(
+        "PreferenceFeedback",
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
+    preference_jobs = relationship(
+        "PreferenceJob",
+        back_populates="document",
+        passive_deletes=True,
+    )
 
 
 class Classification(Base):
@@ -319,3 +348,140 @@ class Bookmark(Base):
 
     # リレーション
     document = relationship("Document", back_populates="bookmarks")
+
+
+class PreferenceProfile(Base):
+    """ユーザー嗜好プロファイル"""
+
+    __tablename__ = "preference_profiles"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, nullable=True, index=True)
+    bookmark_count = Column(Integer, nullable=False, default=0)
+    profile_embedding = Column(Text, nullable=True)
+    category_weights = Column(Text, nullable=True)
+    domain_weights = Column(Text, nullable=True)
+    last_bookmark_id = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="ready", index=True)
+    created_at = Column(DateTime, nullable=False, default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+
+    personalized_scores = relationship(
+        "PersonalizedScore",
+        back_populates="profile",
+        cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (
+        Index(
+            "idx_preference_profiles_user",
+            user_id,
+            unique=True,
+            sqlite_where=user_id.isnot(None),
+        ),
+        Index("idx_preference_profiles_updated_at", "updated_at"),
+    )
+
+
+class PersonalizedScore(Base):
+    """パーソナライズされたスコア"""
+
+    __tablename__ = "personalized_scores"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    profile_id = Column(
+        String,
+        ForeignKey("preference_profiles.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    user_id = Column(String, nullable=True, index=True)
+    document_id = Column(
+        String,
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    score = Column(Float, nullable=False)
+    rank = Column(Integer, nullable=False)
+    components = Column(Text, nullable=True)
+    explanation = Column(Text, nullable=True)
+    computed_at = Column(DateTime, nullable=False, default=func.now())
+    created_at = Column(DateTime, nullable=False, default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+
+    profile = relationship("PreferenceProfile", back_populates="personalized_scores")
+    document = relationship("Document", back_populates="personalized_scores")
+
+    __table_args__ = (
+        CheckConstraint("score >= 0.0 AND score <= 1.0", name="ck_personalized_scores_score_range"),
+        CheckConstraint("rank >= 1", name="ck_personalized_scores_rank_positive"),
+        Index("idx_personalized_scores_user_document", "user_id", "document_id", unique=True),
+        Index("idx_personalized_scores_document", "document_id"),
+        Index("idx_personalized_scores_score", "score"),
+    )
+
+
+class PreferenceJob(Base):
+    """嗜好プロファイル再計算ジョブ"""
+
+    __tablename__ = "preference_jobs"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, nullable=True, index=True)
+    document_id = Column(
+        String,
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    job_type = Column(String, nullable=False, default="profile_rebuild", index=True)
+    status = Column(String, nullable=False, default="pending", index=True)
+    attempts = Column(Integer, nullable=False, default=0)
+    max_attempts = Column(Integer, nullable=False, default=3)
+    last_error = Column(Text, nullable=True)
+    next_attempt_at = Column(DateTime, nullable=True)
+    scheduled_at = Column(DateTime, nullable=True, default=func.now())
+    created_at = Column(DateTime, nullable=True, default=func.now())
+    updated_at = Column(DateTime, nullable=True, default=func.now(), onupdate=func.now())
+    payload = Column(Text, nullable=True)
+
+    document = relationship("Document", back_populates="preference_jobs")
+
+    __table_args__ = (
+        Index("idx_preference_jobs_status", "status"),
+        Index("idx_preference_jobs_next_attempt", "next_attempt_at"),
+        Index("idx_preference_jobs_job_type", "job_type"),
+    )
+
+
+class PreferenceFeedback(Base):
+    """パーソナライズフィードバック"""
+
+    __tablename__ = "preference_feedbacks"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, nullable=True, index=True)
+    document_id = Column(
+        String,
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    feedback_type = Column(String, nullable=False)
+    metadata_payload = Column("metadata", Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=func.now())
+
+    document = relationship("Document", back_populates="preference_feedbacks")
+
+    __table_args__ = (
+        Index("idx_preference_feedbacks_document", "document_id"),
+        Index("idx_preference_feedbacks_user", "user_id"),
+        Index("idx_preference_feedbacks_created_at", "created_at"),
+        UniqueConstraint(
+            "user_id",
+            "document_id",
+            "feedback_type",
+            name="idx_preference_feedbacks_unique_submission",
+        ),
+    )

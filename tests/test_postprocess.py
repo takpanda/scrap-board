@@ -17,7 +17,7 @@ def test_postprocess_generates_summary_and_embedding(tmp_path, monkeypatch):
     os.environ["DB_URL"] = f"sqlite:///{db_file}"
 
     # Ensure tables are created under the test DB
-    from app.core.database import create_tables, Document, Embedding
+    from app.core.database import create_tables, Document, Embedding, PreferenceJob
 
     create_tables()
     from app.core.database import SessionLocal
@@ -76,6 +76,10 @@ def test_postprocess_generates_summary_and_embedding(tmp_path, monkeypatch):
 
         if not found:
             pytest.fail("Postprocess did not generate summary/embedding in time")
+
+        with SessionLocal() as verify:
+            pref_jobs = verify.query(PreferenceJob).filter(PreferenceJob.document_id == new_id).all()
+            assert len(pref_jobs) >= 1
 
     finally:
         db.close()

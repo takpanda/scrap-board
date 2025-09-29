@@ -1,12 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
-from typing import Optional, List
+from sqlalchemy import and_, case
+from sqlalchemy.orm import Session, aliased
+from typing import Optional, List, Dict
 from datetime import datetime
+from html import escape
 
-from app.core.database import get_db, Document, Classification
+from app.core.database import get_db, Document, Classification, PersonalizedScore
 from app.services.llm_client import LLMClient
+from app.services.personalized_feedback import PersonalizedFeedbackService
+from app.services.personalized_repository import PersonalizedScoreRepository
 from app.services.similarity import calculate_document_similarity
 
 router = APIRouter()
@@ -18,13 +22,84 @@ llm_client = LLMClient()
 templates = Jinja2Templates(directory="app/templates")
 
 
+def _resolve_user_id(request: Request) -> Optional[str]:
+    user = getattr(request.state, "user", None)
+    if user is not None:
+        user_id = getattr(user, "id", None) or getattr(user, "user_id", None)
+        if user_id:
+            return str(user_id)
+
+    header_user = request.headers.get("X-User-Id")
+    if header_user:
+        return header_user
+
+    return None
+
+
+def _fetch_personalized_documents(query, user_id: Optional[str], offset: int, limit: int, db: Session):
+    score_alias = aliased(PersonalizedScore)
+    join_condition = and_(score_alias.document_id == Document.id)
+    if user_id is None:
+        join_condition = and_(join_condition, score_alias.user_id == None)  # noqa: E711
+    else:
+        join_condition = and_(join_condition, score_alias.user_id == user_id)
+
+    personalized_query = query.outerjoin(score_alias, join_condition).add_entity(score_alias)
+
+    ordering = [
+        case((score_alias.id.isnot(None), 0), else_=1),
+        score_alias.rank.asc(),
+        score_alias.score.desc(),
+        Document.created_at.desc(),
+    ]
+
+    rows = personalized_query.order_by(*ordering).offset(offset).limit(limit).all()
+
+    repo = PersonalizedScoreRepository(db)
+    documents: List[Document] = []
+    score_map = {}
+    for row in rows:
+        document, score_row = row
+        documents.append(document)
+        if score_row is not None:
+            score_map[document.id] = repo._row_to_dto(score_row)
+
+    return documents, score_map
+
+
+def _render_feedback_fragment(document_id: str, state: str, message: str) -> str:
+    """Render a lightweight HTML snippet for HTMX swaps."""
+
+    icon = "smile" if state == "submitted" else "info"
+    base_classes = "flex items-center gap-2 text-xs font-medium rounded-lg px-3 py-2"
+    if state == "submitted":
+        palette = " bg-emerald/10 text-emerald-700 border border-emerald/30"
+    else:
+        palette = " bg-mist/70 text-graphite border border-mist"
+    escaped_message = escape(message)
+    return "".join(
+        [
+            f'<div class="{base_classes}{palette}" '
+            f'data-personalized-feedback-container '
+            f'data-document-id="{escape(document_id)}" '
+            f'data-feedback-state="{escape(state)}" '
+            f'data-feedback-message="{escaped_message}">',
+            f'<i data-lucide="{icon}" class="w-4 h-4" aria-hidden="true"></i>',
+            f'<span>{escaped_message}</span>',
+            "</div>",
+        ]
+    )
+
+
 @router.get("")
 async def list_documents(
+    request: Request,
     q: Optional[str] = Query(None, description="検索クエリ"),
     category: Optional[str] = Query(None, description="カテゴリフィルタ"),
     domain: Optional[str] = Query(None, description="ドメインフィルタ"),
     from_date: Optional[str] = Query(None, alias="from", description="開始日 (YYYY-MM-DD)"),
     to_date: Optional[str] = Query(None, alias="to", description="終了日 (YYYY-MM-DD)"),
+    sort: Optional[str] = Query("recent", description="ソート順 (recent|personalized)"),
     limit: int = Query(50, le=100, description="取得件数"),
     offset: int = Query(0, description="オフセット"),
     db: Session = Depends(get_db)
@@ -60,8 +135,15 @@ async def list_documents(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid to date format")
     
-    # ソート・ページング
-    documents = query.order_by(Document.created_at.desc()).offset(offset).limit(limit).all()
+    sort_mode = (sort or "recent").lower()
+    use_personalized = sort_mode == "personalized"
+
+    score_map = {}
+    if use_personalized:
+        user_id = _resolve_user_id(request)
+        documents, score_map = _fetch_personalized_documents(query, user_id, offset, limit, db)
+    else:
+        documents = query.order_by(Document.created_at.desc()).offset(offset).limit(limit).all()
     
     # 結果整形
     result = []
@@ -85,6 +167,17 @@ async def list_documents(
             doc_data["tags"] = classification.tags or []
             doc_data["confidence"] = classification.confidence
         
+        score_dto = score_map.get(doc.id)
+        if score_dto is not None:
+            doc_data["personalized"] = {
+                "score": score_dto.score,
+                "rank": score_dto.rank,
+                "explanation": score_dto.explanation,
+                "components": score_dto.components.to_dict(),
+                "computed_at": score_dto.computed_at.isoformat(),
+                "cold_start": score_dto.cold_start,
+            }
+
         result.append(doc_data)
     
     return {
@@ -168,6 +261,86 @@ async def submit_feedback(
     db.commit()
     
     return {"message": "Feedback submitted successfully"}
+
+
+@router.post("/{document_id}/personalized-feedback")
+async def submit_personalized_feedback(
+    request: Request,
+    document_id: str,
+    db: Session = Depends(get_db)
+):
+    """Record "low relevance" feedback for personalized ranking."""
+
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    payload: Dict[str, str] = {}
+    content_type = request.headers.get("content-type", "") or ""
+    try:
+        if "application/json" in content_type:
+            json_body = await request.json()
+            if isinstance(json_body, dict):
+                payload = {str(k): str(v) for k, v in json_body.items() if v is not None}
+        else:
+            form = await request.form()
+            payload = {str(k): str(form.get(k)) for k in form.keys() if form.get(k) is not None}
+    except Exception:
+        payload = {}
+
+    reason = (payload.get("reason") or "low_relevance").strip().lower()
+    if reason != "low_relevance":
+        raise HTTPException(status_code=400, detail="Unsupported feedback reason")
+
+    session_token = payload.get("session_token") or request.headers.get("X-Feedback-Session")
+    if session_token:
+        session_token = str(session_token).strip()
+    if session_token == "":
+        session_token = None
+
+    note = payload.get("note")
+    metadata_keys = {"score", "rank", "cold_start"}
+    metadata = {key: payload[key] for key in metadata_keys if key in payload}
+
+    service = PersonalizedFeedbackService(db)
+    result = service.submit_low_relevance(
+        document=document,
+        user_id=_resolve_user_id(request),
+        session_token=session_token,
+        note=note,
+        metadata=metadata or None,
+    )
+
+    if result.created:
+        state = "submitted"
+        status_label = "accepted"
+        message = "フィードバックありがとうございました。おすすめ改善に活用します。"
+    else:
+        state = "duplicate"
+        status_label = "duplicate"
+        duplicate_messages = {
+            "duplicate_user": "すでに同じユーザーからフィードバックを受け付けています。",
+            "duplicate_session": "このセッションではすでにフィードバック済みです。",
+            "duplicate_constraint": "同じ内容のフィードバックを受け付けています。",
+        }
+        message = duplicate_messages.get(result.state, "すでにこのフィードバックを処理しました。")
+
+    response_payload = {
+        "status": status_label,
+        "message": message,
+        "state": state,
+        "duplicate": not result.created,
+        "document_id": document.id,
+    }
+
+    if request.headers.get("HX-Request"):
+        fragment = _render_feedback_fragment(document.id, state, message)
+        hx_trigger = "personalized-feedback:submitted" if result.created else "personalized-feedback:duplicate"
+        response = HTMLResponse(content=fragment)
+        response.headers["HX-Trigger"] = hx_trigger
+        return response
+
+    return JSONResponse(response_payload)
 
 
 @router.post("/{document_id}/summarize")

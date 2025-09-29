@@ -159,6 +159,7 @@ async def documents_page(
     q: str = "",
     category: str = "",
     tag: str = "",
+    domain: str = "",
     db: Session = Depends(get_db)
 ):
     """ドキュメント一覧ページ"""
@@ -169,6 +170,9 @@ async def documents_page(
     
     if q:
         query = query.filter(Document.content_text.contains(q))
+
+    if domain:
+        query = query.filter(Document.domain == domain)
 
     # タグによるフィルタ（SQLite の JSON 配列を考慮して json_extract + LIKE を利用）
     if tag:
@@ -203,7 +207,8 @@ async def documents_page(
         "documents": documents,
         "q": q,
         "category": category,
-        "tag": tag
+        "tag": tag,
+        "domain": domain
     })
 
 

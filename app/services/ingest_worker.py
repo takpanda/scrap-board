@@ -1,7 +1,7 @@
 import logging
 import json
 from typing import Any, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 
 import httpx
@@ -21,6 +21,7 @@ from app.core.database import SessionLocal
 from app.services.extractor import content_extractor
 from app.services.postprocess import kick_postprocess_async
 from app.services.postprocess_queue import enqueue_job_for_document
+from app.services.personalization_queue import schedule_profile_update
 import sys
 
 logger = logging.getLogger(__name__)
@@ -96,6 +97,15 @@ def _insert_document_if_new(db, doc: Dict[str, Any], source_name: str):
         except Exception:
             db.rollback()
             logger.exception("Failed to create postprocess job for %s", doc_id)
+        delay = timedelta(seconds=30)
+        job_id = schedule_profile_update(
+            db,
+            document_id=doc_id,
+            available_at=now + delay,
+            payload={"document_ids": [doc_id]},
+        )
+        if job_id:
+            logger.debug("Ingest: scheduled preference job %s for document %s (available_at=%s)", job_id, doc_id, (now + delay).isoformat())
         return doc_id
     except Exception:
         db.rollback()

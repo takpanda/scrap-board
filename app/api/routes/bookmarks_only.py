@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, Request, Query, HTTPException
+from fastapi import APIRouter, Depends, Request, Query
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
+from typing import Optional
+from math import ceil
 
 from app.core.database import get_db
 from app.services.bookmark_service import get_user_bookmarked_documents
@@ -45,19 +47,57 @@ router = APIRouter()
 
 
 @router.get("/bookmarks", response_class=HTMLResponse)
-async def bookmarks_only_page(request: Request, page: int = Query(1, ge=1), per_page: int = Query(20, ge=1, le=100), db: Session = Depends(get_db)):
-    # Obtain current user from request.state or dependency. The project uses
-    # anonymous bookmarks in some tests; attempt to read request.state.user if present.
-    user = getattr(request.state, "user", None)
-    # Show anonymous bookmarks when user is not present (the app stores some
-    # bookmarks with user_id == NULL). Call service with user_id=None in that case.
-    uid = user.id if user else None
+async def bookmarks_only_page(
+    request: Request,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    # Resolve current user. Authentication middleware should populate request.state.user;
+    # for tests/local tooling allow header override.
+    uid = _resolve_user_id(request)
+
+    # Fetch bookmarks. When page is out of range but bookmarks exist, snap to last page.
     documents, total = get_user_bookmarked_documents(db, user_id=uid, page=page, per_page=per_page)
 
-    return templates.TemplateResponse("bookmarks_only.html", {
-        "request": request,
-        "documents": documents,
-        "page": page,
-        "per_page": per_page,
-        "total": total
-    })
+    if page > 1 and not documents and total > 0:
+        last_page = max(1, ceil(total / per_page))
+        if last_page != page:
+            documents, total = get_user_bookmarked_documents(db, user_id=uid, page=last_page, per_page=per_page)
+            page = last_page
+
+    last_page = max(1, ceil(total / per_page)) if total else 1
+    has_previous = page > 1
+    has_next = (page * per_page) < total
+    start_index = (page - 1) * per_page + 1 if total else 0
+    end_index = start_index + len(documents) - 1 if documents else 0
+
+    return templates.TemplateResponse(
+        "bookmarks_only.html",
+        {
+            "request": request,
+            "documents": documents,
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "last_page": last_page,
+            "has_previous": has_previous,
+            "has_next": has_next,
+            "start_index": start_index,
+            "end_index": end_index,
+        },
+    )
+
+
+def _resolve_user_id(request: Request) -> Optional[str]:
+    user = getattr(request.state, "user", None)
+    if user is not None:
+        user_id = getattr(user, "id", None) or getattr(user, "user_id", None)
+        if user_id:
+            return str(user_id)
+
+    header_user = request.headers.get("X-User-Id")
+    if header_user:
+        return header_user
+
+    return None

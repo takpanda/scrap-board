@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/bookmark-preference-ranking/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-09-28T12:12:13.310Z",
+      "trigger": "initial",
+      "approvalId": "approval_1759061533190_z3n00vxwo",
+      "approvalTitle": "bookmark-preference-ranking tasks.md 作成"
+    }
+  ]
+}

@@ -2069,6 +2069,9 @@ body.font-large .prose { font-size: 18px; }
     flex-shrink: 0;
     min-width: 1rem;
     min-height: 1rem;
+    font-size: 0;
+    line-height: 0;
+    overflow: hidden;
 }
 
 [data-lucide] svg {

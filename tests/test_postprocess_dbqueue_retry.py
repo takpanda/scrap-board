@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-from app.core.database import Document
+from app.core.database import Document, PreferenceJob
 
 
 class DummyFailOnce:
@@ -91,6 +91,8 @@ def test_db_queue_job_retry(tmp_path, monkeypatch):
 
             d = db2.query(Document).filter(Document.id == new_id).one_or_none()
             assert d is not None and d.short_summary is not None
+            pref_jobs = db2.query(PreferenceJob).filter(PreferenceJob.document_id == new_id).all()
+            assert len(pref_jobs) >= 1
         finally:
             db2.close()
     finally:
