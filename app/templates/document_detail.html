@@ -3,20 +3,23 @@
 {% block title %}{{ document.title }} - Scrap-Board{% endblock %}
 
 {% block content %}
-<div class="document-container overflow-x-auto md:overflow-x-visible">
-    <div class="max-w-6xl mx-auto px-6 py-8">
+<div class="document-container">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div id="doc-data" data-has-short-summary="{{ '1' if document.short_summary else '0' }}" style="display:none"></div>
 
-        <a href="/documents" class="dify-back-btn">
+        <!-- Back Button -->
+        <a href="/documents" class="dify-back-btn mb-4 sm:mb-6">
             <i data-lucide="arrow-left" class="w-4 h-4"></i>
             <span>ドキュメント一覧に戻る</span>
         </a>
 
-        <div class="dify-header-card card-edge">
+        <!-- Header Card with Metadata -->
+        <div class="dify-header-card card-edge mb-6">
             {% include 'partials/_document_meta.html' %}
 
+            <!-- Categories and Tags -->
             {% if document.classifications %}
-            <div class="flex items-start mb-6 md:overflow-x-auto md:whitespace-nowrap flex-wrap md:flex-nowrap" style="gap: 0.5rem; align-items:center;">
+            <div class="flex flex-wrap items-center gap-2 mt-4">
                 <span class="dify-tag-primary">
                     <i data-lucide="tag" class="w-3 h-3"></i>
                     {{ document.classifications[0].primary_category }}
@@ -28,10 +31,11 @@
                     {% endfor %}
                 {% endif %}
 
-                <!-- Bookmark button inline with tags (icon-only) -->
+                <!-- Bookmark button -->
                 <button
-                    class="ml-2 p-1 rounded hover:bg-gray-100"
+                    class="ml-auto p-2 rounded-lg hover:bg-gray-100 transition-colors"
                     aria-pressed="{{ 'true' if document.bookmarked else 'false' }}"
+                    aria-label="ブックマーク"
                     onclick="toggleBookmarkDetail(this)"
                     data-doc-id="{{ document.id }}"
                     title="ブックマーク"
@@ -42,8 +46,11 @@
             {% endif %}
         </div>
 
-        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="md:col-span-2">
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Content Area -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Content Preview Card -->
                 <div class="dify-content-card card-edge">
                     <div class="dify-content-header">
                         <h2 class="dify-section-title">
@@ -54,6 +61,7 @@
                             onclick="toggleFullContent()"
                             id="content-toggle"
                             class="dify-toggle-btn"
+                            aria-label="全文表示切り替え"
                         >
                             <span>全文を表示</span>
                         </button>
@@ -61,13 +69,16 @@
 
                 </div>
 
-                <div class="dify-content-card card-edge mt-6">
-                    <h2 class="dify-section-title">関連ドキュメント</h2>
+                <!-- Similar Documents Card -->
+                <div class="dify-content-card card-edge">
+                    <h2 class="dify-section-title mb-4">
+                        <i data-lucide="link" class="w-5 h-5"></i>
+                        関連ドキュメント
+                    </h2>
                     <div
                         hx-get="/api/documents/{{ document.id }}/similar"
                         hx-trigger="load"
                         hx-target="#similar-documents"
-                        class="mt-4"
                     >
                         <div id="similar-documents" class="dify-similar-list">
                             <!-- Loading placeholders -->
@@ -80,60 +91,61 @@
                 </div>
             </div>
 
-            <aside>
+            <!-- Sidebar -->
+            <aside class="space-y-6">
+                <!-- Summary Card -->
                 <div class="dify-content-card card-edge">
-                    <h3 class="dify-section-title">要約</h3>
                     <div id="summary-section">
-                            <h2 class="dify-section-title">
-                                <i data-lucide="sparkles" class="w-5 h-5"></i>
-                                AI要約
-                            </h2>
-                            <div id="summary-content">
-                            {% if document.short_summary %}
-                                <div class="dify-summary-container">
-                                    <div class="dify-summary-badge"><span>保存済み要約</span></div>
-                                    <div class="dify-summary-content">{{ document.short_summary | safe }}</div>
-                                </div>
-                            {% else %}
-                                <div class="dify-summary-container">
-                                    <div class="dify-summary-badge"><span>AI生成要約</span></div>
-                                    <div class="dify-summary-content">
-                                        <div id="summary-placeholder">
-                                            <p class="text-gray-500">要約を生成しています...</p>
-                                        </div>
-                                        </div>
-
-                                        <!-- Hidden content section (toggle target) required by tests -->
-                                        <div id="content-section" class="hidden dify-content-card">
-                                            <div class="dify-content-header">
-                                                <h2 class="dify-section-title">
-                                                    <i data-lucide="file-text" class="w-5 h-5"></i>
-                                                    コンテンツプレビュー
-                                                </h2>
-                                                <button onclick="toggleFullContent()" id="content-toggle" class="dify-toggle-btn">
-                                                    <span>全文を表示</span>
-                                                </button>
-                                            </div>
-
-                                            <div id="content-preview" class="prose max-w-none">
-                                                <div class="dify-content-text">
-                                                    {{ document.content_md[:500] | markdown | safe }}{% if document.content_md|length > 500 %}<span class="text-gray-400">...</span>{% endif %}
-                                                </div>
-                                            </div>
-
-                                            <div id="content-full" class="hidden prose max-w-none">
-                                                <div class="dify-content-text">
-                                                    {{ document.content_md | safe }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                </div>
-                            {% endif %}
+                        <h2 class="dify-section-title mb-4">
+                            <i data-lucide="sparkles" class="w-5 h-5"></i>
+                            AI要約
+                        </h2>
+                        <div id="summary-content">
+                        {% if document.short_summary %}
+                            <div class="dify-summary-container">
+                                <div class="dify-summary-badge"><span>保存済み要約</span></div>
+                                <div class="dify-summary-content">{{ document.short_summary | safe }}</div>
                             </div>
+                        {% else %}
+                            <div class="dify-summary-container">
+                                <div class="dify-summary-badge"><span>AI生成要約</span></div>
+                                <div class="dify-summary-content">
+                                    <div id="summary-placeholder">
+                                        <p class="text-gray-500">要約を生成しています...</p>
+                                    </div>
+                                </div>
+
+                                <!-- Hidden content section (toggle target) required by tests -->
+                                <div id="content-section" class="hidden dify-content-card">
+                                    <div class="dify-content-header">
+                                        <h2 class="dify-section-title">
+                                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                                            コンテンツプレビュー
+                                        </h2>
+                                        <button onclick="toggleFullContent()" id="content-toggle" class="dify-toggle-btn">
+                                            <span>全文を表示</span>
+                                        </button>
+                                    </div>
+
+                                    <div id="content-preview" class="prose max-w-none">
+                                        <div class="dify-content-text">
+                                            {{ document.content_md[:500] | markdown | safe }}{% if document.content_md|length > 500 %}<span class="text-gray-400">...</span>{% endif %}
+                                        </div>
+                                    </div>
+
+                                    <div id="content-full" class="hidden prose max-w-none">
+                                        <div class="dify-content-text">
+                                            {{ document.content_md | safe }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
                         </div>
+                    </div>
 
                     <div class="mt-4">
-                        <button id="content-view-toggle" onclick="toggleContentView()" class="dify-toggle-btn">
+                        <button id="content-view-toggle" onclick="toggleContentView()" class="dify-toggle-btn w-full justify-center">
                             <span>全文を表示</span>
                             <i data-lucide="file-text" class="w-4 h-4"></i>
                         </button>

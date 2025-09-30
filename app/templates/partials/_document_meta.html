@@ -1,12 +1,12 @@
 <div class="dify-document-meta" role="region" aria-label="Document metadata">
-  <div class="dify-title-with-thumb flex items-center gap-3">
+  <div class="dify-title-with-thumb">
     <img
       src="{% if document.thumbnail_url %}/data/{{ document.thumbnail_url }}{% else %}/static/images/default-thumbnail.svg{% endif %}?v={{ document.updated_at.isoformat() if document.updated_at else '1' }}"
       alt="thumbnail"
-      class="dify-thumb w-14 h-14 flex-shrink-0 rounded-md object-cover"
+      class="dify-thumb"
       loading="lazy"
     />
-    <h1 class="dify-title min-w-0 truncate" style="margin:0;line-height:1;">{{ document.title }}</h1>
+    <h1 class="dify-title">{{ document.title }}</h1>
   </div>
   
   <div class="dify-meta-grid">
@@ -29,6 +29,4 @@
       </div>
     {% endif %}
   </div>
-  
-  <!-- Buttons moved to document_detail action area to control placement -->
 </div>
