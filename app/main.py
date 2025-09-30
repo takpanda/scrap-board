@@ -13,7 +13,7 @@ from markdown_it import MarkdownIt
 from app.core.config import settings
 from app.core.database import get_db, create_tables
 from app.services.scheduler import start_scheduler, stop_scheduler
-from app.api.routes import documents, ingest, collections, utils, admin_sources, bookmarks, bookmarks_only
+from app.api.routes import documents, ingest, collections, utils, admin_sources, bookmarks, bookmarks_only, preferences
 from app.api.routes import admin as admin_routes
 from datetime import timezone, timedelta
 try:
@@ -124,6 +124,7 @@ app.include_router(collections.router, prefix="/api/collections", tags=["collect
 app.include_router(utils.router, prefix="/api", tags=["utils"])
 app.include_router(bookmarks.router, prefix="/api/bookmarks", tags=["bookmarks"])
 app.include_router(bookmarks_only.router)
+app.include_router(preferences.router)
 app.include_router(admin_sources.router)
 app.include_router(admin_routes.router)
 

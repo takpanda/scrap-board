@@ -230,6 +230,14 @@ def test_database_override(tmp_path_factory):
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+    # Ensure the originally imported SessionLocal object points to the
+    # test database engine so any modules that imported it earlier
+    # (e.g. individual test modules) use the same temporary database.
+    try:
+        SessionLocal.configure(bind=engine)
+    except Exception:
+        pass
+
     # Export the test DB URL so any subsequent imports that read the
     # environment (including app imports in the live server thread)
     # pick up the correct temporary database file.
@@ -250,9 +258,13 @@ def test_database_override(tmp_path_factory):
     # import the app after this fixture runs.
     try:
         from app.core import database as app_db
-        # Replace the app's SessionLocal so the app uses the test engine
-        # sessionmaker objects don't implement `configure`, so assign instead.
-        app_db.SessionLocal = TestingSessionLocal
+        # Ensure the app's SessionLocal uses the same engine. When tests have
+        # already imported SessionLocal, mutating the existing sessionmaker via
+        # configure keeps all references aligned with the temporary database.
+        try:
+            app_db.SessionLocal.configure(bind=engine)
+        except Exception:
+            app_db.SessionLocal = TestingSessionLocal
         # Ensure the module-level engine used by the app is the test engine
         # so that any code referencing `app.core.database.engine` uses the
         # same database as the tests.
