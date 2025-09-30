@@ -123,16 +123,19 @@
     </style>
     <style>
         /* Defensive: ensure article cards and their children cannot force horizontal overflow
-           Apply to documents container articles to avoid affecting other pages like reader. */
-        #documents-container article, #documents-container article * {
+           Apply to documents and bookmarks container articles to avoid affecting other pages like reader. */
+        #documents-container article, #documents-container article *,
+        #bookmarks-container article, #bookmarks-container article * {
             box-sizing: border-box;
             min-width: 0; /* allow children to shrink */
             max-width: 100%; /* prevent child from exceeding card width */
             word-break: break-word;
             overflow-wrap: anywhere;
         }
-        #documents-container article img { max-width: 100%; height: auto; }
-        #documents-container article p, #documents-container article a, #documents-container article .prose {
+        #documents-container article img,
+        #bookmarks-container article img { max-width: 100%; height: auto; }
+        #documents-container article p, #documents-container article a, #documents-container article .prose,
+        #bookmarks-container article p, #bookmarks-container article a, #bookmarks-container article .prose {
             word-break: break-word;
             overflow-wrap: anywhere;
             max-width: 100%;
@@ -187,12 +190,14 @@
             padding-top: 0.75rem !important;
         }
         /* Force thumbnail size to avoid external overrides (80%) */
-        #documents-container article header img.thumb-80 {
+        #documents-container article header img.thumb-80,
+        #bookmarks-container article header img.thumb-80 {
             width: 2.4rem !important;
             height: 2.4rem !important;
         }
         @media (min-width: 768px) {
-            #documents-container article header img.thumb-80 {
+            #documents-container article header img.thumb-80,
+            #bookmarks-container article header img.thumb-80 {
                 width: 3.2rem !important;
                 height: 3.2rem !important;
             }
