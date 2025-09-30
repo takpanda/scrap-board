@@ -7,7 +7,7 @@ from typing import Optional, List, Dict
 from datetime import datetime
 from html import escape
 
-from app.core.database import get_db, Document, Classification, PersonalizedScore
+from app.core.database import get_db, Document, Classification, PersonalizedScore, Bookmark
 from app.services.llm_client import LLMClient
 from app.services.personalized_feedback import PersonalizedFeedbackService
 from app.services.personalized_repository import PersonalizedScoreRepository
@@ -45,6 +45,18 @@ def _fetch_personalized_documents(query, user_id: Optional[str], offset: int, li
         join_condition = and_(join_condition, score_alias.user_id == user_id)
 
     personalized_query = query.outerjoin(score_alias, join_condition).add_entity(score_alias)
+    
+    # ブックマーク済みの記事を除外
+    if user_id is not None:
+        # サブクエリでユーザーのブックマーク済みドキュメントIDを取得
+        bookmarked_subquery = db.query(Bookmark.document_id).filter(
+            Bookmark.user_id == user_id
+        ).subquery()
+        
+        # ブックマーク済みドキュメントを除外
+        personalized_query = personalized_query.filter(
+            ~Document.id.in_(db.query(bookmarked_subquery.c.document_id))
+        )
 
     ordering = [
         case((score_alias.id.isnot(None), 0), else_=1),

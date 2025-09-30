@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from sqlalchemy.orm import Session
 
-from app.core.database import Document, create_tables
+from app.core.database import Document, create_tables, Bookmark
 from app.core import database as app_db
 from app.services.personalization_models import ExplanationBreakdown, PersonalizedScoreDTO
 from app.services.personalized_repository import PersonalizedScoreRepository
@@ -117,7 +117,75 @@ def test_personalized_sort_without_scores_returns_recent_order(client: TestClien
 
     assert [doc["id"] for doc in docs] == [first_doc.id, older_doc.id]
     assert all("personalized" not in doc for doc in docs)
-    assert all("personalized" not in doc for doc in docs)
+
+
+def test_personalized_sort_excludes_bookmarked_documents(client: TestClient, db_session: Session):
+    """ブックマーク済みの記事はパーソナライズされたリストから除外されることを確認"""
+    repo = PersonalizedScoreRepository(db_session)
+    user_id = "user-123"
+
+    # テスト用のドキュメントを作成
+    bookmarked_doc = _persist_document(db_session, title="ブックマーク済み記事", created_at=datetime.utcnow() - timedelta(days=2))
+    recommended_doc = _persist_document(db_session, title="おすすめ記事", created_at=datetime.utcnow() - timedelta(days=1))
+    
+    # 両方の記事にPersonalizedScoreを設定（ブックマーク済み記事の方が高スコア）
+    scores = [
+        PersonalizedScoreDTO(
+            id=str(uuid.uuid4()),
+            document_id=bookmarked_doc.id,
+            score=0.95,  # より高いスコア
+            rank=1,
+            components=ExplanationBreakdown(similarity=0.9, category=0.8, domain=0.7, freshness=0.9),
+            explanation="高スコアですがブックマーク済みのため除外される記事",
+            computed_at=datetime.utcnow(),
+            user_id=user_id,
+            cold_start=False,
+        ),
+        PersonalizedScoreDTO(
+            id=str(uuid.uuid4()),
+            document_id=recommended_doc.id,
+            score=0.75,  # より低いスコア
+            rank=2,
+            components=ExplanationBreakdown(similarity=0.7, category=0.6, domain=0.5, freshness=0.8),
+            explanation="ブックマークされていないおすすめ記事",
+            computed_at=datetime.utcnow(),
+            user_id=user_id,
+            cold_start=False,
+        ),
+    ]
+    repo.bulk_upsert(scores, profile_id=f"profile-{user_id}", user_id=user_id)
+    
+    # bookmarked_docをブックマークに追加
+    bookmark = Bookmark(
+        user_id=user_id,
+        document_id=bookmarked_doc.id,
+        note="テスト用ブックマーク"
+    )
+    db_session.add(bookmark)
+    db_session.commit()
+
+    # パーソナライズされたリストを取得
+    response = client.get(
+        "/api/documents",
+        params={"sort": "personalized", "limit": 10},
+        headers={"X-User-Id": user_id},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    docs = payload["documents"]
+    
+    # ブックマーク済み記事が結果に含まれていないことを確認
+    doc_ids = [doc["id"] for doc in docs]
+    assert bookmarked_doc.id not in doc_ids, "ブックマーク済み記事がおすすめリストに含まれています"
+    
+    # ブックマークされていない記事は含まれていることを確認
+    assert recommended_doc.id in doc_ids, "ブックマークされていない記事がおすすめリストに含まれていません"
+    
+    # ブックマークされていない記事がパーソナライズ情報を持っていることを確認
+    recommended_doc_data = next((doc for doc in docs if doc["id"] == recommended_doc.id), None)
+    assert recommended_doc_data is not None
+    assert "personalized" in recommended_doc_data
+    assert recommended_doc_data["personalized"]["score"] == pytest.approx(0.75, rel=1e-3)
 
 
 def test_personalized_sort_uses_user_specific_scores_over_global(client: TestClient, db_session: Session):
