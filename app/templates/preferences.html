@@ -1,205 +1,337 @@
 {% extends "base.html" %}
 
+{% block title %}嗜好分析 - Scrap-Board{% endblock %}
 {% block content %}
-<div class="max-w-7xl mx-auto py-6 px-4">
-  <!-- ヘッダー -->
-  <div class="mb-6">
-    <h1 class="text-3xl font-bold text-ink mb-2">ブックマーク嗜好分析</h1>
-    <p class="text-graphite">あなたのブックマーク傾向を可視化します</p>
-  </div>
+<div class="preferences-page" data-page-id="preferences">
+  {% set summary = analysis.get('summary', {}) %}
+  {% set profile_status = summary.get('profile_status', 'unknown') %}
+  {% set top_topics = analysis.get('top_topics') or [] %}
+  {% set top_keywords = analysis.get('top_keywords') or [] %}
+  {% set top_articles = analysis.get('top_articles') or [] %}
+  {% set recent_bookmarks = analysis.get('recent_bookmarks') or [] %}
+  {% set profile_weights = analysis.get('profile_weights') or {} %}
+  {% set category_weights = profile_weights.get('categories') %}
+  {% set domain_weights = profile_weights.get('domains') %}
 
-  <!-- サマリーカード -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white rounded-lg shadow p-4 border border-mist">
-      <div class="text-sm text-graphite mb-1">ブックマーク総数</div>
-      <div class="text-2xl font-bold text-ink">{{ analysis.summary.total_bookmarks }}</div>
+  <section class="preferences-card preferences-card--hero">
+    <div class="preferences-header">
+      <h1 class="preferences-title text-ink">ブックマーク嗜好分析</h1>
+      <p class="preferences-description text-graphite">あなたのブックマーク傾向を可視化し、次に読むべきコンテンツを判断するヒントにしましょう。</p>
     </div>
-    <div class="bg-white rounded-lg shadow p-4 border border-mist">
-      <div class="text-sm text-graphite mb-1">カテゴリ数</div>
-      <div class="text-2xl font-bold text-emerald">{{ analysis.summary.categories_count }}</div>
-    </div>
-    <div class="bg-white rounded-lg shadow p-4 border border-mist">
-      <div class="text-sm text-graphite mb-1">ドメイン数</div>
-      <div class="text-2xl font-bold text-indigo-600">{{ analysis.summary.unique_domains }}</div>
-    </div>
-    <div class="bg-white rounded-lg shadow p-4 border border-mist">
-      <div class="text-sm text-graphite mb-1">プロファイル状態</div>
-      <div class="text-sm font-semibold">
-        {% if analysis.summary.profile_status == 'active' %}
-          <span class="text-emerald">✓ アクティブ</span>
-        {% elif analysis.summary.profile_status == 'cold_start' %}
-          <span class="text-amber-600">⋯ 初期状態</span>
-        {% elif analysis.summary.profile_status == 'error' %}
-          <span class="text-red-600">✗ エラー</span>
-        {% else %}
-          <span class="text-graphite">不明</span>
-        {% endif %}
-      </div>
-    </div>
-  </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <!-- 頻出トピック -->
-    <div class="bg-white rounded-lg shadow p-6 border border-mist">
-      <h2 class="text-xl font-bold text-ink mb-4">頻出トピック</h2>
-      {% if analysis.top_topics %}
-        <div class="space-y-3">
-          {% for topic in analysis.top_topics %}
-            <div>
-              <div class="flex justify-between items-center mb-1">
-                <span class="text-sm font-medium text-graphite">{{ topic.name }}</span>
-                <span class="text-sm text-graphite">{{ topic.count }}件 ({{ topic.percentage }}%)</span>
+    <div class="preferences-summary-grid">
+      <article class="preferences-summary-card">
+        <span class="preferences-summary-label">ブックマーク総数</span>
+        <span class="preferences-summary-value">{{ summary.total_bookmarks | default(0) }}</span>
+        <span class="preferences-summary-hint">収集済みコンテンツ</span>
+      </article>
+      <article class="preferences-summary-card">
+        <span class="preferences-summary-label">カテゴリ数</span>
+        <span class="preferences-summary-value">{{ summary.categories_count | default(0) }}</span>
+        <span class="preferences-summary-hint">ユニークカテゴリ</span>
+      </article>
+      <article class="preferences-summary-card">
+        <span class="preferences-summary-label">ドメイン数</span>
+        <span class="preferences-summary-value">{{ summary.unique_domains | default(0) }}</span>
+        <span class="preferences-summary-hint">ユニークドメイン</span>
+      </article>
+      <article class="preferences-summary-card">
+        <span class="preferences-summary-label">プロファイル状態</span>
+        <div class="preferences-status-wrapper">
+          {% if profile_status == 'active' %}
+            <span class="preferences-status preferences-status--active">
+              <span class="preferences-status-indicator"></span>
+              アクティブ
+            </span>
+          {% elif profile_status == 'cold_start' %}
+            <span class="preferences-status preferences-status--cold">
+              <span class="preferences-status-indicator"></span>
+              初期状態
+            </span>
+          {% elif profile_status == 'error' %}
+            <span class="preferences-status preferences-status--error">
+              <span class="preferences-status-indicator"></span>
+              エラー
+            </span>
+          {% else %}
+            <span class="preferences-status preferences-status--unknown">不明</span>
+          {% endif %}
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <div class="preferences-two-column">
+    <section class="preferences-card">
+      <h2 class="preferences-section-title">頻出トピック</h2>
+      {% if top_topics %}
+        <ul class="preferences-topic-list">
+          {% for topic in top_topics %}
+            <li class="preferences-topic-item">
+              <div class="preferences-topic-header">
+                <span class="preferences-topic-name">{{ topic.name }}</span>
+                <span class="preferences-topic-count">{{ topic.count }}件 ({{ topic.percentage }}%)</span>
               </div>
-              <div class="w-full bg-mist rounded-full h-2">
-                <div class="bg-emerald h-2 rounded-full" style="width: {{ topic.percentage }}%"></div>
+              <div class="preferences-topic-bar">
+                <span class="preferences-topic-bar-fill" data-percentage="{{ topic.percentage }}"></span>
               </div>
-            </div>
+            </li>
           {% endfor %}
+        </ul>
+        <div class="preferences-chart">
+          <canvas id="topic-distribution-chart" aria-label="頻出トピックの円グラフ" role="img"></canvas>
         </div>
       {% else %}
-        <p class="text-graphite text-sm">データがありません</p>
+        <p class="preferences-empty">データがありません</p>
       {% endif %}
-    </div>
+    </section>
 
-    <!-- 主要キーワード -->
-    <div class="bg-white rounded-lg shadow p-6 border border-mist">
-      <h2 class="text-xl font-bold text-ink mb-4">主要キーワード</h2>
-      {% if analysis.top_keywords %}
-        <div class="flex flex-wrap gap-2">
-          {% for kw in analysis.top_keywords %}
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-emerald-50 text-emerald-800 border border-emerald-200">
-              {{ kw.keyword }}
-              <span class="ml-1 text-xs text-emerald-600">{{ kw.count }}</span>
+    <section class="preferences-card">
+      <h2 class="preferences-section-title">主要キーワード</h2>
+      {% if top_keywords %}
+        <div class="preferences-chip-list">
+          {% for kw in top_keywords %}
+            <span class="preferences-chip">
+              <span>{{ kw.keyword }}</span>
+              <span class="preferences-chip-count">{{ kw.count }}</span>
             </span>
           {% endfor %}
         </div>
       {% else %}
-        <p class="text-graphite text-sm">データがありません</p>
+        <p class="preferences-empty">データがありません</p>
       {% endif %}
-    </div>
+    </section>
   </div>
 
-  <!-- 上位記事リスト -->
-  <div class="bg-white rounded-lg shadow p-6 border border-mist mb-6">
-    <h2 class="text-xl font-bold text-ink mb-4">上位記事</h2>
-    {% if analysis.top_articles %}
-      <div class="space-y-4">
-        {% for article in analysis.top_articles %}
-          <div class="border-b border-mist pb-4 last:border-b-0">
-            <div class="flex items-start justify-between">
-              <div class="flex-1">
-                <h3 class="font-medium text-ink hover:text-emerald">
-                  {% if article.url %}
-                    <a href="/documents/{{ article.id }}" class="hover:underline">{{ article.title }}</a>
-                  {% else %}
-                    {{ article.title }}
-                  {% endif %}
-                </h3>
-                <div class="flex items-center gap-3 mt-2 text-sm text-graphite">
-                  {% if article.domain %}
-                    <span class="flex items-center">
-                      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                      </svg>
-                      {{ article.domain }}
-                    </span>
-                  {% endif %}
-                  {% if article.category %}
-                    <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs">{{ article.category }}</span>
-                  {% endif %}
-                  {% if article.bookmarked_at %}
-                    <span>{{ article.bookmarked_at[:10] }}</span>
-                  {% endif %}
-                </div>
-                {% if article.summary %}
-                  <p class="mt-2 text-sm text-graphite line-clamp-2">{{ article.summary }}</p>
-                {% endif %}
-                {% if article.tags %}
-                  <div class="flex flex-wrap gap-1 mt-2">
-                    {% for tag in article.tags[:5] %}
-                      <span class="text-xs px-2 py-0.5 rounded bg-mist text-graphite">{{ tag }}</span>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-              </div>
+  <section class="preferences-card">
+    <h2 class="preferences-section-title">上位記事</h2>
+    {% if top_articles %}
+      <ul class="preferences-article-list">
+        {% for article in top_articles %}
+          <li class="preferences-article-item">
+            <h3 class="preferences-article-title">
+              {% if article.url %}
+                <a class="preferences-article-link" href="/documents/{{ article.id }}">{{ article.title }}</a>
+              {% else %}
+                {{ article.title }}
+              {% endif %}
+            </h3>
+            <div class="preferences-article-meta">
+              {% if article.domain %}
+                <span class="preferences-meta-pill">
+                  <span class="preferences-meta-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M2 12h20"></path>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                  </span>
+                  {{ article.domain }}
+                </span>
+              {% endif %}
+              {% if article.category %}
+                <span class="preferences-meta-pill preferences-meta-pill--accent">{{ article.category }}</span>
+              {% endif %}
+              {% if article.bookmarked_at %}
+                <span class="preferences-meta-pill">
+                  <span class="preferences-meta-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 3h18"></path>
+                      <path d="M8 21h8"></path>
+                      <path d="M17 3v18"></path>
+                      <path d="M7 3v18"></path>
+                      <path d="M3 7h18"></path>
+                    </svg>
+                  </span>
+                  {{ article.bookmarked_at[:10] }}
+                </span>
+              {% endif %}
             </div>
-          </div>
+            {% if article.summary %}
+              <p class="preferences-article-summary">{{ article.summary }}</p>
+            {% endif %}
+            {% if article.tags %}
+              <div class="preferences-tag-list">
+                {% for tag in article.tags[:5] %}
+                  <span class="preferences-tag">{{ tag }}</span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </li>
         {% endfor %}
-      </div>
+      </ul>
     {% else %}
-      <p class="text-graphite text-sm">データがありません</p>
+      <p class="preferences-empty">データがありません</p>
     {% endif %}
-  </div>
+  </section>
 
-  <!-- 最近のブックマーク履歴 -->
-  <div class="bg-white rounded-lg shadow p-6 border border-mist">
-    <h2 class="text-xl font-bold text-ink mb-4">最近のブックマーク</h2>
-    {% if analysis.recent_bookmarks %}
-      <div class="space-y-2">
-        {% for item in analysis.recent_bookmarks %}
-          <div class="flex items-center justify-between py-2 border-b border-mist last:border-b-0">
-            <div class="flex-1">
-              <a href="/documents/{{ item.id }}" class="text-sm font-medium text-ink hover:text-emerald hover:underline">
-                {{ item.title }}
-              </a>
+  <section class="preferences-card">
+    <h2 class="preferences-section-title">最近のブックマーク</h2>
+    {% if recent_bookmarks %}
+      <ul class="preferences-bookmark-list">
+        {% for item in recent_bookmarks %}
+          <li class="preferences-bookmark-item">
+            <div class="preferences-bookmark-main">
+              <a class="preferences-bookmark-link" href="/documents/{{ item.id }}">{{ item.title }}</a>
               {% if item.category %}
-                <span class="ml-2 text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">{{ item.category }}</span>
+                <span class="preferences-meta-pill preferences-meta-pill--accent">{{ item.category }}</span>
               {% endif %}
             </div>
             {% if item.bookmarked_at %}
-              <span class="text-xs text-graphite ml-4">{{ item.bookmarked_at[:10] }}</span>
+              <span class="preferences-bookmark-date">{{ item.bookmarked_at[:10] }}</span>
             {% endif %}
-          </div>
+          </li>
         {% endfor %}
-      </div>
+      </ul>
     {% else %}
-      <p class="text-graphite text-sm">データがありません</p>
+      <p class="preferences-empty">データがありません</p>
     {% endif %}
-  </div>
+  </section>
 
-  <!-- プロファイル重み情報 (デバッグ用、必要に応じて非表示) -->
-  {% if analysis.profile_weights.categories or analysis.profile_weights.domains %}
-  <div class="bg-white rounded-lg shadow p-6 border border-mist mt-6">
-    <h2 class="text-xl font-bold text-ink mb-4">プロファイル重み</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {% if analysis.profile_weights.categories %}
-      <div>
-        <h3 class="text-sm font-semibold text-graphite mb-2">カテゴリ重み</h3>
-        <div class="space-y-1">
-          {% for category, weight in analysis.profile_weights.categories.items() %}
-            <div class="flex justify-between text-sm">
-              <span class="text-graphite">{{ category }}</span>
-              <span class="font-mono text-ink">{{ "%.3f"|format(weight) }}</span>
-            </div>
-          {% endfor %}
+  {% if category_weights or domain_weights %}
+  <section class="preferences-card">
+    <h2 class="preferences-section-title">プロファイル重み</h2>
+    <div class="preferences-two-column">
+      {% if category_weights %}
+        <div>
+          <h3 class="preferences-subsection-title">カテゴリ重み</h3>
+          <ul class="preferences-weight-list">
+            {% for category, weight in category_weights.items() %}
+              <li class="preferences-weight-item">
+                <span class="preferences-weight-label">{{ category }}</span>
+                <span class="preferences-weight-value">{{ "%.3f"|format(weight) }}</span>
+              </li>
+            {% endfor %}
+          </ul>
         </div>
-      </div>
       {% endif %}
-      {% if analysis.profile_weights.domains %}
-      <div>
-        <h3 class="text-sm font-semibold text-graphite mb-2">ドメイン重み</h3>
-        <div class="space-y-1">
-          {% for domain, weight in analysis.profile_weights.domains.items() %}
-            <div class="flex justify-between text-sm">
-              <span class="text-graphite">{{ domain }}</span>
-              <span class="font-mono text-ink">{{ "%.3f"|format(weight) }}</span>
-            </div>
-          {% endfor %}
+      {% if domain_weights %}
+        <div>
+          <h3 class="preferences-subsection-title">ドメイン重み</h3>
+          <ul class="preferences-weight-list">
+            {% for domain, weight in domain_weights.items() %}
+              <li class="preferences-weight-item">
+                <span class="preferences-weight-label">{{ domain }}</span>
+                <span class="preferences-weight-value">{{ "%.3f"|format(weight) }}</span>
+              </li>
+            {% endfor %}
+          </ul>
         </div>
-      </div>
       {% endif %}
     </div>
-  </div>
+  </section>
   {% endif %}
 </div>
 
-<!-- Chart.js を使用したグラフ描画のためのスクリプト -->
+<script id="preferences-topics-data" type="application/json">
+  {{ top_topics | tojson }}
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-  // トピック円グラフの描画（必要に応じて有効化）
-  // const topicsData = {{ analysis.top_topics | tojson }};
-  // if (topicsData && topicsData.length > 0) {
-  //   // グラフ描画コード
-  // }
+  (function() {
+    document.querySelectorAll('.preferences-topic-bar-fill').forEach((bar) => {
+      const raw = Number(bar.dataset.percentage);
+      if (!Number.isFinite(raw) || raw <= 0) {
+        bar.style.width = '0%';
+        bar.classList.add('is-empty');
+        return;
+      }
+
+      const clamped = Math.min(Math.max(raw, 0), 100);
+      bar.style.width = `${clamped}%`;
+    });
+
+    const canvas = document.getElementById('topic-distribution-chart');
+    if (!canvas) {
+      return;
+    }
+
+    const dataSource = document.getElementById('preferences-topics-data');
+    let topicsData = [];
+    if (dataSource) {
+      try {
+        const payload = dataSource.textContent?.trim() || '[]';
+        const parsed = JSON.parse(payload);
+        if (Array.isArray(parsed)) {
+          topicsData = parsed;
+        }
+      } catch (error) {
+        console.warn('トピックデータの解析に失敗しました', error);
+      }
+    }
+
+    if (!Array.isArray(topicsData) || topicsData.length === 0) {
+      return;
+    }
+
+    const values = topicsData.map(item => Number(item.percentage) || 0);
+    const hasPositiveValue = values.some(value => value > 0);
+    if (!hasPositiveValue) {
+      return;
+    }
+
+    const labels = topicsData.map(item => item.name);
+    const counts = topicsData.map(item => Number(item.percentage) || 0);
+
+    const palette = [
+      '#0f9d79', '#34d399', '#5a6ff0', '#14b8a6', '#818cf8', '#f59e0b', '#f97316', '#6366f1'
+    ];
+
+    const chartColors = labels.map((_, index) => palette[index % palette.length]);
+
+    const existing = canvas.dataset.chartInstanceId;
+    if (existing && window[existing] && typeof window[existing].destroy === 'function') {
+      window[existing].destroy();
+    }
+
+    if (window.Chart) {
+      const chartInstance = new window.Chart(canvas, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: '頻出トピック',
+              data: counts,
+              backgroundColor: chartColors,
+              borderWidth: 0,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                boxWidth: 16,
+                boxHeight: 16,
+                color: '#2E3642',
+                font: { size: 12 }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label(context) {
+                  const raw = context.raw ?? 0;
+                  const topic = topicsData[context.dataIndex];
+                  const count = topic?.count ?? 0;
+                  return `${context.label}: ${count}件 (${raw}%)`;
+                }
+              }
+            }
+          },
+          layout: { padding: 8 },
+          cutout: '58%'
+        }
+      });
+
+      const chartId = `chart_${Date.now()}`;
+      canvas.dataset.chartInstanceId = chartId;
+      window[chartId] = chartInstance;
+    }
+  })();
 </script>
 {% endblock %}

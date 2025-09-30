@@ -78,7 +78,7 @@ class PreferenceAnalysisService:
             "last_updated": profile_info.get("updated_at"),
         }
 
-        return {
+        result = {
             "top_topics": top_topics,
             "top_keywords": top_keywords,
             "top_articles": top_articles,
@@ -86,6 +86,7 @@ class PreferenceAnalysisService:
             "summary": summary,
             "profile_weights": profile_info.get("weights", {}),
         }
+        return result
 
     def _load_bookmarks(
         self, db: Session, user_id: Optional[str]
