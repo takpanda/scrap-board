@@ -37,26 +37,54 @@ def _resolve_user_id(request: Request) -> Optional[str]:
 
 
 def _fetch_personalized_documents(query, user_id: Optional[str], offset: int, limit: int, db: Session):
-    score_alias = aliased(PersonalizedScore)
-    join_condition = and_(score_alias.document_id == Document.id)
-    if user_id is None:
-        join_condition = and_(join_condition, score_alias.user_id == None)  # noqa: E711
-    else:
-        join_condition = and_(join_condition, score_alias.user_id == user_id)
-
-    personalized_query = query.outerjoin(score_alias, join_condition).add_entity(score_alias)
-    
-    # ブックマーク済みの記事を除外
+    # If a user_id is provided, try to prefer user-specific scores but fall back
+    # to global scores (user_id IS NULL) when no user-specific score exists.
+    # When no user_id is provided, only global scores are considered (existing behaviour).
     if user_id is not None:
-        # サブクエリでユーザーのブックマーク済みドキュメントIDを取得
+        user_alias = aliased(PersonalizedScore)
+        global_alias = aliased(PersonalizedScore)
+
+        user_join = and_(user_alias.document_id == Document.id, user_alias.user_id == user_id)
+        global_join = and_(global_alias.document_id == Document.id, global_alias.user_id == None)  # noqa: E711
+
+        personalized_query = query.outerjoin(user_alias, user_join).outerjoin(global_alias, global_join).add_entity(user_alias).add_entity(global_alias)
+
+        # ブックマーク済みの記事を除外（ユーザーが識別できる場合）
         bookmarked_subquery = db.query(Bookmark.document_id).filter(
             Bookmark.user_id == user_id
         ).subquery()
-        
-        # ブックマーク済みドキュメントを除外
-        personalized_query = personalized_query.filter(
-            ~Document.id.in_(db.query(bookmarked_subquery.c.document_id))
-        )
+        personalized_query = personalized_query.filter(~Document.id.in_(db.query(bookmarked_subquery.c.document_id)))
+
+        # Ordering: prefer documents with user-specific score, then those with global score,
+        # then others. Within scored docs prefer lower rank and higher score.
+        ordering = [
+            case((user_alias.id.isnot(None), 0), (global_alias.id.isnot(None), 1), else_=2),
+            case((user_alias.id.isnot(None), user_alias.rank), else_=global_alias.rank).asc(),
+            case((user_alias.id.isnot(None), user_alias.score), else_=global_alias.score).desc(),
+            Document.created_at.desc(),
+        ]
+
+        rows = personalized_query.order_by(*ordering).offset(offset).limit(limit).all()
+
+        repo = PersonalizedScoreRepository(db)
+        documents: List[Document] = []
+        score_map = {}
+        for row in rows:
+            # row: (Document, user_alias_row | None, global_alias_row | None)
+            document = row[0]
+            user_row = row[1]
+            global_row = row[2]
+            documents.append(document)
+            chosen = user_row if user_row is not None else global_row
+            if chosen is not None:
+                score_map[document.id] = repo._row_to_dto(chosen)
+
+        return documents, score_map
+
+    # No user_id -> existing behaviour: only consider global (user_id IS NULL) scores
+    score_alias = aliased(PersonalizedScore)
+    join_condition = and_(score_alias.document_id == Document.id, score_alias.user_id == None)  # noqa: E711
+    personalized_query = query.outerjoin(score_alias, join_condition).add_entity(score_alias)
 
     ordering = [
         case((score_alias.id.isnot(None), 0), else_=1),
