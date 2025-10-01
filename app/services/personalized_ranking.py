@@ -27,10 +27,15 @@ def _ensure_datetime(value: Any) -> Optional[datetime]:
 	if isinstance(value, datetime):
 		return value
 	if isinstance(value, str):
+		# Try flexible parsing first (RFC 2822, timezones, etc.)
 		try:
-			return datetime.fromisoformat(value)
-		except ValueError:
-			return None
+			from dateutil import parser as _dateutil_parser
+			return _dateutil_parser.parse(value)
+		except Exception:
+			try:
+				return datetime.fromisoformat(value)
+			except Exception:
+				return None
 	return None
 
 

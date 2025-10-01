@@ -135,16 +135,19 @@ async def list_documents(
     # 日付フィルタ
     if from_date:
         try:
-            from_dt = datetime.fromisoformat(from_date)
+            # Accept ISO and common RFC date formats
+            from dateutil import parser as _dateutil_parser
+            from_dt = _dateutil_parser.parse(from_date)
             query = query.filter(Document.created_at >= from_dt)
-        except ValueError:
+        except Exception:
             raise HTTPException(status_code=400, detail="Invalid from date format")
     
     if to_date:
         try:
-            to_dt = datetime.fromisoformat(to_date)
+            from dateutil import parser as _dateutil_parser
+            to_dt = _dateutil_parser.parse(to_date)
             query = query.filter(Document.created_at <= to_dt)
-        except ValueError:
+        except Exception:
             raise HTTPException(status_code=400, detail="Invalid to date format")
     
     sort_mode = (sort or "recent").lower()

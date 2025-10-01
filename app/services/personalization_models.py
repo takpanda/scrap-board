@@ -33,10 +33,15 @@ def _coerce_datetime(value: Any) -> datetime:
 	if isinstance(value, datetime):
 		return value
 	if isinstance(value, str):
+		# Prefer dateutil for robust parsing (RFC 2822, timezone aware, etc.)
 		try:
-			return datetime.fromisoformat(value)
-		except ValueError:
-			pass
+			from dateutil import parser as _dateutil_parser
+			return _dateutil_parser.parse(value)
+		except Exception:
+			try:
+				return datetime.fromisoformat(value)
+			except Exception:
+				pass
 	return datetime.utcnow()
 
 

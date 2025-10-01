@@ -69,7 +69,12 @@ def _insert_document_if_new(db, doc: Dict[str, Any], source_name: str):
         "domain": doc.get("domain"),
         "title": doc.get("title"),
         "author": doc.get("author"),
-        "published_at": doc.get("published_at"),
+        # Ensure published_at is a datetime or None. Some sources provide RFC-style
+        # date strings (e.g. 'Thu, 18 Sep 2025 04:02:17 GMT'); coerce them here.
+        "published_at": (
+            doc.get("published_at") if isinstance(doc.get("published_at"), datetime)
+            else (content_extractor._parse_date(doc.get("published_at")) if doc.get("published_at") else None)
+        ),
         "content_md": doc.get("content_md"),
         "content_text": doc.get("content_text"),
         "hash": doc_hash,
@@ -324,12 +329,19 @@ def trigger_fetch_for_source(source_id: int):
                     content_md = it.get("body") or ""
                     content_text = content_md
                     content_hash = hashlib_sha256(content_text)
+                    # Coerce published date string to datetime when possible
+                    pub = it.get("created_at")
+                    try:
+                        pub_dt = content_extractor._parse_date(pub) if pub else None
+                    except Exception:
+                        pub_dt = None
+
                     extracted = {
                         "url": url,
                         "domain": "qiita.com",
                         "title": it.get("title") or "無題",
                         "author": it.get("user", {}).get("id") if it.get("user") else None,
-                        "published_at": it.get("created_at"),
+                        "published_at": pub_dt,
                         "content_md": content_md,
                         "content_text": content_text,
                         "hash": content_hash,
@@ -365,12 +377,18 @@ def trigger_fetch_for_source(source_id: int):
                 if not extracted:
                     content_text = it.get("summary") or ""
                     content_hash = hashlib_sha256(content_text)
+                    pub = it.get("published")
+                    try:
+                        pub_dt = content_extractor._parse_date(pub) if pub else None
+                    except Exception:
+                        pub_dt = None
+
                     extracted = {
                         "url": url,
                         "domain": "b.hatena.ne.jp",
                         "title": it.get("title") or "無題",
                         "author": None,
-                        "published_at": it.get("published"),
+                        "published_at": pub_dt,
                         "content_md": content_text,
                         "content_text": content_text,
                         "hash": content_hash,
@@ -405,12 +423,18 @@ def trigger_fetch_for_source(source_id: int):
                 if not extracted:
                     content_text = it.get("summary") or ""
                     content_hash = hashlib_sha256(content_text)
+                    pub = it.get("published")
+                    try:
+                        pub_dt = content_extractor._parse_date(pub) if pub else None
+                    except Exception:
+                        pub_dt = None
+
                     extracted = {
                         "url": url,
                         "domain": (url.split('/')[2] if url and '//' in url else 'rss'),
                         "title": it.get("title") or "無題",
                         "author": None,
-                        "published_at": it.get("published"),
+                        "published_at": pub_dt,
                         "content_md": content_text,
                         "content_text": content_text,
                         "hash": content_hash,

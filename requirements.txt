@@ -35,6 +35,9 @@ langdetect>=1.0.9
 # RSS/Feed parsing
 feedparser>=6.0.0
 
+# Robust date parsing (RFC 2822 and others)
+python-dateutil>=2.8.2
+
 # File handling
 aiofiles>=23.0.0
 
