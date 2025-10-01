@@ -16,7 +16,7 @@
             {% include 'partials/_document_meta.html' %}
 
             {% if document.classifications %}
-            <div class="flex items-start mb-6 md:overflow-x-auto md:whitespace-nowrap flex-wrap md:flex-nowrap" style="gap: 0.5rem; align-items:center;">
+            <div class="tag-list flex items-center mb-6 md:overflow-x-auto md:whitespace-nowrap flex-wrap md:flex-nowrap">
                 <span class="dify-tag-primary">
                     <i data-lucide="tag" class="w-3 h-3"></i>
                     {{ document.classifications[0].primary_category }}
