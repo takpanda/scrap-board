@@ -1,4 +1,4 @@
-CREATE TABLE documents (
+CREATE TABLE IF NOT EXISTS documents (
   id TEXT PRIMARY KEY,
   url TEXT UNIQUE,
   domain TEXT,
