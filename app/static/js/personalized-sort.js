@@ -600,6 +600,24 @@
                 updatedEl.textContent = "";
                 updatedEl.classList.add("hidden");
             }
+            // 詳細エリアも非表示にする
+            var detailsEl = block.querySelector("[data-personalized-details]");
+            if (detailsEl) {
+                detailsEl.classList.add("hidden");
+            }
+            // トグルボタンの状態をリセット
+            var toggleButton = block.querySelector("[data-personalized-toggle]");
+            if (toggleButton) {
+                toggleButton.setAttribute("aria-expanded", "false");
+                var toggleText = toggleButton.querySelector("[data-personalized-toggle-text]");
+                if (toggleText) {
+                    toggleText.textContent = "詳細を表示";
+                }
+                var toggleIcon = toggleButton.querySelector("[data-personalized-toggle-icon]");
+                if (toggleIcon) {
+                    toggleIcon.setAttribute("data-lucide", "chevron-down");
+                }
+            }
         }
         var fallback = article.querySelector("[data-personalized-fallback]");
         if (fallback) {
@@ -684,7 +702,7 @@
                     var label = COMPONENT_LABELS[item[0]] || item[0];
                     var value = item[1];
                     var badge = document.createElement("span");
-                    badge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald/10 text-emerald-700 border border-emerald/20 text-[11px]";
+                    badge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald/10 text-emerald-700 border border-emerald/20 text-xs";
                     if (isNumber(value)) {
                         badge.textContent = label + " " + safeFormatPercent(value) + "%";
                     } else {
@@ -706,6 +724,69 @@
                 updatedEl.classList.add("hidden");
             }
         }
+
+        // 折り畳み/展開ボタンのイベントリスナーを設定
+        this.setupToggleButton(block);
+    };
+
+    PersonalizedSortController.prototype.setupToggleButton = function (block) {
+        var toggleButton = block.querySelector("[data-personalized-toggle]");
+        var detailsEl = block.querySelector("[data-personalized-details]");
+        var toggleText = block.querySelector("[data-personalized-toggle-text]");
+        var toggleIcon = block.querySelector("[data-personalized-toggle-icon]");
+        
+        if (!toggleButton || !detailsEl) {
+            return;
+        }
+
+        // 既存のイベントリスナーを削除
+        var newButton = toggleButton.cloneNode(true);
+        toggleButton.parentNode.replaceChild(newButton, toggleButton);
+        toggleButton = newButton;
+
+        // 新しい参照を取得
+        toggleText = toggleButton.querySelector("[data-personalized-toggle-text]");
+        toggleIcon = toggleButton.querySelector("[data-personalized-toggle-icon]");
+
+        toggleButton.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            var isExpanded = detailsEl.classList.contains("hidden");
+            
+            if (isExpanded) {
+                // 展開
+                detailsEl.classList.remove("hidden");
+                toggleButton.setAttribute("aria-expanded", "true");
+                toggleButton.setAttribute("aria-label", "おすすめの詳細を非表示");
+                if (toggleText) {
+                    toggleText.textContent = "詳細を非表示";
+                }
+                if (toggleIcon) {
+                    toggleIcon.setAttribute("data-lucide", "chevron-up");
+                }
+            } else {
+                // 折り畳み
+                detailsEl.classList.add("hidden");
+                toggleButton.setAttribute("aria-expanded", "false");
+                toggleButton.setAttribute("aria-label", "おすすめの詳細を表示");
+                if (toggleText) {
+                    toggleText.textContent = "詳細を表示";
+                }
+                if (toggleIcon) {
+                    toggleIcon.setAttribute("data-lucide", "chevron-down");
+                }
+            }
+            
+            // アイコンを再描画
+            if (typeof window.createIcons === "function") {
+                try {
+                    window.createIcons();
+                } catch (err) {
+                    console.warn("createIcons() failed after toggle", err);
+                }
+            }
+        });
     };
 
     PersonalizedSortController.prototype.reapplyIcons = function () {
