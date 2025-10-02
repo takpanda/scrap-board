@@ -68,6 +68,7 @@ cp data/scraps.db data/backup/scraps.db.$(date +%Y%m%d%H%M%S)
 
 	- `migrations/001_add_summaries_to_documents.sql`
 	- `migrations/002_add_sources_and_thumbnails.sql`
+	- `migrations/migrate_null_to_guest.py` - ゲストユーザーID統一用マイグレーション（NULL → "guest"）
 
 **マイグレーションの適用（ローカル開発向け推奨）**: 付属の Python スクリプト `migrations/apply_migrations.py` を使うことを推奨します。スクリプトは `migrations/*.sql` を辞書順に読み、順に適用します。ローカル向けに idempotent（既に存在するカラムやテーブルで発生する一般的なエラーは警告として無視）に動作するよう設計されています。
 
@@ -90,6 +91,18 @@ sqlite3 data/scraps.db < migrations/002_add_sources_and_thumbnails.sql
 - `migrations/*.sql` を辞書順に適用します。
 - 既知の "already exists" / "duplicate column" 等のエラーは警告としてログ出力し、処理を継続します（ローカル開発での再実行を想定）。
 - 想定外のエラーが出た場合はスクリプトは例外を投げます。ログとバックアップを確認してください。
+
+**ゲストユーザーID統一マイグレーション**: ユーザー未特定時の処理を統一するため、既存の `user_id=NULL` データを `"guest"` に変換するマイグレーションが必要です:
+
+```bash
+# ドライラン（変更内容を確認）
+python migrations/migrate_null_to_guest.py --dry-run
+
+# 実際のマイグレーション実行
+python migrations/migrate_null_to_guest.py
+```
+
+詳細は `docs/guest-user-specification.md` を参照してください。
 
 Docker コンテナでの実行例:
 
