@@ -219,13 +219,26 @@ def test_database_override(tmp_path_factory):
 
     This ensures the FastAPI app uses a test database file for all tests and that
     tables are created before tests exercise the app.
+    
+    If DB_URL is already set (e.g., in CI with migrations applied), use that database
+    instead of creating a new temporary one.
     """
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
     from app.core.database import Base, get_db, SessionLocal
-    # Build test DB path
-    db_file = tmp_path_factory.mktemp("data") / "tests.sqlite"
-    db_url = f"sqlite:///{db_file}"
+    import os
+    from pathlib import Path
+    
+    # Check if DB_URL is already set (e.g., by CI or pytest_configure)
+    existing_db_url = os.environ.get("DB_URL")
+    if existing_db_url and "test.db" in existing_db_url:
+        # Use the existing database (with migrations already applied in CI)
+        db_url = existing_db_url
+        db_file = Path(existing_db_url.replace("sqlite:///", ""))
+    else:
+        # Build test DB path for local development
+        db_file = tmp_path_factory.mktemp("data") / "tests.sqlite"
+        db_url = f"sqlite:///{db_file}"
 
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -307,9 +320,11 @@ def test_database_override(tmp_path_factory):
         pass
     yield db_url
 
-    # Teardown: remove DB file if exists
+    # Teardown: remove DB file if exists (only for temporary databases, not test.db)
     try:
-        if db_file.exists():
+        existing_db_url = os.environ.get("DB_URL")
+        # Only delete temporary test databases, not the test.db used in CI
+        if db_file.exists() and "test.db" not in str(db_file):
             db_file.unlink()
     except Exception:
         pass
