@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import Bookmark, Document, PreferenceProfile
+from app.core.user_utils import normalize_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -92,14 +93,14 @@ class PreferenceAnalysisService:
         self, db: Session, user_id: Optional[str]
     ) -> List[Bookmark]:
         """ブックマークをロードする"""
+        normalized_user_id = normalize_user_id(user_id)
+        
         query = db.query(Bookmark).options(
             joinedload(Bookmark.document).joinedload(Document.classifications)
         )
 
-        if user_id is None:
-            query = query.filter(Bookmark.user_id.is_(None))
-        else:
-            query = query.filter(Bookmark.user_id == user_id)
+        # Always filter by normalized user_id (including "guest")
+        query = query.filter(Bookmark.user_id == normalized_user_id)
 
         query = query.order_by(Bookmark.created_at.desc())
         return list(query.all())
@@ -246,12 +247,12 @@ class PreferenceAnalysisService:
         self, db: Session, user_id: Optional[str]
     ) -> Dict[str, any]:
         """プロファイル情報を取得"""
+        normalized_user_id = normalize_user_id(user_id)
+        
         query = db.query(PreferenceProfile)
 
-        if user_id is None:
-            query = query.filter(PreferenceProfile.user_id.is_(None))
-        else:
-            query = query.filter(PreferenceProfile.user_id == user_id)
+        # Always filter by normalized user_id (including "guest")
+        query = query.filter(PreferenceProfile.user_id == normalized_user_id)
 
         profile = query.first()
 

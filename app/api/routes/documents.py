@@ -8,6 +8,7 @@ from datetime import datetime
 from html import escape
 
 from app.core.database import get_db, Document, Classification, PersonalizedScore, Bookmark
+from app.core.user_utils import normalize_user_id
 from app.services.llm_client import LLMClient
 from app.services.personalized_feedback import PersonalizedFeedbackService
 from app.services.personalized_repository import PersonalizedScoreRepository
@@ -22,32 +23,36 @@ llm_client = LLMClient()
 templates = Jinja2Templates(directory="app/templates")
 
 
-def _resolve_user_id(request: Request) -> Optional[str]:
+def _resolve_user_id(request: Request) -> str:
+    """Resolve user ID from request, defaulting to 'guest' for unidentified users."""
     user = getattr(request.state, "user", None)
     if user is not None:
         user_id = getattr(user, "id", None) or getattr(user, "user_id", None)
         if user_id:
-            return str(user_id)
+            return normalize_user_id(str(user_id))
 
     header_user = request.headers.get("X-User-Id")
     if header_user:
-        return header_user
+        return normalize_user_id(header_user)
 
-    return None
+    return normalize_user_id(None)
 
 
-def _fetch_personalized_documents(query, user_id: Optional[str], offset: int, limit: int, db: Session):
-    # If a user_id is provided, try to prefer user-specific scores but fall back
-    # to global scores (user_id IS NULL) when no user-specific score exists.
-    # When no user_id is provided, only global scores are considered (existing behaviour).
-    if user_id is not None:
+def _fetch_personalized_documents(query, user_id: str, offset: int, limit: int, db: Session):
+    # user_id is now always a string (normalized to "guest" for unidentified users)
+    # Try to prefer user-specific scores, then fall back to guest scores if user is not "guest".
+    # For "guest" users, only return their own scores.
+    from app.core.user_utils import GUEST_USER_ID
+    
+    if user_id != GUEST_USER_ID:
+        # For identified users: prefer user-specific scores, fall back to guest (global) scores
         user_alias = aliased(PersonalizedScore)
-        global_alias = aliased(PersonalizedScore)
+        guest_alias = aliased(PersonalizedScore)
 
         user_join = and_(user_alias.document_id == Document.id, user_alias.user_id == user_id)
-        global_join = and_(global_alias.document_id == Document.id, global_alias.user_id == None)  # noqa: E711
+        guest_join = and_(guest_alias.document_id == Document.id, guest_alias.user_id == GUEST_USER_ID)
 
-        personalized_query = query.outerjoin(user_alias, user_join).outerjoin(global_alias, global_join).add_entity(user_alias).add_entity(global_alias)
+        personalized_query = query.outerjoin(user_alias, user_join).outerjoin(guest_alias, guest_join).add_entity(user_alias).add_entity(guest_alias)
 
         # ブックマーク済みの記事を除外（ユーザーが識別できる場合）
         bookmarked_subquery = db.query(Bookmark.document_id).filter(
@@ -55,12 +60,12 @@ def _fetch_personalized_documents(query, user_id: Optional[str], offset: int, li
         ).subquery()
         personalized_query = personalized_query.filter(~Document.id.in_(db.query(bookmarked_subquery.c.document_id)))
 
-        # Ordering: prefer documents with user-specific score, then those with global score,
+        # Ordering: prefer documents with user-specific score, then those with guest score,
         # then others. Within scored docs prefer lower rank and higher score.
         ordering = [
-            case((user_alias.id.isnot(None), 0), (global_alias.id.isnot(None), 1), else_=2),
-            case((user_alias.id.isnot(None), user_alias.rank), else_=global_alias.rank).asc(),
-            case((user_alias.id.isnot(None), user_alias.score), else_=global_alias.score).desc(),
+            case((user_alias.id.isnot(None), 0), (guest_alias.id.isnot(None), 1), else_=2),
+            case((user_alias.id.isnot(None), user_alias.rank), else_=guest_alias.rank).asc(),
+            case((user_alias.id.isnot(None), user_alias.score), else_=guest_alias.score).desc(),
             Document.created_at.desc(),
         ]
 
@@ -70,20 +75,20 @@ def _fetch_personalized_documents(query, user_id: Optional[str], offset: int, li
         documents: List[Document] = []
         score_map = {}
         for row in rows:
-            # row: (Document, user_alias_row | None, global_alias_row | None)
+            # row: (Document, user_alias_row | None, guest_alias_row | None)
             document = row[0]
             user_row = row[1]
-            global_row = row[2]
+            guest_row = row[2]
             documents.append(document)
-            chosen = user_row if user_row is not None else global_row
+            chosen = user_row if user_row is not None else guest_row
             if chosen is not None:
                 score_map[document.id] = repo._row_to_dto(chosen)
 
         return documents, score_map
 
-    # No user_id -> existing behaviour: only consider global (user_id IS NULL) scores
+    # For guest users: only consider scores for the "guest" user
     score_alias = aliased(PersonalizedScore)
-    join_condition = and_(score_alias.document_id == Document.id, score_alias.user_id == None)  # noqa: E711
+    join_condition = and_(score_alias.document_id == Document.id, score_alias.user_id == GUEST_USER_ID)
     personalized_query = query.outerjoin(score_alias, join_condition).add_entity(score_alias)
 
     ordering = [

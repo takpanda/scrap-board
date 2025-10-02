@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from app.core.database import Document, PreferenceFeedback, create_tables
+from app.core.user_utils import normalize_user_id
 from app.services.personalization_queue import schedule_profile_update
 
 logger = logging.getLogger(__name__)
@@ -43,24 +44,28 @@ class PersonalizedFeedbackService:
 
         Duplicate submissions from the same user or the same browser session are
         ignored to keep the queue noise-free.
+        
+        user_id is normalized to "guest" if None or empty.
         """
+        # Normalize user_id to ensure consistency
+        normalized_user_id = normalize_user_id(user_id)
 
         normalized_session = (session_token or "").strip() or None
         normalized_note = (note or "").strip() or None
 
-        # Reject duplicates from the same authenticated user if a user id exists.
-        if user_id:
-            existing_for_user = (
-                self._db.query(PreferenceFeedback)
-                .filter(
-                    PreferenceFeedback.document_id == document.id,
-                    PreferenceFeedback.feedback_type == "low_relevance",
-                    PreferenceFeedback.user_id == user_id,
-                )
-                .first()
+        # Reject duplicates from the same authenticated user.
+        # Note: All users including "guest" are now tracked with an ID.
+        existing_for_user = (
+            self._db.query(PreferenceFeedback)
+            .filter(
+                PreferenceFeedback.document_id == document.id,
+                PreferenceFeedback.feedback_type == "low_relevance",
+                PreferenceFeedback.user_id == normalized_user_id,
             )
-            if existing_for_user:
-                return PersonalizedFeedbackResult(False, "duplicate_user")
+            .first()
+        )
+        if existing_for_user:
+            return PersonalizedFeedbackResult(False, "duplicate_user")
 
         # Check duplicates for the same anonymous session token.
         if normalized_session:
@@ -92,7 +97,7 @@ class PersonalizedFeedbackService:
         )
 
         feedback = PreferenceFeedback(
-            user_id=user_id,
+            user_id=normalized_user_id,
             document_id=document.id,
             feedback_type="low_relevance",
             metadata_payload=metadata_payload,
@@ -137,7 +142,7 @@ class PersonalizedFeedbackService:
         try:
             job_id = schedule_profile_update(
                 self._db,
-                user_id=user_id,
+                user_id=normalized_user_id,
                 document_id=document.id,
                 payload={
                     "reason": "feedback_low_relevance",

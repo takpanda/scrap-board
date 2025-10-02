@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 import app.core.database as app_db
 from app.core.database import Bookmark, Document, create_tables, get_db
+from app.core.user_utils import GUEST_USER_ID
 from app.services.personalization_queue import schedule_profile_update
 
 router = APIRouter()
@@ -47,7 +48,7 @@ async def create_bookmark(payload: BookmarkCreate, db: Session = Depends(get_db)
     # 重複チェックおよび作成処理を試行。bookmarks テーブルが存在しない等で
     # OperationalError が発生した場合は create_tables() を呼び出して再試行する。
     try:
-        existing = db.query(Bookmark).filter(Bookmark.user_id == None, Bookmark.document_id == document_id).first()
+        existing = db.query(Bookmark).filter(Bookmark.user_id == GUEST_USER_ID, Bookmark.document_id == document_id).first()
         if existing:
             return {
                 "id": existing.id,
@@ -56,7 +57,7 @@ async def create_bookmark(payload: BookmarkCreate, db: Session = Depends(get_db)
                 "created_at": existing.created_at.isoformat(),
             }
 
-        bm = Bookmark(user_id=None, document_id=document_id, note=note)
+        bm = Bookmark(user_id=GUEST_USER_ID, document_id=document_id, note=note)
         db.add(bm)
         db.commit()
         db.refresh(bm)
@@ -83,7 +84,7 @@ async def create_bookmark(payload: BookmarkCreate, db: Session = Depends(get_db)
             # Use the current SessionLocal from app.core.database so that
             # test fixtures which rebind SessionLocal are respected.
             new_db = app_db.SessionLocal()
-            existing = new_db.query(Bookmark).filter(Bookmark.user_id == None, Bookmark.document_id == document_id).first()
+            existing = new_db.query(Bookmark).filter(Bookmark.user_id == GUEST_USER_ID, Bookmark.document_id == document_id).first()
             if existing:
                 return {
                     "id": existing.id,
@@ -92,7 +93,7 @@ async def create_bookmark(payload: BookmarkCreate, db: Session = Depends(get_db)
                     "created_at": existing.created_at.isoformat(),
                 }
 
-            bm = Bookmark(user_id=None, document_id=document_id, note=note)
+            bm = Bookmark(user_id=GUEST_USER_ID, document_id=document_id, note=note)
             new_db.add(bm)
             new_db.commit()
             new_db.refresh(bm)
@@ -164,9 +165,9 @@ async def delete_bookmark(bookmark_id: str, db: Session = Depends(get_db)):
 
 @router.get("")
 async def list_bookmarks(limit: int = Query(50, le=200), offset: int = Query(0), db: Session = Depends(get_db)):
-    """ユーザー（匿名含む）のブックマーク一覧。現状 user_id=NULL のものを返す。"""
+    """ユーザー（匿名含む）のブックマーク一覧。現状 user_id="guest" のものを返す。"""
     try:
-        q = db.query(Bookmark).filter(Bookmark.user_id == None).order_by(Bookmark.created_at.desc()).offset(offset).limit(limit)
+        q = db.query(Bookmark).filter(Bookmark.user_id == GUEST_USER_ID).order_by(Bookmark.created_at.desc()).offset(offset).limit(limit)
         items = q.all()
     except OperationalError:
         try:
@@ -177,7 +178,7 @@ async def list_bookmarks(limit: int = Query(50, le=200), offset: int = Query(0),
         try:
             new_db = app_db.SessionLocal()
             # Eager-load document so we can safely close the session afterwards
-            q = new_db.query(Bookmark).options(joinedload(Bookmark.document)).filter(Bookmark.user_id == None).order_by(Bookmark.created_at.desc()).offset(offset).limit(limit)
+            q = new_db.query(Bookmark).options(joinedload(Bookmark.document)).filter(Bookmark.user_id == GUEST_USER_ID).order_by(Bookmark.created_at.desc()).offset(offset).limit(limit)
             items = q.all()
 
             # Build and return the result while session is still open to avoid DetachedInstanceError
@@ -229,7 +230,7 @@ async def delete_bookmark_by_document(document_id: Optional[str] = None, db: Ses
         raise HTTPException(status_code=400, detail="document_id query parameter required")
 
     try:
-        bm = db.query(Bookmark).filter(Bookmark.user_id == None, Bookmark.document_id == document_id).first()
+        bm = db.query(Bookmark).filter(Bookmark.user_id == GUEST_USER_ID, Bookmark.document_id == document_id).first()
     except OperationalError:
         try:
             create_tables()
@@ -238,7 +239,7 @@ async def delete_bookmark_by_document(document_id: Optional[str] = None, db: Ses
         new_db = None
         try:
             new_db = app_db.SessionLocal()
-            bm = new_db.query(Bookmark).filter(Bookmark.user_id == None, Bookmark.document_id == document_id).first()
+            bm = new_db.query(Bookmark).filter(Bookmark.user_id == GUEST_USER_ID, Bookmark.document_id == document_id).first()
             if not bm:
                 raise HTTPException(status_code=404, detail="Bookmark not found")
             bookmark_user_id = bm.user_id

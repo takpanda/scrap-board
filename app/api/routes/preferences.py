@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.core.database import get_db
+from app.core.user_utils import normalize_user_id
 from app.services.preference_analysis import PreferenceAnalysisService
 from fastapi.templating import Jinja2Templates
 
@@ -14,19 +15,19 @@ templates = Jinja2Templates(directory="app/templates")
 router = APIRouter()
 
 
-def _resolve_user_id(request: Request) -> Optional[str]:
-    """リクエストからユーザーIDを解決"""
+def _resolve_user_id(request: Request) -> str:
+    """リクエストからユーザーIDを解決、未特定時は'guest'を返す"""
     user = getattr(request.state, "user", None)
     if user is not None:
         user_id = getattr(user, "id", None) or getattr(user, "user_id", None)
         if user_id:
-            return str(user_id)
+            return normalize_user_id(str(user_id))
 
     header_user = request.headers.get("X-User-Id")
     if header_user:
-        return header_user
+        return normalize_user_id(header_user)
 
-    return None
+    return normalize_user_id(None)
 
 
 @router.get("/api/preferences/analysis")

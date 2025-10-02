@@ -2,6 +2,7 @@ from typing import Tuple, List, Optional
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import OperationalError
 from app.core.database import Bookmark, Document
+from app.core.user_utils import normalize_user_id
 
 
 def get_user_bookmarked_documents(
@@ -14,7 +15,12 @@ def get_user_bookmarked_documents(
 
     Documents are ordered by Bookmark.created_at desc and include transient
     bookmark metadata (bookmark_id, bookmarked_at, bookmark_note).
+    
+    user_id is normalized to "guest" if None or empty.
     """
+    # Normalize user_id to ensure consistency
+    normalized_user_id = normalize_user_id(user_id)
+    
     # Clamp page/per_page to sane values in case other callers pass invalid numbers.
     try:
         safe_page = max(int(page), 1)
@@ -32,10 +38,8 @@ def get_user_bookmarked_documents(
         joinedload(Bookmark.document).joinedload(Document.classifications)
     )
 
-    if user_id is None:
-        q = q.filter(Bookmark.user_id == None)  # noqa: E711 - intentional SQL NULL comparison
-    else:
-        q = q.filter(Bookmark.user_id == user_id)
+    # Always filter by normalized user_id (including "guest")
+    q = q.filter(Bookmark.user_id == normalized_user_id)
 
     q = q.order_by(Bookmark.created_at.desc())
 

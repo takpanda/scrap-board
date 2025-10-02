@@ -5,6 +5,7 @@ from typing import Optional
 from math import ceil
 
 from app.core.database import get_db
+from app.core.user_utils import normalize_user_id
 from app.services.bookmark_service import get_user_bookmarked_documents
 from fastapi.templating import Jinja2Templates
 from markdown_it import MarkdownIt
@@ -89,15 +90,16 @@ async def bookmarks_only_page(
     )
 
 
-def _resolve_user_id(request: Request) -> Optional[str]:
+def _resolve_user_id(request: Request) -> str:
+    """Resolve user ID from request, defaulting to 'guest' for unidentified users."""
     user = getattr(request.state, "user", None)
     if user is not None:
         user_id = getattr(user, "id", None) or getattr(user, "user_id", None)
         if user_id:
-            return str(user_id)
+            return normalize_user_id(str(user_id))
 
     header_user = request.headers.get("X-User-Id")
     if header_user:
-        return header_user
+        return normalize_user_id(header_user)
 
-    return None
+    return normalize_user_id(None)
