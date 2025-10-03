@@ -192,6 +192,7 @@ async def list_documents(
     
     # 結果整形
     result = []
+    display_rank = 1  # 表示用の連番rank
     for doc in documents:
         doc_data = {
             "id": doc.id,
@@ -216,12 +217,13 @@ async def list_documents(
         if score_dto is not None:
             doc_data["personalized"] = {
                 "score": score_dto.score,
-                "rank": score_dto.rank,
+                "rank": display_rank,  # DBのrankではなく、表示用の連番rankを使用
                 "explanation": score_dto.explanation,
                 "components": score_dto.components.to_dict(),
                 "computed_at": score_dto.computed_at.isoformat(),
                 "cold_start": score_dto.cold_start,
             }
+            display_rank += 1  # おすすめ記事の場合のみrankをインクリメント
 
         result.append(doc_data)
     
