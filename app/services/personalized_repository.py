@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Sequence
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import PersonalizedScore
+from app.core.user_utils import normalize_user_id
 from app.services.personalization_models import ExplanationBreakdown, PersonalizedScoreDTO
 
 logger = logging.getLogger(__name__)
@@ -38,10 +39,13 @@ def _decode_components(payload: Optional[str]) -> tuple[ExplanationBreakdown, bo
 	return breakdown, cold_start
 
 
-def _resolved_user_ids(scores: Sequence[PersonalizedScoreDTO], fallback_user_id: Optional[str]) -> Dict[Optional[str], List[PersonalizedScoreDTO]]:
-	grouped: Dict[Optional[str], List[PersonalizedScoreDTO]] = {}
+def _resolved_user_ids(scores: Sequence[PersonalizedScoreDTO], fallback_user_id: Optional[str]) -> Dict[str, List[PersonalizedScoreDTO]]:
+	"""Group scores by user_id, normalizing to 'guest' when needed."""
+	grouped: Dict[str, List[PersonalizedScoreDTO]] = {}
+	normalized_fallback = normalize_user_id(fallback_user_id)
 	for score in scores:
-		resolved = score.user_id if score.user_id is not None else fallback_user_id
+		# Normalize the score's user_id, falling back to the normalized fallback
+		resolved = normalize_user_id(score.user_id) if score.user_id is not None else normalized_fallback
 		if resolved not in grouped:
 			grouped[resolved] = []
 		grouped[resolved].append(score)
@@ -68,12 +72,16 @@ class PersonalizedScoreRepository:
 		explicit `user_id`. If a row already exists for a (user_id, document_id)
 		pair, it will be updated; otherwise a new row is inserted. Returns the list
 		of row IDs persisted.
+		
+		user_id is normalized to "guest" if None or empty.
 		"""
 
 		if not scores:
 			return []
 
-		grouped = _resolved_user_ids(scores, user_id)
+		# Normalize user_id before grouping
+		normalized_user_id = normalize_user_id(user_id)
+		grouped = _resolved_user_ids(scores, normalized_user_id)
 		if len(grouped) != 1:
 			raise ValueError("bulk_upsert requires all scores to resolve to the same user_id")
 
@@ -81,10 +89,8 @@ class PersonalizedScoreRepository:
 		target_scores = grouped[resolved_user_id]
 		document_ids = [score.document_id for score in target_scores]
 		existing_query = self.session.query(PersonalizedScore).filter(PersonalizedScore.document_id.in_(document_ids))
-		if resolved_user_id is None:
-			existing_query = existing_query.filter(PersonalizedScore.user_id == None)  # noqa: E711
-		else:
-			existing_query = existing_query.filter(PersonalizedScore.user_id == resolved_user_id)
+		# Always use explicit user_id comparison (no more NULL checks needed)
+		existing_query = existing_query.filter(PersonalizedScore.user_id == resolved_user_id)
 
 		existing_rows = {row.document_id: row for row in existing_query.all()}
 		persisted_ids: List[str] = []
@@ -135,19 +141,19 @@ class PersonalizedScoreRepository:
 		offset: int = 0,
 		with_documents: bool = False,
 	) -> List[PersonalizedScoreDTO]:
-		"""Retrieve ordered scores for a user."""
+		"""Retrieve ordered scores for a user. user_id is normalized to 'guest' if None."""
 
 		if limit <= 0:
 			return []
+
+		normalized_user_id = normalize_user_id(user_id)
 
 		query = self.session.query(PersonalizedScore)
 		if with_documents:
 			query = query.options(joinedload(PersonalizedScore.document))
 
-		if user_id is None:
-			query = query.filter(PersonalizedScore.user_id == None)  # noqa: E711
-		else:
-			query = query.filter(PersonalizedScore.user_id == user_id)
+		# Always filter by normalized user_id
+		query = query.filter(PersonalizedScore.user_id == normalized_user_id)
 
 		rows = (
 			query.order_by(PersonalizedScore.rank.asc(), PersonalizedScore.score.desc(), PersonalizedScore.document_id.asc())
@@ -163,16 +169,16 @@ class PersonalizedScoreRepository:
 		user_id: Optional[str],
 		document_ids: Sequence[str],
 	) -> Dict[str, PersonalizedScoreDTO]:
-		"""Return a mapping of document_id -> DTO for the given user."""
+		"""Return a mapping of document_id -> DTO for the given user. user_id is normalized to 'guest' if None."""
 
 		if not document_ids:
 			return {}
 
+		normalized_user_id = normalize_user_id(user_id)
+
 		query = self.session.query(PersonalizedScore).filter(PersonalizedScore.document_id.in_(list(document_ids)))
-		if user_id is None:
-			query = query.filter(PersonalizedScore.user_id == None)  # noqa: E711
-		else:
-			query = query.filter(PersonalizedScore.user_id == user_id)
+		# Always filter by normalized user_id
+		query = query.filter(PersonalizedScore.user_id == normalized_user_id)
 
 		rows = query.all()
 		return {row.document_id: self._row_to_dto(row) for row in rows}
@@ -184,13 +190,13 @@ class PersonalizedScoreRepository:
 		document_ids: Optional[Sequence[str]] = None,
 		commit: bool = True,
 	) -> int:
-		"""Delete personalized scores for a user. Returns number of rows removed."""
+		"""Delete personalized scores for a user. Returns number of rows removed. user_id is normalized to 'guest' if None."""
+
+		normalized_user_id = normalize_user_id(user_id)
 
 		query = self.session.query(PersonalizedScore)
-		if user_id is None:
-			query = query.filter(PersonalizedScore.user_id == None)  # noqa: E711
-		else:
-			query = query.filter(PersonalizedScore.user_id == user_id)
+		# Always filter by normalized user_id
+		query = query.filter(PersonalizedScore.user_id == normalized_user_id)
 
 		if document_ids:
 			query = query.filter(PersonalizedScore.document_id.in_(list(document_ids)))
