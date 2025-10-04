@@ -58,12 +58,61 @@ def migrate_table(cursor: sqlite3.Cursor, table_name: str, dry_run: bool = False
         print(f"  🔍 Table '{table_name}': {null_count} rows would be updated (DRY RUN)")
         return null_count
     
+    # Special handling for preference_feedbacks to avoid UNIQUE constraint violations.
+    # There are two conflict scenarios to handle:
+    # 1) Multiple NULL rows for the same (document_id, feedback_type) — these would collide when set to the same user_id.
+    # 2) A NULL row that would collide with an existing row that already has user_id = 'guest'.
+    if table_name == "preference_feedbacks":
+        # 1) Within NULL user_id rows, keep one per (document_id, feedback_type), delete the rest.
+        # Use rowid to pick a single survivor deterministically.
+        cursor.execute(
+            "DELETE FROM preference_feedbacks WHERE user_id IS NULL AND rowid NOT IN ("
+            "SELECT MIN(rowid) FROM preference_feedbacks WHERE user_id IS NULL GROUP BY document_id, feedback_type"
+            ")"
+        )
+        deleted_within_null = cursor.rowcount
+        if deleted_within_null:
+            print(f"  ⚠️  preference_feedbacks: removed {deleted_within_null} duplicate NULL rows within same (document_id,feedback_type)")
+
+        # 2) Remove NULL rows that would duplicate existing 'guest' submissions
+        cursor.execute(
+            "DELETE FROM preference_feedbacks WHERE user_id IS NULL AND EXISTS ("
+            "SELECT 1 FROM preference_feedbacks b WHERE b.user_id = ? AND b.document_id = preference_feedbacks.document_id AND b.feedback_type = preference_feedbacks.feedback_type)",
+            (GUEST_USER_ID,)
+        )
+        deleted_conflicts = cursor.rowcount
+        if deleted_conflicts:
+            print(f"  ⚠️  preference_feedbacks: removed {deleted_conflicts} NULL rows that would conflict with existing '{GUEST_USER_ID}' rows")
+    
+    # Special handling for preference_profiles: if a 'guest' profile already exists, remove NULL profiles
+    if table_name == "preference_profiles":
+        # If there is at least one profile with user_id = 'guest', delete any NULL user_id profiles
+        cursor.execute("SELECT COUNT(*) FROM preference_profiles WHERE user_id = ?", (GUEST_USER_ID,))
+        guest_count = cursor.fetchone()[0]
+        if guest_count > 0:
+            cursor.execute("DELETE FROM preference_profiles WHERE user_id IS NULL")
+            deleted_profiles = cursor.rowcount
+            if deleted_profiles:
+                print(f"  ⚠️  preference_profiles: removed {deleted_profiles} NULL profiles because a '{GUEST_USER_ID}' profile exists")
+
+    # Special handling for personalized_scores: remove NULL user_id rows that would conflict with existing guest rows
+    if table_name == "personalized_scores":
+        # Delete NULL rows where a guest score for the same document already exists
+        cursor.execute(
+            "DELETE FROM personalized_scores WHERE user_id IS NULL AND EXISTS ("
+            "SELECT 1 FROM personalized_scores b WHERE b.user_id = ? AND b.document_id = personalized_scores.document_id)",
+            (GUEST_USER_ID,)
+        )
+        deleted_scores = cursor.rowcount
+        if deleted_scores:
+            print(f"  ⚠️  personalized_scores: removed {deleted_scores} NULL rows that would conflict with existing '{GUEST_USER_ID}' rows")
+
     # Perform the update
     cursor.execute(
         f"UPDATE {table_name} SET user_id = ? WHERE user_id IS NULL",
         (GUEST_USER_ID,)
     )
-    
+
     updated_count = cursor.rowcount
     print(f"  ✓ Table '{table_name}': updated {updated_count} rows (NULL → '{GUEST_USER_ID}')")
     return updated_count
