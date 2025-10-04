@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between">
       <!-- Left: Main info -->
       <div class="flex items-center space-x-4 flex-1">
-        {% set icon = 'rss' if s.type == 'rss' else 'code' if s.type == 'qiita' else 'bookmark' if s.type == 'hatena' else 'file-text' %}
+  {% set icon = 'rss' if s.type == 'rss' else 'code' if s.type == 'qiita' else 'bookmark' if s.type == 'hatena' else 'file-down' if s.type == 'speakerdeck' else 'file-text' %}
         <div class="flex-shrink-0">
           <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
             <i data-lucide="{{ icon }}" class="w-5 h-5 text-emerald-600"></i>

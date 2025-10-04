@@ -13,14 +13,16 @@ from typing import Dict, List, Optional, Sequence
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import Bookmark, Document, PreferenceProfile
+from app.core.user_utils import normalize_user_id
 from app.services.llm_client import LLMClient, llm_client
 from app.services.personalization_models import PreferenceProfileDTO, PreferenceProfileStatus
 
 logger = logging.getLogger(__name__)
 
-# 暫定対応: 1人ユーザー前提のため閾値を1に設定
-# 将来の認証実装時に、複数ユーザー環境に応じて3等に変更可能
-DEFAULT_COLD_START_THRESHOLD = 1
+# 暫定対応: 開発環境ではコールドスタート判定をやや緩めにする（3未満はコールドスタート扱い）
+# モデル側の `PreferenceProfileDTO.is_cold_start` は bookmark_count < 3 もコールドスタートと見なすため
+# デフォルト閾値を 3 に合わせます。
+DEFAULT_COLD_START_THRESHOLD = 3
 DEFAULT_MAX_BOOKMARKS = 50
 DEFAULT_EMBEDDING_CHAR_LIMIT = 4000
 DEFAULT_MAX_RETRIES = 2
@@ -216,10 +218,12 @@ class PreferenceProfileService:
 		domain_weights: Dict[str, float],
 	) -> PreferenceProfile:
 		now = datetime.utcnow()
+		# Normalize user_id to ensure we never persist NULL/empty user_id values
+		normalized_user = normalize_user_id(user_id)
 		if profile is None:
 			profile = PreferenceProfile(
 				id=str(uuid.uuid4()),
-				user_id=user_id,
+				user_id=normalized_user,
 				created_at=now,
 			)
 
@@ -233,6 +237,8 @@ class PreferenceProfileService:
 		payload_categories = _dumps(category_weights) if category_weights else "{}"
 		payload_domains = _dumps(domain_weights) if domain_weights else "{}"
 
+		# Ensure stored profile.user_id is normalized as well
+		profile.user_id = normalize_user_id(user_id)
 		profile.bookmark_count = bookmark_count
 		profile.last_bookmark_id = last_bookmark_id
 		profile.status = status
@@ -247,13 +253,20 @@ class PreferenceProfileService:
 		return profile
 
 	def _load_recent_bookmarks(self, db: Session, user_id: Optional[str]) -> List[Bookmark]:
+		from app.core.user_utils import normalize_user_id, GUEST_USER_ID
+		# Normalize user_id so that None/empty and the string 'guest' are handled uniformly.
+		normalized = normalize_user_id(user_id)
+
 		query = db.query(Bookmark).options(
 			joinedload(Bookmark.document).joinedload(Document.classifications),
 		)
-		if user_id is None:
-			query = query.filter(Bookmark.user_id.is_(None))
+		# If normalized user is the guest sentinel, bookmarks are stored with the
+		# literal 'guest' user_id in the DB. Use equality comparison for the
+		# normalized value so both None (legacy) and 'guest' are covered.
+		if normalized == GUEST_USER_ID:
+			query = query.filter(Bookmark.user_id == GUEST_USER_ID)
 		else:
-			query = query.filter(Bookmark.user_id == user_id)
+			query = query.filter(Bookmark.user_id == normalized)
 		query = query.order_by(Bookmark.created_at.desc()).limit(self.max_bookmarks)
 		return list(query.all())
 
@@ -319,11 +332,11 @@ class PreferenceProfileService:
 		return {key: round(value / total, 4) for key, value in counter.items()}
 
 	def _get_profile(self, db: Session, user_id: Optional[str]) -> Optional[PreferenceProfile]:
-		query = db.query(PreferenceProfile)
-		if user_id is None:
-			query = query.filter(PreferenceProfile.user_id.is_(None))
-		else:
-			query = query.filter(PreferenceProfile.user_id == user_id)
+		from app.core.user_utils import normalize_user_id
+		# Normalize user_id so that we consistently query stored profiles using
+		# the canonical representation (e.g. 'guest' for unidentified users).
+		normalized = normalize_user_id(user_id)
+		query = db.query(PreferenceProfile).filter(PreferenceProfile.user_id == normalized)
 		return query.one_or_none()
 
 	def _to_dto(self, profile: PreferenceProfile) -> PreferenceProfileDTO:

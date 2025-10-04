@@ -15,6 +15,22 @@
         <div class="dify-header-card card-edge">
             {% include 'partials/_document_meta.html' %}
 
+            <!-- Action buttons section -->
+            <div class="flex items-center gap-3 mb-4 flex-wrap">
+                {% if document.url %}
+                <a href="{{ document.url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-mist/80 text-graphite border border-mist rounded-md hover:bg-mist transition-colors">
+                    <i data-lucide="external-link" class="w-5 h-5 mr-2"></i>
+                    元記事を見る
+                </a>
+                {% endif %}
+                {% if document.pdf_path %}
+                <a href="/api/documents/{{ document.id }}/pdf" download class="inline-flex items-center px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-md hover:bg-red-100 transition-colors">
+                    <i data-lucide="file-down" class="w-5 h-5 mr-2"></i>
+                    PDFをダウンロード
+                </a>
+                {% endif %}
+            </div>
+
             {% if document.classifications %}
             <div class="tag-list flex items-center mb-6 md:overflow-x-auto md:whitespace-nowrap flex-wrap md:flex-nowrap">
                 <span class="dify-tag-primary">

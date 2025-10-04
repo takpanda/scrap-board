@@ -289,6 +289,63 @@ def _fetch_rss_items(config: Dict[str, Any]):
     return items
 
 
+def _fetch_speakerdeck_items(config: Dict[str, Any]):
+    """Fetch items from a SpeakerDeck RSS/Atom feed.
+
+    Expected config:
+    - `username`: SpeakerDeck username (generates feed URL)
+    - `url`: direct feed URL (overrides username)
+    - `per_page`: number of entries to fetch (default: 20)
+    - `format`: 'rss' or 'atom' (default: 'rss')
+    """
+    items = []
+    
+    # Generate feed URL from username or use direct URL
+    feed_url = config.get("url")
+    if not feed_url:
+        username = config.get("username")
+        if not username:
+            logger.warning("SpeakerDeck source missing both `url` and `username` in config")
+            return items
+        
+        feed_format = config.get("format", "rss")
+        if feed_format not in ["rss", "atom"]:
+            feed_format = "rss"
+        
+        feed_url = f"https://speakerdeck.com/{username}.{feed_format}"
+        logger.info(f"Generated SpeakerDeck feed URL: {feed_url}")
+    
+    per_page = config.get("per_page", 20)
+    
+    try:
+        import feedparser
+        
+        logger.info(f"Fetching SpeakerDeck feed from {feed_url}")
+        parsed = feedparser.parse(feed_url)
+        
+        if parsed.bozo and parsed.get("bozo_exception"):
+            logger.warning(f"Feed parse warning for {feed_url}: {parsed.bozo_exception}")
+        
+        for e in parsed.entries[:per_page]:
+            item = {
+                "link": e.get("link"),
+                "title": e.get("title", "無題"),
+                "published": e.get("published") or e.get("updated"),
+                "summary": e.get("summary", ""),
+            }
+            items.append(item)
+            logger.debug(f"Found SpeakerDeck presentation: {item['title']}")
+        
+        logger.info(f"Fetched {len(items)} presentations from SpeakerDeck feed")
+        
+    except ModuleNotFoundError:
+        logger.warning("feedparser not installed; SpeakerDeck fetch skipped")
+    except Exception as e:
+        logger.error(f"SpeakerDeck fetch error for {feed_url}: {e}")
+    
+    return items
+
+
 def trigger_fetch_for_source(source_id: int):
     """Fetch entries for a given source and push to ingest pipeline.
 
@@ -454,6 +511,93 @@ def trigger_fetch_for_source(source_id: int):
                     _insert_document_if_new(db, extracted, name)
                 except Exception as e:
                     logger.error(f"Failed to insert RSS document for {url}: {e}")
+        elif stype == "speakerdeck":
+            items = _fetch_speakerdeck_items(config)
+            for it in items:
+                url = it.get("link")
+                if not url:
+                    logger.warning("SpeakerDeck item missing link")
+                    continue
+                
+                extracted = None
+                try:
+                    import asyncio
+
+                    extracted = asyncio.get_event_loop().run_until_complete(content_extractor.extract_from_url(url))
+                except Exception as e:
+                    logger.warning(f"Extractor failed for {url}: {e}")
+
+                if not extracted:
+                    # Fallback to using feed-provided fields
+                    content_text = it.get("summary") or ""
+                    content_hash = hashlib_sha256(content_text)
+                    pub = it.get("published")
+                    try:
+                        pub_dt = content_extractor._parse_date(pub) if pub else None
+                    except Exception:
+                        pub_dt = None
+
+                    extracted = {
+                        "url": url,
+                        "domain": "speakerdeck.com",
+                        "title": it.get("title") or "無題",
+                        "author": None,
+                        "published_at": pub_dt,
+                        "content_md": content_text,
+                        "content_text": content_text,
+                        "hash": content_hash,
+                        "lang": "ja",
+                    }
+
+                # Ensure thumbnail if missing
+                if not extracted.get("thumbnail_url"):
+                    try:
+                        thumb = _ensure_thumbnail_for_url(db, extracted.get("url"))
+                        if thumb:
+                            extracted["thumbnail_url"] = thumb
+                    except Exception:
+                        logger.debug("Thumbnail generation failed for %s", extracted.get("url"))
+
+                # Insert document first
+                doc_id = None
+                try:
+                    doc_id = _insert_document_if_new(db, extracted, name)
+                except Exception as e:
+                    logger.error(f"Failed to insert SpeakerDeck document for {url}: {e}")
+                
+                # If document was inserted, try to download PDF
+                if doc_id:
+                    try:
+                        from app.services.speakerdeck_handler import SpeakerDeckHandler
+                        
+                        handler = SpeakerDeckHandler()
+                        
+                        # Get PDF URL
+                        pdf_url = handler.get_pdf_url(url)
+                        if not pdf_url:
+                            logger.warning(f"Could not extract PDF URL for {url}")
+                            continue
+                        
+                        # Download PDF
+                        logger.info(f"Downloading PDF for document {doc_id} from {pdf_url}")
+                        pdf_path = handler.download_pdf(pdf_url, doc_id)
+                        
+                        if pdf_path:
+                            # Update document with PDF path
+                            try:
+                                db.execute(
+                                    text("UPDATE documents SET pdf_path = :pdf_path WHERE id = :id"),
+                                    {"pdf_path": pdf_path, "id": doc_id}
+                                )
+                                db.commit()
+                                logger.info(f"Successfully saved PDF for document {doc_id} at {pdf_path}")
+                            except Exception as e:
+                                db.rollback()
+                                logger.error(f"Failed to update PDF path for document {doc_id}: {e}")
+                        else:
+                            logger.error(f"Failed to download PDF for document {doc_id}")
+                    except Exception as e:
+                        logger.error(f"Error processing PDF for document {doc_id}: {e}")
         else:
             logger.info(f"Source type {stype} not implemented yet")
     finally:

@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/speakerdeck-feed-support/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-04T06:33:03.634Z",
+      "trigger": "initial",
+      "approvalId": "approval_1759559583626_dl5s1t54w",
+      "approvalTitle": "Tasks document for SpeakerDeck Feed Support"
+    }
+  ]
+}

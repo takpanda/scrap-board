@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/speakerdeck-feed-support/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-04T06:23:35.474Z",
+      "trigger": "initial",
+      "approvalId": "approval_1759559015462_s6hvd194j",
+      "approvalTitle": "SpeakerDeck Feed Support - Design"
+    }
+  ]
+}

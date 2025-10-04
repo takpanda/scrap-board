@@ -480,3 +480,75 @@ async def get_similar_documents(
     else:
         # Return JSON for API calls
         return {"similar_documents": formatted_docs}
+
+
+@router.get("/{document_id}/pdf")
+async def download_pdf(
+    document_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Download PDF file for a document.
+    
+    Returns the PDF file if available, otherwise raises 404.
+    Includes security validations to prevent path traversal attacks.
+    """
+    from fastapi.responses import FileResponse
+    from pathlib import Path
+    from sqlalchemy import text
+    import re
+    
+    # Fetch document from database
+    result = db.execute(
+        text("SELECT id, title, pdf_path FROM documents WHERE id = :id"),
+        {"id": document_id}
+    ).fetchone()
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    doc_id, title, pdf_path = result[0], result[1], result[2]
+    
+    # Check if PDF path exists
+    if not pdf_path:
+        raise HTTPException(status_code=404, detail="PDF not available for this document")
+    
+    # Construct full file path
+    base_dir = Path("data")
+    full_path = base_dir / pdf_path
+    
+    # Security: Resolve paths and check that file is within data directory
+    try:
+        resolved_base = base_dir.resolve()
+        resolved_full = full_path.resolve()
+        
+        # Check if resolved path is within base directory
+        if not str(resolved_full).startswith(str(resolved_base)):
+            raise HTTPException(status_code=403, detail="Access denied")
+    except Exception as e:
+        raise HTTPException(status_code=403, detail="Invalid file path")
+    
+    # Check if file exists
+    if not resolved_full.exists() or not resolved_full.is_file():
+        raise HTTPException(status_code=404, detail="PDF file not found")
+    
+    # Generate safe filename from title
+    # Remove non-alphanumeric characters except spaces, hyphens, underscores
+    safe_title = re.sub(r'[^\w\s\-]', '', title)
+    safe_title = re.sub(r'\s+', '_', safe_title)  # Replace spaces with underscores
+    # Limit filename length
+    safe_title = safe_title[:100] if len(safe_title) > 100 else safe_title
+    # Ensure filename is not empty
+    if not safe_title:
+        safe_title = document_id
+    
+    filename = f"{safe_title}.pdf"
+    
+    # Return file with appropriate headers
+    return FileResponse(
+        path=str(resolved_full),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )

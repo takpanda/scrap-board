@@ -1,4 +1,4 @@
-<div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3" data-sort-controls data-current-sort="recent">
+<div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3" data-sort-controls data-current-sort="{{ sort if sort is defined else 'recent' }}">
     <span class="text-xs font-semibold tracking-wide text-graphite uppercase">並び替え</span>
     <div
         class="inline-flex bg-mist/60 rounded-lg p-1 border border-transparent"
@@ -11,7 +11,7 @@
             type="button"
             class="sort-toggle-button inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald focus-visible:ring-offset-1 bg-white text-ink shadow-sm border border-emerald"
             data-sort-toggle="recent"
-            aria-pressed="true"
+            aria-pressed="{{ 'true' if (sort is defined and sort == 'recent') else ('true' if not sort is defined else 'false') }}"
         >
             <i data-lucide="clock" class="w-4 h-4"></i>
             <span>新着順</span>
@@ -20,7 +20,7 @@
             type="button"
             class="sort-toggle-button inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald focus-visible:ring-offset-1 text-graphite/70"
             data-sort-toggle="personalized"
-            aria-pressed="false"
+            aria-pressed="{{ 'true' if (sort is defined and sort == 'personalized') else 'false' }}"
         >
             <i data-lucide="sparkles" class="w-4 h-4"></i>
             <span>おすすめ順</span>

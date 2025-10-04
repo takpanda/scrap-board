@@ -32,6 +32,12 @@
                             <i data-lucide="external-link" class="w-4 h-4 mr-2"></i>
                             元記事
                         </a>
+                        {% if document.pdf_path %}
+                        <a href="/api/documents/{{ document.id }}/pdf" download title="PDFをダウンロード" class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors">
+                            <i data-lucide="file-down" class="w-4 h-4 mr-1"></i>
+                            PDF
+                        </a>
+                        {% endif %}
                         <a href="/documents/{{ document.id }}" class="text-xs bg-emerald text-white px-3 py-1 rounded-md hover:bg-emerald/90 ml-2">詳細を見る</a>
                     {% endif %}
                 {% else %}
@@ -40,6 +46,12 @@
                             <i data-lucide="external-link" class="w-4 h-4 mr-2"></i>
                             元記事
                         </a>
+                        {% if document.pdf_path %}
+                        <a href="/api/documents/{{ document.id }}/pdf" download title="PDFをダウンロード" class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors">
+                            <i data-lucide="file-down" class="w-4 h-4 mr-1"></i>
+                            PDF
+                        </a>
+                        {% endif %}
                         <a href="/documents/{{ document.id }}" class="text-xs bg-emerald text-white px-3 py-1 rounded-md hover:bg-emerald/90 ml-2">詳細を見る</a>
                     {% endif %}
                 {% endif %}

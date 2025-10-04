@@ -84,6 +84,17 @@ async def create_source(request: Request, db=Depends(get_db)):
                 config = json.loads(config_raw) if config_raw else {}
             except Exception:
                 config = {}
+            
+            # Handle SpeakerDeck specific fields
+            if type_ == "speakerdeck":
+                username = form.get("speakerdeck_username")
+                format_ = form.get("speakerdeck_format") or "rss"
+                if username:
+                    # Generate SpeakerDeck feed URL from username
+                    url = f"https://speakerdeck.com/{username}.{format_}"
+                    config["username"] = username
+                    config["format"] = format_
+            
             if url:
                 try:
                     config = dict(config or {})

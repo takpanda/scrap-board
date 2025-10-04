@@ -36,6 +36,7 @@
             <option value="rss">RSS</option>
             <option value="qiita">Qiita</option>
             <option value="hatena">Hatena</option>
+            <option value="speakerdeck">SpeakerDeck</option>
             <option value="other">Other</option>
           </select>
           <select id="status-filter" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
@@ -100,6 +101,7 @@
                 タイプ <span class="text-red-500">*</span>
               </label>
               <select 
+                id="source-type-select"
                 name="type" 
                 required 
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
@@ -107,8 +109,39 @@
                 <option value="rss">RSS</option>
                 <option value="qiita">Qiita</option>
                 <option value="hatena">Hatena</option>
+                <option value="speakerdeck">SpeakerDeck</option>
                 <option value="other">Other</option>
               </select>
+            </div>
+            
+            <!-- SpeakerDeck specific fields (shown only when type is speakerdeck) -->
+            <div id="speakerdeck-fields" style="display: none;">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                SpeakerDeck ユーザー名 <span class="text-red-500">*</span>
+              </label>
+              <input 
+                id="speakerdeck-username"
+                name="speakerdeck_username" 
+                placeholder="例: username" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" 
+              />
+              <p class="mt-1 text-xs text-gray-500">
+                SpeakerDeckのユーザー名を入力すると、自動的にRSSフィードURLが生成されます
+              </p>
+              
+              <div class="mt-3">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  フィード形式
+                </label>
+                <select 
+                  id="speakerdeck-format"
+                  name="speakerdeck_format"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                >
+                  <option value="rss">RSS (.rss)</option>
+                  <option value="atom">Atom (.atom)</option>
+                </select>
+              </div>
             </div>
             
             <div>
@@ -123,16 +156,17 @@
               <p class="mt-1 text-xs text-gray-500">空欄の場合は手動実行のみ</p>
             </div>
             
-            <div>
+            <div id="url-field">
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 URL（任意）
               </label>
               <input
+                id="source-url"
                 name="url"
                 placeholder="例: https://example.com/feed.xml"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
-              <p class="mt-1 text-xs text-gray-500">フェードやAPIのエンドポイントURLを指定します（任意）。</p>
+              <p class="mt-1 text-xs text-gray-500">フェードやAPIのエンドポイントURLを指定します（任意）。SpeakerDeckの場合、ユーザー名から自動生成されます。</p>
             </div>
             
             <button 
@@ -323,11 +357,73 @@
     }
   }
 
+  // SpeakerDeck specific handling
+  function initSpeakerDeckHandling() {
+    const typeSelect = document.getElementById('source-type-select');
+    const speakerdeckFields = document.getElementById('speakerdeck-fields');
+    const urlField = document.getElementById('url-field');
+    const sourceUrlInput = document.getElementById('source-url');
+    const usernameInput = document.getElementById('speakerdeck-username');
+    const formatSelect = document.getElementById('speakerdeck-format');
+
+    if (!typeSelect || !speakerdeckFields || !urlField) return;
+
+    function updateSpeakerDeckUI() {
+      const isSpeakerDeck = typeSelect.value === 'speakerdeck';
+      
+      if (isSpeakerDeck) {
+        speakerdeckFields.style.display = 'block';
+        urlField.style.display = 'none';
+        // Make username required when SpeakerDeck is selected
+        if (usernameInput) {
+          usernameInput.setAttribute('required', 'required');
+        }
+      } else {
+        speakerdeckFields.style.display = 'none';
+        urlField.style.display = 'block';
+        if (usernameInput) {
+          usernameInput.removeAttribute('required');
+        }
+      }
+    }
+
+    function generateSpeakerDeckURL() {
+      const username = usernameInput ? usernameInput.value.trim() : '';
+      const format = formatSelect ? formatSelect.value : 'rss';
+      
+      if (!username) {
+        if (sourceUrlInput) sourceUrlInput.value = '';
+        return;
+      }
+      
+      // Generate SpeakerDeck feed URL: https://speakerdeck.com/{username}.{format}
+      const url = `https://speakerdeck.com/${username}.${format}`;
+      if (sourceUrlInput) {
+        sourceUrlInput.value = url;
+      }
+    }
+
+    // Listen to type changes
+    typeSelect.addEventListener('change', updateSpeakerDeckUI);
+    
+    // Listen to username and format changes to auto-generate URL
+    if (usernameInput) {
+      usernameInput.addEventListener('input', generateSpeakerDeckURL);
+    }
+    if (formatSelect) {
+      formatSelect.addEventListener('change', generateSpeakerDeckURL);
+    }
+
+    // Initial state
+    updateSpeakerDeckUI();
+  }
+
   // Initialize after DOM content loaded
   document.addEventListener('DOMContentLoaded', function() {
     initIcons();
     initSearchAndFilter();
     initFormValidation();
+    initSpeakerDeckHandling();
   });
 
   // Global confirm handler for buttons/forms with data-confirm

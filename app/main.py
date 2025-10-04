@@ -194,10 +194,17 @@ async def documents_page(
             text("(classifications.tags LIKE :raw_like OR classifications.tags LIKE :escaped_like)")
         ).params(raw_like=raw_like, escaped_like=escaped_like)
     
-    # Always fetch personalized data for better UX (JavaScript will decide whether to use it)
-    # This ensures server-side rendered pages have personalized data available immediately
-    user_id = _resolve_user_id(request)
-    documents, score_map = _fetch_personalized_documents(query, user_id, 0, 50, db)
+    # Respect the `sort` parameter: use personalized ranking only when requested.
+    # This keeps the default behavior as "recent" (created_at desc).
+    sort_mode = (sort or "recent").lower()
+    score_map = {}
+    if sort_mode == "personalized":
+        # Fetch personalized documents (this returns documents and score_map)
+        user_id = _resolve_user_id(request)
+        documents, score_map = _fetch_personalized_documents(query, user_id, 0, 50, db)
+    else:
+        # recent (default) - order by created_at descending
+        documents = query.order_by(Document.created_at.desc()).limit(50).all()
     
     # Attach a transient `bookmarked` attribute to each Document instance so
     # templates can easily check bookmark state (document.bookmarked).
