@@ -67,6 +67,17 @@ async def bookmarks_only_page(
             documents, total = get_user_bookmarked_documents(db, user_id=uid, page=last_page, per_page=per_page)
             page = last_page
 
+    # Add personalized data to documents (for consistency with documents page)
+    # Bookmarks page doesn't use personalized sorting, but we set attributes to None
+    # to prevent template errors when document_card.html checks for these attributes
+    for d in documents:
+        d.personalized_score = None
+        d.personalized_rank = None
+        d.personalized_explanation = None
+        d.personalized_components = None
+        d.personalized_computed_at = None
+        d.personalized_cold_start = None
+
     last_page = max(1, ceil(total / per_page)) if total else 1
     has_previous = page > 1
     has_next = (page * per_page) < total

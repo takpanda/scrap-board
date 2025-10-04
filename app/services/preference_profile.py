@@ -18,7 +18,9 @@ from app.services.personalization_models import PreferenceProfileDTO, Preference
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_COLD_START_THRESHOLD = 3
+# 暫定対応: 1人ユーザー前提のため閾値を1に設定
+# 将来の認証実装時に、複数ユーザー環境に応じて3等に変更可能
+DEFAULT_COLD_START_THRESHOLD = 1
 DEFAULT_MAX_BOOKMARKS = 50
 DEFAULT_EMBEDDING_CHAR_LIMIT = 4000
 DEFAULT_MAX_RETRIES = 2

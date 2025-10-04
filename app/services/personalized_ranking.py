@@ -126,7 +126,7 @@ class ExplanationPresenter:
 		parts: List[str] = []
 
 		if cold_start:
-			parts.append("ブックマークがまだ少ないため暫定的なおすすめです。")
+			parts.append("ブックマークを追加すると、おすすめの精度が向上します。")
 
 		primary_category = _extract_primary_category(document)
 		domain = getattr(document, "domain", None)

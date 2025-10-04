@@ -161,11 +161,13 @@ async def documents_page(
     category: str = "",
     tag: str = "",
     domain: str = "",
+    sort: str = "recent",
     db: Session = Depends(get_db)
 ):
     """ドキュメント一覧ページ"""
-    # 基本的なクエリ（後で改善）
+    # 基本的なクエリ(後で改善)
     from app.core.database import Document, Classification
+    from app.api.routes.documents import _resolve_user_id, _fetch_personalized_documents
     
     query = db.query(Document)
     
@@ -192,9 +194,14 @@ async def documents_page(
             text("(classifications.tags LIKE :raw_like OR classifications.tags LIKE :escaped_like)")
         ).params(raw_like=raw_like, escaped_like=escaped_like)
     
-    documents = query.order_by(Document.created_at.desc()).limit(50).all()
+    # Always fetch personalized data for better UX (JavaScript will decide whether to use it)
+    # This ensures server-side rendered pages have personalized data available immediately
+    user_id = _resolve_user_id(request)
+    documents, score_map = _fetch_personalized_documents(query, user_id, 0, 50, db)
+    
     # Attach a transient `bookmarked` attribute to each Document instance so
     # templates can easily check bookmark state (document.bookmarked).
+    # Also attach personalized data if available
     for d in documents:
         try:
             d.bookmarked = bool(d.bookmarks and len(d.bookmarks) > 0)
@@ -202,6 +209,23 @@ async def documents_page(
             # Best-effort only: if relationship not loaded or access fails,
             # default to False.
             d.bookmarked = False
+        
+        # Attach personalized data to document object
+        score_dto = score_map.get(d.id)
+        if score_dto is not None:
+            d.personalized_score = score_dto.score
+            d.personalized_rank = score_dto.rank
+            d.personalized_explanation = score_dto.explanation
+            d.personalized_components = score_dto.components
+            d.personalized_computed_at = score_dto.computed_at
+            d.personalized_cold_start = score_dto.cold_start
+        else:
+            d.personalized_score = None
+            d.personalized_rank = None
+            d.personalized_explanation = None
+            d.personalized_components = None
+            d.personalized_computed_at = None
+            d.personalized_cold_start = None
 
     return templates.TemplateResponse("documents.html", {
         "request": request,
@@ -209,7 +233,8 @@ async def documents_page(
         "q": q,
         "category": category,
         "tag": tag,
-        "domain": domain
+        "domain": domain,
+        "sort": sort
     })
 
 

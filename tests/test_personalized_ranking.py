@@ -125,7 +125,8 @@ def test_score_documents_marks_cold_start(now: datetime):
 
 	assert len(scores) == 1
 	assert scores[0].cold_start is True
-	assert "暫定" in scores[0].explanation
+	# メッセージが「暫定」から「追加すると」に変更されたため、テストを更新
+	assert ("追加すると" in scores[0].explanation or "精度が向上" in scores[0].explanation)
 
 
 def test_score_documents_uses_category_and_domain_weights(now: datetime):

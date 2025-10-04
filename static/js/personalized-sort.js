@@ -409,11 +409,34 @@
         return 50;
     };
 
+    PersonalizedSortController.prototype.decorateExistingArticles = function () {
+        if (!this.grid) {
+            return;
+        }
+        var articles = this.grid.querySelectorAll("[data-document-id]");
+        var self = this;
+        var hasPersonalizedData = false;
+        forEachNode(articles, function (article) {
+            if (article.hasAttribute("data-personalized-score")) {
+                hasPersonalizedData = true;
+                self.decorateArticle(article, null);
+            }
+        });
+        if (hasPersonalizedData) {
+            this.setStatus("ready");
+        }
+    };
+
     PersonalizedSortController.prototype.applyPersonalizedSort = function () {
         var _this = this;
         if (!this.container) {
             return;
         }
+        
+        // First, try to decorate existing articles with server-side rendered data
+        this.decorateExistingArticles();
+        
+        // Then fetch fresh data from API for reordering
         if (this.abortController && typeof this.abortController.abort === "function") {
             this.abortController.abort();
         }
@@ -575,7 +598,7 @@
             fallback.classList.add("hidden");
             var fallbackText = fallback.querySelector("[data-personalized-fallback-text]");
             if (fallbackText) {
-                fallbackText.textContent = "パーソナライズはまだ準備中です。標準順で表示しています。";
+                fallbackText.textContent = "記事をブックマークすると、あなた好みのおすすめ順で表示されます。";
             }
         }
     };
@@ -587,7 +610,26 @@
         if (!block || !fallback) {
             return;
         }
+        
+        // Try to get personalized data from doc object first, then from data attributes
         var personalized = doc && doc.personalized;
+        if (!personalized && article.hasAttribute("data-personalized-score")) {
+            // Read from data attributes (server-side rendered data)
+            try {
+                personalized = {
+                    score: parseFloat(article.getAttribute("data-personalized-score")),
+                    rank: parseInt(article.getAttribute("data-personalized-rank"), 10),
+                    explanation: article.getAttribute("data-personalized-explanation"),
+                    components: JSON.parse(article.getAttribute("data-personalized-components") || "{}"),
+                    computed_at: article.getAttribute("data-personalized-computed-at"),
+                    cold_start: article.getAttribute("data-personalized-cold-start") === "true"
+                };
+            } catch (e) {
+                console.error("Failed to parse personalized data from attributes:", e);
+                personalized = null;
+            }
+        }
+        
         if (!personalized) {
             fallback.classList.remove("hidden");
             return;
@@ -596,7 +638,7 @@
             fallback.classList.remove("hidden");
             var fallbackText = fallback.querySelector("[data-personalized-fallback-text]");
             if (fallbackText) {
-                fallbackText.textContent = "ブックマークがまだ少ないため、おすすめ順は準備中です。";
+                fallbackText.textContent = "ブックマークを追加すると、おすすめ順の精度が向上します。";
             }
             return;
         }
