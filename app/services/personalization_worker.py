@@ -20,6 +20,7 @@ from app.services.personalized_ranking import PersonalizedRankingService
 from app.services.personalized_repository import PersonalizedScoreRepository
 from app.services.personalization_models import PersonalizedScoreDTO, PreferenceProfileDTO
 from app.services.preference_profile import PreferenceProfileService
+from app.core.user_utils import normalize_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -128,11 +129,12 @@ def _handle_profile_rebuild(
 
 	repo = PersonalizedScoreRepository(session)
 	persisted = repo.bulk_upsert(scores, profile_id=profile.id, user_id=profile.user_id)
+	resolved_user = normalize_user_id(profile.user_id)
 	logger.info(
 		"personalization_worker: job %s stored %d scores for user=%s",
 		job.id,
 		len(persisted),
-		profile.user_id,
+		resolved_user,
 	)
 
 	if not scores and target_ids:
