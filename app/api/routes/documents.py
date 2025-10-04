@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import and_, case
+from sqlalchemy import and_, case, or_
 from sqlalchemy.orm import Session, aliased
 from typing import Optional, List, Dict
 from datetime import datetime
@@ -88,7 +88,10 @@ def _fetch_personalized_documents(query, user_id: str, offset: int, limit: int, 
 
     # For guest users: only consider scores for the "guest" user
     score_alias = aliased(PersonalizedScore)
-    join_condition = and_(score_alias.document_id == Document.id, score_alias.user_id == GUEST_USER_ID)
+    join_condition = and_(
+        score_alias.document_id == Document.id,
+        or_(score_alias.user_id == GUEST_USER_ID, score_alias.user_id.is_(None))
+    )
     personalized_query = query.outerjoin(score_alias, join_condition).add_entity(score_alias)
 
     ordering = [
@@ -219,15 +222,19 @@ async def list_documents(
         
         score_dto = score_map.get(doc.id)
         if score_dto is not None:
+            is_cold_start = bool(getattr(score_dto, "cold_start", False))
+            rank_for_display = None
+            if not is_cold_start:
+                rank_for_display = display_rank
+                display_rank += 1  # おすすめ記事の場合のみrankをインクリメント
             doc_data["personalized"] = {
                 "score": score_dto.score,
-                "rank": display_rank,  # DBのrankではなく、表示用の連番rankを使用
+                "rank": rank_for_display,
                 "explanation": score_dto.explanation,
                 "components": score_dto.components.to_dict(),
                 "computed_at": score_dto.computed_at.isoformat(),
-                "cold_start": score_dto.cold_start,
+                "cold_start": is_cold_start,
             }
-            display_rank += 1  # おすすめ記事の場合のみrankをインクリメント
 
         result.append(doc_data)
     

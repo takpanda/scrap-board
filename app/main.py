@@ -209,6 +209,7 @@ async def documents_page(
     # Attach a transient `bookmarked` attribute to each Document instance so
     # templates can easily check bookmark state (document.bookmarked).
     # Also attach personalized data if available
+    display_rank = 1
     for d in documents:
         try:
             d.bookmarked = bool(d.bookmarks and len(d.bookmarks) > 0)
@@ -221,14 +222,22 @@ async def documents_page(
         score_dto = score_map.get(d.id)
         if score_dto is not None:
             d.personalized_score = score_dto.score
-            d.personalized_rank = score_dto.rank
+            # Preserve original rank for debugging/telemetry while ensuring
+            # display rank is re-assigned as a contiguous sequence.
+            d.personalized_original_rank = score_dto.rank
             d.personalized_explanation = score_dto.explanation
             d.personalized_components = score_dto.components
             d.personalized_computed_at = score_dto.computed_at
             d.personalized_cold_start = score_dto.cold_start
+            if score_dto.cold_start:
+                d.personalized_rank = None
+            else:
+                d.personalized_rank = display_rank
+                display_rank += 1
         else:
             d.personalized_score = None
             d.personalized_rank = None
+            d.personalized_original_rank = None
             d.personalized_explanation = None
             d.personalized_components = None
             d.personalized_computed_at = None
