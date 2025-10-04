@@ -183,10 +183,9 @@ async def list_documents(
 
     score_map = {}
     if use_personalized:
-        # Use global (user_id IS NULL) personalized scores for everyone.
-        # This forces the system to use shared/global personalization data
-        # instead of any user-specific scores.
-        documents, score_map = _fetch_personalized_documents(query, None, offset, limit, db)
+        # パーソナライズドソート時はuser_idを取得してブックマーク除外などを適用
+        user_id = _resolve_user_id(request)
+        documents, score_map = _fetch_personalized_documents(query, user_id, offset, limit, db)
     else:
         documents = query.order_by(Document.created_at.desc()).offset(offset).limit(limit).all()
     
