@@ -151,11 +151,61 @@ async def ingest_pdf(
 async def ingest_rss(
     feed_url: str = Form(...),
     schedule: bool = Form(False),
+    max_items: int = Form(20),
+    background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db)
 ):
     """RSSフィードを取り込み"""
-    # TODO: RSSフィード処理実装
-    raise HTTPException(status_code=501, detail="RSS ingestion not implemented yet")
+    try:
+        import feedparser
+    except ModuleNotFoundError:
+        raise HTTPException(status_code=500, detail="feedparser not installed")
+    
+    try:
+        # RSSフィードをパース
+        parsed = feedparser.parse(feed_url)
+        
+        if not parsed.entries:
+            raise HTTPException(status_code=400, detail="No entries found in RSS feed")
+        
+        # 取り込むアイテムのリストを作成
+        items_to_ingest = []
+        for entry in parsed.entries[:max_items]:
+            link = entry.get("link")
+            if link:
+                # 重複チェック
+                existing = db.query(Document).filter(Document.url == link).first()
+                if not existing:
+                    items_to_ingest.append({
+                        "url": link,
+                        "title": entry.get("title", ""),
+                        "published": entry.get("published"),
+                        "summary": entry.get("summary", "")
+                    })
+        
+        if not items_to_ingest:
+            return {
+                "message": "All items already exist",
+                "total_entries": len(parsed.entries),
+                "new_items": 0
+            }
+        
+        # バックグラウンドでアイテムを取り込む
+        if background_tasks is not None:
+            background_tasks.add_task(_ingest_rss_items_background, items_to_ingest)
+        else:
+            asyncio.create_task(_ingest_rss_items_background_async(items_to_ingest))
+        
+        return {
+            "message": f"RSS feed ingestion started for {len(items_to_ingest)} items",
+            "total_entries": len(parsed.entries),
+            "new_items": len(items_to_ingest),
+            "feed_title": parsed.feed.get("title", "")
+        }
+        
+    except Exception as e:
+        logger.error(f"RSS feed ingestion error: {e}")
+        raise HTTPException(status_code=500, detail=f"RSS feed ingestion failed: {str(e)}")
 
 
 async def _process_document_async(document_id: str, content_data: dict, db: Session):
@@ -272,3 +322,53 @@ def _process_document_background_sync(document_id: str):
         asyncio.run(_process_document_background(document_id))
     except Exception as e:
         logger.error(f"Background sync wrapper failed for {document_id}: {e}")
+
+
+async def _ingest_rss_items_background_async(items: List[dict]):
+    """RSSアイテムをバックグラウンドで取り込む（async版）"""
+    db = SessionLocal()
+    try:
+        for item in items:
+            try:
+                url = item["url"]
+                
+                # コンテンツ抽出
+                content_data = await content_extractor.extract_from_url(url)
+                if not content_data:
+                    logger.warning(f"Failed to extract content from {url}")
+                    continue
+                
+                # サムネイル取得を試行
+                try:
+                    thumb = _ensure_thumbnail_for_url(db, content_data.get("url"))
+                    if thumb:
+                        content_data["thumbnail_url"] = thumb
+                except Exception:
+                    logger.debug("Thumbnail fetch failed for %s", url)
+                
+                # ドキュメント保存
+                document = Document(**content_data)
+                document.source = "rss"
+                db.add(document)
+                db.commit()
+                db.refresh(document)
+                
+                # 要約・分類・埋め込みを実行
+                await _process_document_async(document.id, content_data, db)
+                
+                logger.info(f"RSS item ingested successfully: {url}")
+                
+            except Exception as e:
+                logger.error(f"Failed to ingest RSS item {item.get('url')}: {e}")
+                db.rollback()
+                
+    finally:
+        db.close()
+
+
+def _ingest_rss_items_background(items: List[dict]):
+    """RSSアイテムをバックグラウンドで取り込む（同期ラッパー）"""
+    try:
+        asyncio.run(_ingest_rss_items_background_async(items))
+    except Exception as e:
+        logger.error(f"RSS background ingestion failed: {e}")

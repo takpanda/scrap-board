@@ -188,15 +188,15 @@ async def list_documents(
 
     score_map = {}
     if use_personalized:
-        # Use global (user_id IS NULL) personalized scores for everyone.
-        # This forces the system to use shared/global personalization data
-        # instead of any user-specific scores.
-        documents, score_map = _fetch_personalized_documents(query, None, offset, limit, db)
+        # パーソナライズドソート時はuser_idを取得してブックマーク除外などを適用
+        user_id = _resolve_user_id(request)
+        documents, score_map = _fetch_personalized_documents(query, user_id, offset, limit, db)
     else:
         documents = query.order_by(Document.created_at.desc()).offset(offset).limit(limit).all()
     
     # 結果整形
     result = []
+    display_rank = 1  # 表示用の連番rank
     for doc in documents:
         doc_data = {
             "id": doc.id,
@@ -221,12 +221,13 @@ async def list_documents(
         if score_dto is not None:
             doc_data["personalized"] = {
                 "score": score_dto.score,
-                "rank": score_dto.rank,
+                "rank": display_rank,  # DBのrankではなく、表示用の連番rankを使用
                 "explanation": score_dto.explanation,
                 "components": score_dto.components.to_dict(),
                 "computed_at": score_dto.computed_at.isoformat(),
                 "cold_start": score_dto.cold_start,
             }
+            display_rank += 1  # おすすめ記事の場合のみrankをインクリメント
 
         result.append(doc_data)
     

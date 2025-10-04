@@ -246,10 +246,15 @@ def test_personalized_sort_uses_user_specific_scores_over_global(client: TestCli
     assert docs_user[0]["personalized"]["cold_start"] is True
     assert docs_user[0]["personalized"]["components"]["similarity"] == pytest.approx(0.92)
 
-    remaining_user_ids = {doc["id"] for doc in docs_user[1:]}
-    assert remaining_user_ids == {fallback_doc.id, global_doc.id}
-    for doc in docs_user[1:]:
-        assert "personalized" not in doc
+    # 2番目はグローバルスコアを持つ記事（フォールバックとして使用される）
+    assert docs_user[1]["id"] == global_doc.id
+    assert "personalized" in docs_user[1]
+    assert docs_user[1]["personalized"]["rank"] == 2
+    assert docs_user[1]["personalized"]["score"] == pytest.approx(0.9)
+    
+    # 3番目はスコアを持たない記事
+    assert docs_user[2]["id"] == fallback_doc.id
+    assert "personalized" not in docs_user[2]
 
     response_global = client.get(
         "/api/documents",
