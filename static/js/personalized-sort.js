@@ -289,6 +289,7 @@
 
         this.originalOrderIds = [];
         this.abortController = null;
+        this.serverFallbackRequested = false;
         this.currentSort = this.loadPreference();
         this.refreshStructure();
 
@@ -352,11 +353,32 @@
     PersonalizedSortController.prototype.onSortChange = function (sort) {
         this.currentSort = sort === PERSONALIZED_SORT ? PERSONALIZED_SORT : DEFAULT_SORT;
         this.savePreference(this.currentSort);
+        this.updateHistory();
         this.updateToggleUI();
         if (this.currentSort === PERSONALIZED_SORT) {
             this.applyPersonalizedSort();
         } else {
             this.restoreDefaultOrder();
+        }
+    };
+
+    PersonalizedSortController.prototype.updateHistory = function () {
+        if (!window.history || typeof window.history.replaceState !== "function") {
+            return;
+        }
+        try {
+            var url = new URL(window.location.href);
+            if (this.currentSort === PERSONALIZED_SORT) {
+                url.searchParams.set("sort", PERSONALIZED_SORT);
+            } else {
+                url.searchParams.delete("sort");
+            }
+            var next = url.toString();
+            if (next !== window.location.href) {
+                window.history.replaceState({}, document.title, next);
+            }
+        } catch (err) {
+            /* ignore URL parsing errors */
         }
     };
 
@@ -478,7 +500,9 @@
                     return;
                 }
                 _this.reorderWithData(data.documents);
-                _this.container.setAttribute("data-documents-limit", String(data.documents.length));
+                if (_this.container) {
+                    _this.container.setAttribute("data-documents-limit", String(data.documents.length));
+                }
             })
             .catch(function (error) {
                 if (error && error.name === "AbortError") {
@@ -487,6 +511,64 @@
                 console.warn("personalized sort fetch failed", error);
                 _this.restoreDefaultOrder("error");
             });
+    };
+
+    PersonalizedSortController.prototype.requestServerRenderedPersonalized = function () {
+        if (this.serverFallbackRequested) {
+            return;
+        }
+        this.serverFallbackRequested = true;
+        this.setStatus("loading");
+        try {
+            var url = new URL(window.location.href);
+            url.searchParams.set("sort", PERSONALIZED_SORT);
+            var href = url.toString();
+            if (window.htmx && typeof window.htmx.ajax === "function") {
+                var targetSelector = "#documents-container";
+                if (this.container && this.container.id) {
+                    targetSelector = "#" + this.container.id;
+                }
+                var self = this;
+                var xhr;
+                try {
+                    xhr = window.htmx.ajax("GET", href, {
+                        target: targetSelector,
+                        swap: "outerHTML",
+                        headers: {
+                            "X-Personalized-Fallback": "true"
+                        }
+                    });
+                } catch (ajaxError) {
+                    console.warn("personalized sort fallback ajax failed", ajaxError);
+                    this.serverFallbackRequested = false;
+                    window.location.assign(href);
+                    return;
+                }
+
+                if (xhr && typeof xhr.addEventListener === "function") {
+                    xhr.addEventListener("load", function () {
+                        if (xhr.status >= 400) {
+                            console.warn("personalized sort fallback ajax returned status", xhr.status);
+                            window.location.assign(href);
+                        }
+                    });
+                    xhr.addEventListener("error", function () {
+                        console.warn("personalized sort fallback ajax network error");
+                        window.location.assign(href);
+                    });
+                    xhr.addEventListener("loadend", function () {
+                        self.serverFallbackRequested = false;
+                    });
+                } else {
+                    this.serverFallbackRequested = false;
+                }
+            } else {
+                window.location.assign(href);
+            }
+        } catch (err) {
+            this.serverFallbackRequested = false;
+            console.warn("failed to construct personalized fallback url", err);
+        }
     };
 
     PersonalizedSortController.prototype.reorderWithData = function (documents) {
@@ -500,12 +582,39 @@
             byId.set(article.getAttribute("data-document-id"), article);
         });
 
-        var orderedArticles = [];
-        var self = this;
+        var matched = [];
+        var missingCount = 0;
         documents.forEach(function (doc) {
             var article = byId.get(doc.id);
             if (!article) {
+                missingCount += 1;
                 return;
+            }
+            matched.push({ doc: doc, article: article });
+        });
+
+        if (missingCount > 0) {
+            this.requestServerRenderedPersonalized();
+            return;
+        }
+
+        var orderedArticles = [];
+        var displayRank = 1;
+        var self = this;
+        matched.forEach(function (pair) {
+            var doc = pair.doc;
+            var article = pair.article;
+            if (doc && doc.personalized) {
+                var p = doc.personalized;
+                if (typeof p.rank === "number" && !isNaN(p.rank)) {
+                    p.rank_original = p.rank;
+                }
+                if (p.cold_start) {
+                    p.rank = null;
+                } else if (typeof p.rank === "number" || p.rank == null) {
+                    p.rank = displayRank;
+                    displayRank += 1;
+                }
             }
             self.decorateArticle(article, doc);
             orderedArticles.push(article);
@@ -601,22 +710,21 @@
                 fallbackText.textContent = "記事をブックマークすると、あなた好みのおすすめ順で表示されます。";
             }
         }
+        article.removeAttribute("data-personalized-score");
+        article.removeAttribute("data-personalized-rank");
+        article.removeAttribute("data-personalized-explanation");
+        article.removeAttribute("data-personalized-components");
+        article.removeAttribute("data-personalized-computed-at");
+        article.removeAttribute("data-personalized-cold-start");
+        article.removeAttribute("data-personalized-original-rank");
     };
 
     PersonalizedSortController.prototype.decorateArticle = function (article, doc) {
-        this.clearArticle(article);
-        var block = article.querySelector("[data-personalized-block]");
-        var fallback = article.querySelector("[data-personalized-fallback]");
-        if (!block || !fallback) {
-            return;
-        }
-        
-        // Try to get personalized data from doc object first, then from data attributes
-        var personalized = doc && doc.personalized;
-        if (!personalized && article.hasAttribute("data-personalized-score")) {
-            // Read from data attributes (server-side rendered data)
+        var personalizedFromAttributes = null;
+        // Try to read any pre-rendered personalization attributes before clearing them
+        if (!doc && article.hasAttribute("data-personalized-score")) {
             try {
-                personalized = {
+                personalizedFromAttributes = {
                     score: parseFloat(article.getAttribute("data-personalized-score")),
                     rank: parseInt(article.getAttribute("data-personalized-rank"), 10),
                     explanation: article.getAttribute("data-personalized-explanation"),
@@ -626,10 +734,23 @@
                 };
             } catch (e) {
                 console.error("Failed to parse personalized data from attributes:", e);
-                personalized = null;
+                personalizedFromAttributes = null;
             }
         }
-        
+
+        this.clearArticle(article);
+        var block = article.querySelector("[data-personalized-block]");
+        var fallback = article.querySelector("[data-personalized-fallback]");
+        if (!block || !fallback) {
+            return;
+        }
+
+        // Prefer doc payload but fall back to attributes captured before clearing
+        var personalized = doc && doc.personalized ? doc.personalized : personalizedFromAttributes;
+        if (personalized && typeof personalized.rank === "number" && isNaN(personalized.rank)) {
+            personalized.rank = null;
+        }
+
         if (!personalized) {
             fallback.classList.remove("hidden");
             return;
@@ -645,6 +766,30 @@
 
         fallback.classList.add("hidden");
         block.classList.remove("hidden");
+
+        var scoreAttr = isNumber(personalized.score) ? String(personalized.score) : "";
+        var rankAttr = personalized.rank != null && !isNaN(personalized.rank) ? String(personalized.rank) : "";
+        var originalRankAttr = personalized.rank_original != null && !isNaN(personalized.rank_original)
+            ? String(personalized.rank_original)
+            : "";
+        var componentsPayload = "{}";
+        try {
+            componentsPayload = JSON.stringify(personalized.components || {});
+        } catch (err) {
+            componentsPayload = "{}";
+        }
+
+        if (scoreAttr) {
+            article.setAttribute("data-personalized-score", scoreAttr);
+        }
+        article.setAttribute("data-personalized-rank", rankAttr);
+        if (personalized.explanation) {
+            article.setAttribute("data-personalized-explanation", personalized.explanation);
+        }
+        article.setAttribute("data-personalized-components", componentsPayload);
+        article.setAttribute("data-personalized-computed-at", personalized.computed_at || "");
+        article.setAttribute("data-personalized-cold-start", personalized.cold_start ? "true" : "false");
+        article.setAttribute("data-personalized-original-rank", originalRankAttr);
 
         var rankEl = block.querySelector("[data-personalized-rank]");
         if (rankEl) {

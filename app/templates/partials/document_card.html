@@ -2,7 +2,7 @@
 <article tabindex="0" class="w-full bg-white rounded-xl border border-mist shadow-sm hover:shadow-lg transition-shadow hover:-translate-y-1 transform will-change-transform p-4 flex flex-col h-full card-edge my-3" data-document-id="{{ document.id }}"
     {% if document.personalized_score is not none and document.personalized_components is not none %}
     data-personalized-score="{{ document.personalized_score }}"
-    data-personalized-rank="{{ document.personalized_rank }}"
+    data-personalized-rank="{{ document.personalized_rank if document.personalized_rank is not none else '' }}"
     data-personalized-explanation="{{ document.personalized_explanation|e }}"
     data-personalized-components='{{ document.personalized_components.to_dict()|tojson|safe }}'
     data-personalized-computed-at="{{ document.personalized_computed_at.isoformat() }}"

@@ -40,8 +40,9 @@
         if (modal) modal.classList.remove('hidden');
     }
 
-    function processAutostarts(){
-        var nodes = document.querySelectorAll('[data-md-autostart]');
+    function processAutostarts(root){
+        var scope = (root && root.querySelectorAll) ? root : document;
+        var nodes = scope.querySelectorAll('[data-md-autostart]');
         if (!nodes || nodes.length === 0) return;
         nodes.forEach(function(node){
             // prefer textContent to preserve newlines and avoid attribute escaping
@@ -52,7 +53,7 @@
             if (node.parentElement) target = node.parentElement.querySelector('[data-md-inline]');
             if (!target){ var s = node.previousElementSibling; while(s){ if (s.hasAttribute && s.hasAttribute('data-md-inline')){ target = s; break; } s = s.previousElementSibling; } }
             if (!target){ var n = node.nextElementSibling; while(n){ if (n.hasAttribute && n.hasAttribute('data-md-inline')){ target = n; break; } n = n.nextElementSibling; } }
-            if (!target) target = document.querySelector('[data-md-inline]');
+            if (!target) target = scope.querySelector('[data-md-inline]');
             if (target){
                 try{
                     var parser = md || (window.markdownit ? initParser() : null);
@@ -85,7 +86,21 @@
 
     // Re-render after HTMX swaps if present
     if (window && window.htmx) {
-        document.body.addEventListener('htmx:afterSwap', function(evt){ renderInlineMarkdown(evt.target); if (window.createIcons) createIcons(); });
+        document.body.addEventListener('htmx:afterSwap', function(evt){ renderInlineMarkdown(evt.target); processAutostarts(evt.target); if (window.createIcons) createIcons(); });
+    }
+
+    try {
+        window.scrapMarkdownRenderInline = renderInlineMarkdown;
+        window.scrapMarkdownProcessAutostarts = processAutostarts;
+        window.scrapMarkdownRefresh = function(root){
+            renderInlineMarkdown(root || document);
+            processAutostarts(root || document);
+            if (typeof window.createIcons === 'function') {
+                try { window.createIcons(); } catch (err) { console.warn('markdown-preview: createIcons failed after refresh', err); }
+            }
+        };
+    } catch (ex) {
+        log('markdown-preview: failed to expose helpers', ex);
     }
 
 })();

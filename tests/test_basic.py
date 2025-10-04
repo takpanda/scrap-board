@@ -1,4 +1,5 @@
 import json
+import re
 import uuid
 from datetime import datetime, timedelta
 
@@ -8,7 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.core.database import Base, Document, PersonalizedScore, get_db
+from app.core.database import Base, Bookmark, Document, PersonalizedScore, get_db
 
 # Mark all tests in this file as unit tests
 pytestmark = pytest.mark.unit
@@ -131,6 +132,7 @@ def _add_personalized_score(
     explanation: str,
     computed_at: datetime,
     user_id: str | None = None,
+    cold_start: bool = False,
 ) -> None:
     payload = json.dumps(
         {
@@ -138,7 +140,7 @@ def _add_personalized_score(
             "category": 0.3,
             "domain": 0.2,
             "freshness": 0.1,
-            "__cold_start": False,
+            "__cold_start": cold_start,
         },
         ensure_ascii=False,
     )
@@ -250,6 +252,129 @@ def test_documents_personalized_sort_respects_user_header(client):
     assert header_data[0]["personalized"]["rank"] == 1
     assert header_data[1]["id"] == doc_default_id
     assert "personalized" not in header_data[1]
+
+
+def test_documents_page_personalized_rank_compacts_after_exclusion(client):
+    session = TestingSessionLocal()
+    user_id = "user-compact"
+    try:
+        now = datetime.utcnow()
+        doc_rank1_id = "doc-rank1"
+        doc_rank2_id = "doc-rank2"
+        doc_rank3_id = "doc-rank3"
+
+        _create_document(session, doc_id=doc_rank1_id, title="おすすめ1", created_at=now)
+        _create_document(session, doc_id=doc_rank2_id, title="おすすめ2", created_at=now - timedelta(minutes=5))
+        _create_document(session, doc_id=doc_rank3_id, title="おすすめ3", created_at=now - timedelta(minutes=10))
+        session.commit()
+
+        _add_personalized_score(
+            session,
+            document_id=doc_rank1_id,
+            rank=1,
+            score=0.95,
+            explanation="rank1",
+            computed_at=now,
+            user_id=user_id,
+        )
+        _add_personalized_score(
+            session,
+            document_id=doc_rank2_id,
+            rank=2,
+            score=0.90,
+            explanation="rank2",
+            computed_at=now,
+            user_id=user_id,
+        )
+        _add_personalized_score(
+            session,
+            document_id=doc_rank3_id,
+            rank=3,
+            score=0.85,
+            explanation="rank3",
+            computed_at=now,
+            user_id=user_id,
+        )
+        session.add(Bookmark(user_id=user_id, document_id=doc_rank2_id))
+        session.commit()
+    finally:
+        session.close()
+
+    response = client.get(
+        "/documents",
+        params={"sort": "personalized"},
+        headers={"X-User-Id": user_id},
+    )
+    assert response.status_code == 200
+
+    ranks = re.findall(r'data-personalized-rank="(\d+)"', response.text)
+    assert ranks == ["1", "2"]
+    assert f'data-document-id="{doc_rank2_id}"' not in response.text
+
+
+def test_personalized_rank_skips_cold_start_entries(client):
+    session = TestingSessionLocal()
+    user_id = "user-cold"
+    try:
+        now = datetime.utcnow()
+        doc_cold_id = "doc-cold"
+        doc_hot_id = "doc-hot"
+
+        _create_document(session, doc_id=doc_cold_id, title="コールドスタート", created_at=now)
+        _create_document(session, doc_id=doc_hot_id, title="通常推薦", created_at=now - timedelta(minutes=3))
+        session.commit()
+
+        _add_personalized_score(
+            session,
+            document_id=doc_cold_id,
+            rank=7,
+            score=0.50,
+            explanation="cold start",
+            computed_at=now,
+            user_id=user_id,
+            cold_start=True,
+        )
+        _add_personalized_score(
+            session,
+            document_id=doc_hot_id,
+            rank=8,
+            score=0.90,
+            explanation="regular",
+            computed_at=now,
+            user_id=user_id,
+        )
+        session.commit()
+    finally:
+        session.close()
+
+    api_response = client.get(
+        "/api/documents",
+        params={"sort": "personalized", "limit": 5},
+        headers={"X-User-Id": user_id},
+    )
+    assert api_response.status_code == 200
+    data = api_response.json()["documents"]
+    personalized_docs = [doc for doc in data if "personalized" in doc]
+    assert len(personalized_docs) >= 2
+    assert personalized_docs[0]["id"] == doc_cold_id
+    assert personalized_docs[0]["personalized"]["cold_start"] is True
+    assert personalized_docs[0]["personalized"]["rank"] in (None, 0)
+
+    assert personalized_docs[1]["id"] == doc_hot_id
+    assert personalized_docs[1]["personalized"]["rank"] == 1
+
+    html_response = client.get(
+        "/documents",
+        params={"sort": "personalized"},
+        headers={"X-User-Id": user_id},
+    )
+    assert html_response.status_code == 200
+    html = html_response.text
+    # コールドスタートの記事はdata-personalized-rankが空、通常記事は1
+    cold_match = re.search(rf'data-document-id="{doc_cold_id}"[^>]*data-personalized-rank="([^"]*)"', html)
+    hot_match = re.search(rf'data-document-id="{doc_hot_id}"[^>]*data-personalized-rank="([^"]*)"', html)
+    assert cold_match is not None and cold_match.group(1) == ""
+    assert hot_match is not None and hot_match.group(1) == "1"
 
 def test_environment_configuration():
     """環境変数設定のテスト"""

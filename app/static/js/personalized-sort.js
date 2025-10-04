@@ -306,8 +306,9 @@
 
         this.originalOrderIds = [];
         this.abortController = null;
+        this.serverFallbackInFlight = false;
         this.currentSort = this.loadPreference();
-        this.refreshStructure();
+        this.refreshStructure({ updateBaseline: true });
 
         this.bindEvents();
         this.updateToggleUI();
@@ -334,17 +335,23 @@
         });
     };
 
-    PersonalizedSortController.prototype.refreshStructure = function () {
+    PersonalizedSortController.prototype.refreshStructure = function (options) {
+        var opts = options || {};
+        var shouldUpdateBaseline = !!opts.updateBaseline;
         this.container = document.getElementById("documents-container");
         this.grid = this.container ? this.container.querySelector("[data-documents-grid]") : null;
         if (!this.grid) {
-            this.originalOrderIds = [];
+            if (shouldUpdateBaseline) {
+                this.originalOrderIds = [];
+            }
             return;
         }
         var articles = this.getArticleElements();
-        this.originalOrderIds = articles.map(function (article) {
-            return article.getAttribute("data-document-id");
-        });
+        if (shouldUpdateBaseline || this.originalOrderIds.length === 0) {
+            this.originalOrderIds = articles.map(function (article) {
+                return article.getAttribute("data-document-id");
+            });
+        }
     };
 
     PersonalizedSortController.prototype.bindEvents = function () {
@@ -367,7 +374,7 @@
                 return;
             }
             if (event.target.id === "documents-container") {
-                self.refreshStructure();
+                self.refreshStructure({ updateBaseline: self.currentSort !== PERSONALIZED_SORT });
                 self.updateToggleUI();
                 if (self.currentSort === PERSONALIZED_SORT) {
                     self.applyPersonalizedSort();
@@ -507,8 +514,19 @@
                     _this.restoreDefaultOrder("empty");
                     return;
                 }
-                _this.reorderWithData(data.documents);
-                _this.container.setAttribute("data-documents-limit", String(data.documents.length));
+                var reorderResult = _this.reorderWithData(data.documents);
+                if (reorderResult && reorderResult.applied) {
+                    _this.container.setAttribute("data-documents-limit", String(data.documents.length));
+                    _this.reapplyIcons();
+                }
+
+                if (reorderResult && reorderResult.missingIds && reorderResult.missingIds.length > 0) {
+                    var fallbackParams = new URLSearchParams(params);
+                    fallbackParams.delete("limit");
+                    _this.requestServerRenderedPersonalized(fallbackParams);
+                    return;
+                }
+                _this.setStatus("ready", data.documents);
             })
             .catch(function (error) {
                 if (error && error.name === "AbortError") {
@@ -521,8 +539,7 @@
 
     PersonalizedSortController.prototype.reorderWithData = function (documents) {
         if (!this.grid) {
-            this.setStatus("ready", documents);
-            return;
+            return { missingIds: [], applied: false };
         }
         var articles = this.getArticleElements();
         var byId = new Map();
@@ -532,9 +549,11 @@
 
         var orderedArticles = [];
         var self = this;
+        var missingIds = [];
         documents.forEach(function (doc) {
             var article = byId.get(doc.id);
             if (!article) {
+                missingIds.push(doc.id);
                 return;
             }
             self.decorateArticle(article, doc);
@@ -555,8 +574,80 @@
 
         this.grid.innerHTML = "";
         this.grid.appendChild(fragment);
-        this.setStatus("ready", documents);
-        this.reapplyIcons();
+        return { missingIds: missingIds, applied: true };
+    };
+
+    PersonalizedSortController.prototype.requestServerRenderedPersonalized = function (params) {
+        if (this.serverFallbackInFlight) {
+            return;
+        }
+        this.serverFallbackInFlight = true;
+        this.setStatus("loading");
+
+        var query = "";
+        if (params instanceof URLSearchParams) {
+            query = params.toString();
+        } else if (typeof params === "string") {
+            query = params;
+        }
+        if (query.indexOf("sort=") === -1) {
+            query = query ? query + "&sort=" + PERSONALIZED_SORT : "sort=" + PERSONALIZED_SORT;
+        }
+        var url = "/documents" + (query ? "?" + query : "");
+
+        var self = this;
+        fetch(url, {
+            headers: {
+                "HX-Request": "true",
+                Accept: "text/html"
+            }
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error("Failed to fetch server-rendered personalized view");
+                }
+                return response.text();
+            })
+            .then(function (html) {
+                var parser = new DOMParser();
+                var parsed = parser.parseFromString(html, "text/html");
+                var newContainer = parsed.getElementById("documents-container");
+                if (!newContainer) {
+                    throw new Error("documents-container not found in server response");
+                }
+                var currentContainer = document.getElementById("documents-container");
+                if (!currentContainer || !currentContainer.parentNode) {
+                    throw new Error("Existing documents container missing");
+                }
+                currentContainer.parentNode.replaceChild(newContainer, currentContainer);
+                self.container = newContainer;
+                self.refreshStructure({ updateBaseline: false });
+                self.decorateExistingArticles();
+                self.reapplyIcons();
+                initFeedbackUI(newContainer);
+                if (typeof window.scrapMarkdownRefresh === "function") {
+                    try {
+                        window.scrapMarkdownRefresh(newContainer);
+                    } catch (err) {
+                        console.warn("Failed to refresh markdown after fallback", err);
+                    }
+                }
+                try {
+                    var currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.set("sort", PERSONALIZED_SORT);
+                    window.history.replaceState({}, "", currentUrl.toString());
+                } catch (err) {
+                    console.warn("Failed to update history state", err);
+                }
+                self.setStatus("ready");
+            })
+            .catch(function (error) {
+                console.error("Server-rendered personalized fallback failed", error);
+                self.restoreDefaultOrder("error");
+            })
+            .finally(function () {
+                self.serverFallbackInFlight = false;
+            });
     };
 
     PersonalizedSortController.prototype.restoreDefaultOrder = function (stateOverride) {
