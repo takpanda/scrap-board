@@ -104,13 +104,17 @@ def process_doc_once(doc_id: str):
 
         try:
             summary = _run_async(lambda: llm_client.generate_summary(text, style="short", timeout_sec=settings.summary_timeout_sec))
-            if summary:
-                doc.short_summary = summary[: settings.short_summary_max_chars]
-                doc.summary_generated_at = datetime.utcnow()
-                doc.summary_model = settings.summary_model or settings.chat_model
-                db.add(doc)
-                db.commit()
-                logger.info("Postprocess: saved short summary for %s", doc_id)
+            # If no summary was produced (None or empty), treat as failure so the job is retried.
+            if summary is None or (isinstance(summary, str) and summary.strip() == ""):
+                logger.error("Postprocess: summary generation returned empty for %s", doc_id)
+                return False, "summary empty"
+            # Save the generated summary
+            doc.short_summary = summary[: settings.short_summary_max_chars]
+            doc.summary_generated_at = datetime.utcnow()
+            doc.summary_model = settings.summary_model or settings.chat_model
+            db.add(doc)
+            db.commit()
+            logger.info("Postprocess: saved short summary for %s", doc_id)
         except Exception as e:
             logger.exception("Postprocess: summary generation failed for %s", doc_id)
             return False, f"summary error: {e}"

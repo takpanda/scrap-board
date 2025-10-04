@@ -33,9 +33,14 @@ class LLMClient:
                 )
                 response.raise_for_status()
                 data = response.json()
-                return data["choices"][0]["message"]["content"]
+                try:
+                    return data["choices"][0]["message"]["content"]
+                except Exception as e:
+                    logger.error(f"Chat completion parse error: {e} response={data}")
+                    return None
         except Exception as e:
-            logger.error(f"Chat completion error: {e}")
+            # log original exception with repr to help debugging connection errors
+            logger.error(f"Chat completion error: {e!r}")
             return None
     
     async def create_embedding(self, text: str) -> Optional[List[float]]:
@@ -98,7 +103,14 @@ class LLMClient:
             coro = self.summarize_text(text, summary_type=("short" if style == "short" else "medium"))
             result = await asyncio.wait_for(coro, timeout=t)
             elapsed = asyncio.get_event_loop().time() - start
-            logger.info(f"summary_generation_success model={self.chat_model} elapsed_ms={int(elapsed*1000)} style={style}")
+            if result is not None:
+                logger.info(
+                    f"summary_generation_success model={self.chat_model} elapsed_ms={int(elapsed*1000)} style={style}"
+                )
+            else:
+                logger.error(
+                    f"summary_generation_none model={self.chat_model} elapsed_ms={int(elapsed*1000)} style={style}"
+                )
             return result
         except asyncio.TimeoutError:
             elapsed = None
