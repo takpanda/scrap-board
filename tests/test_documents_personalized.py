@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+from dateutil.parser import isoparse
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
@@ -49,6 +52,36 @@ def _persist_document(session: Session, *, title: str, created_at: datetime | No
     session.commit()
     session.refresh(doc)
     return doc
+
+
+def test_recent_sort_returns_jst_iso(client: TestClient, db_session: Session):
+    db_session.query(Document).delete()
+    db_session.commit()
+
+    latest_created = datetime(2024, 1, 1, 0, 0)
+    older_created = datetime(2023, 12, 31, 15, 0)
+
+    latest_doc = _persist_document(db_session, title="最新記事", created_at=latest_created)
+    older_doc = _persist_document(db_session, title="前日記事", created_at=older_created)
+
+    response = client.get("/api/documents", params={"sort": "recent", "limit": 10})
+    assert response.status_code == 200
+
+    docs = response.json()["documents"]
+    assert [doc["id"] for doc in docs[:2]] == [latest_doc.id, older_doc.id]
+
+    first_created = docs[0]["created_at"]
+    assert isinstance(first_created, str)
+    assert first_created.endswith("+09:00")
+
+    parsed_first = isoparse(first_created)
+    assert parsed_first.tzinfo is not None
+    expected_first = datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc).astimezone(ZoneInfo("Asia/Tokyo"))
+    assert parsed_first == expected_first
+
+    parsed_second = isoparse(docs[1]["created_at"])
+    expected_second = datetime(2023, 12, 31, 15, 0, tzinfo=timezone.utc).astimezone(ZoneInfo("Asia/Tokyo"))
+    assert parsed_second == expected_second
 
 
 def test_personalized_sort_returns_ranked_documents(client: TestClient, db_session: Session):

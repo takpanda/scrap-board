@@ -12,14 +12,10 @@ from markdown_it import MarkdownIt
 
 from app.core.config import settings
 from app.core.database import get_db, create_tables
+from app.core.timezone import format_jst
 from app.services.scheduler import start_scheduler, stop_scheduler
 from app.api.routes import documents, ingest, collections, utils, admin_sources, bookmarks, bookmarks_only, preferences
 from app.api.routes import admin as admin_routes
-from datetime import timezone, timedelta
-try:
-    from zoneinfo import ZoneInfo
-except Exception:
-    ZoneInfo = None
 
 # ログ設定
 logging.basicConfig(level=getattr(logging, settings.log_level))
@@ -92,28 +88,14 @@ def markdown_filter(text):
     return md.render(text)
 
 templates.env.filters["markdown"] = markdown_filter
-def to_jst(dt, fmt="%Y年%m月%d日 %H:%M"):
-    """日時を日本標準時(JST)に変換してフォーマットする Jinja2 フィルタ。
 
-    - dt が None の場合は空文字を返す。
-    - dt.tzinfo が None の場合は UTC とみなして変換する。
-    - ZoneInfo が利用できない場合は timezone offset +9 を適用する。
-    """
-    if not dt:
+
+def to_jst(dt, fmt="%Y年%m月%d日 %H:%M"):
+    """Format the datetime in Japan Standard Time for Jinja2 templates."""
+    if dt is None:
         return ""
-    try:
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        if ZoneInfo is not None:
-            jst = dt.astimezone(ZoneInfo("Asia/Tokyo"))
-        else:
-            jst = dt.astimezone(timezone(timedelta(hours=9)))
-        return jst.strftime(fmt)
-    except Exception:
-        try:
-            return dt.strftime(fmt)
-        except Exception:
-            return ""
+    return format_jst(dt, fmt)
+
 
 templates.env.filters["to_jst"] = to_jst
 
