@@ -96,7 +96,7 @@
         <div class="p-6">
           <p class="text-sm text-gray-600 mb-6">RSS等の外部ソースを登録してください。cronスケジュールは省略可能です。</p>
           
-          <form id="create-source-form" method="post" action="/api/admin/sources/?html=1" hx-post="/api/admin/sources/?html=1" hx-swap="outerHTML:closest #sources-list" class="space-y-4">
+          <form id="create-source-form" method="post" action="/api/admin/sources/?html=1" hx-post="/api/admin/sources/?html=1" hx-swap="outerHTML:closest #sources-list" hx-indicator="#create-loading" class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 ソース名 <span class="text-red-500">*</span>
@@ -182,15 +182,34 @@
               <p class="mt-1 text-xs text-gray-500">フェードやAPIのエンドポイントURLを指定します（任意）。SpeakerDeckの場合、ユーザー名から自動生成されます。</p>
             </div>
             
-            <button 
-              type="submit" 
-              class="w-full bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors font-medium flex items-center justify-center"
-              style="color: white !important; font-weight: 500 !important; background-color: #059669 !important; min-height: 40px !important;"
-              data-confirm="このソースを作成します。よろしいですか？"
-            >
-              <i data-lucide="plus" class="w-4 h-4 mr-2 flex-shrink-0" style="color: white !important; fill: white !important; stroke: white !important;"></i>
-              <span style="color: white !important; font-size: 14px !important; font-weight: 500 !important; display: inline-block !important;">ソースを作成</span>
-            </button>
+            <div class="relative">
+              <button
+                type="submit"
+                class="w-full bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                style="color: white !important; font-weight: 500 !important; background-color: #059669 !important; min-height: 40px !important;"
+                data-confirm="このソースを作成します。よろしいですか？"
+              >
+                <i data-lucide="plus" class="w-4 h-4 mr-2 flex-shrink-0" style="color: white !important; fill: white !important; stroke: white !important;"></i>
+                <span style="color: white !important; font-size: 14px !important; font-weight: 500 !important; display: inline-block !important;">ソースを作成</span>
+              </button>
+
+              <!-- Loading indicator -->
+              <div id="create-loading" class="htmx-indicator absolute inset-0 flex items-center justify-center bg-emerald-600 rounded-md">
+                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="ml-2 text-white text-sm font-medium">作成中...</span>
+              </div>
+            </div>
+
+            <!-- Success message (hidden by default) -->
+            <div id="create-success" class="hidden p-3 bg-green-50 border border-green-200 rounded-md">
+              <div class="flex items-center text-green-800">
+                <i data-lucide="check-circle" class="w-5 h-5 mr-2 text-green-600"></i>
+                <span class="text-sm font-medium">ソースを作成しました</span>
+              </div>
+            </div>
           </form>
         </div>
       </div>
@@ -608,9 +627,29 @@
   initConfirmHandlers();
 
   // Re-initialize after HTMX updates
-  document.addEventListener('htmx:afterSwap', function() {
+  document.addEventListener('htmx:afterSwap', function(evt) {
     initIcons();
     initSearchAndFilter();
     initConfirmHandlers();
+
+    // Show success message and reset form if it was a successful source creation
+    if (evt.detail.target.id === 'sources-list') {
+      const form = document.getElementById('create-source-form');
+      const successMsg = document.getElementById('create-success');
+
+      if (form && successMsg) {
+        // Reset form
+        form.reset();
+
+        // Show success message
+        successMsg.classList.remove('hidden');
+        createIcons(); // Re-initialize icons in success message
+
+        // Hide success message after 3 seconds
+        setTimeout(function() {
+          successMsg.classList.add('hidden');
+        }, 3000);
+      }
+    }
   });
 </script>

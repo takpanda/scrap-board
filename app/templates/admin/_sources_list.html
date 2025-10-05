@@ -1,66 +1,63 @@
 <div class="space-y-4">
   {% for s in sources %}
-  <div class="source-card bg-white rounded-lg border border-gray-200 p-4 hover:border-emerald-300 hover:shadow-md transition-all duration-200" data-source-id="{{ s.id }}" data-source-name="{{ s.name|lower }}" data-source-type="{{ s.type }}" data-source-status="{{ 'enabled' if s.enabled else 'disabled' }}">
-    <div class="flex items-center justify-between">
+  <div class="source-card bg-white rounded-xl border border-gray-200 shadow-md p-4 hover:shadow-lg hover:border-emerald-400 transition-all duration-200" data-source-id="{{ s.id }}" data-source-name="{{ s.name|lower }}" data-source-type="{{ s.type }}" data-source-status="{{ 'enabled' if s.enabled else 'disabled' }}">
+    <div class="flex items-center justify-between gap-3">
       <!-- Left: Main info -->
-      <div class="flex items-center space-x-4 flex-1">
+      <div class="flex items-center space-x-3 flex-1 min-w-0">
   {% set icon = 'rss' if s.type == 'rss' else 'code' if s.type == 'qiita' else 'bookmark' if s.type == 'hatena' else 'file-down' if s.type == 'speakerdeck' else 'file-text' %}
         <div class="flex-shrink-0">
-          <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-            <i data-lucide="{{ icon }}" class="w-5 h-5 text-emerald-600"></i>
+          <div class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+            <i data-lucide="{{ icon }}" class="w-4 h-4 text-emerald-600"></i>
           </div>
         </div>
-        
+
         <div class="flex-1 min-w-0">
-          <div class="flex items-center space-x-3">
-            <h3 class="text-lg font-semibold text-gray-900 truncate">{{ s.name }}</h3>
-            <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
+          <div class="flex items-center space-x-2">
+            <h3 class="text-base font-semibold text-gray-900 truncate">{{ s.name }}</h3>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 flex-shrink-0">
               {{ s.type }}
             </span>
           </div>
-          
-          <div class="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-            <span class="cron-display">
-              <i data-lucide="clock" class="w-4 h-4 inline mr-1"></i>
+
+          <div class="mt-0.5 flex items-center space-x-3 text-xs text-gray-500">
+            <span class="cron-display truncate">
+              <i data-lucide="clock" class="w-3 h-3 inline mr-0.5"></i>
               {{ s.cron_schedule or '手動実行' }}
             </span>
-            <span>ID: {{ s.id }}</span>
+            <span class="flex-shrink-0">ID: {{ s.id }}</span>
           </div>
         </div>
       </div>
 
       <!-- Right: Status and actions -->
-      <div class="flex items-center space-x-3">
+      <div class="flex items-center space-x-2 flex-shrink-0">
         <!-- Status -->
         <div>
           {% if s.enabled %}
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-              <i data-lucide="check-circle" class="w-4 h-4 mr-1"></i>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <i data-lucide="check-circle" class="w-3 h-3 mr-0.5"></i>
               有効
             </span>
           {% else %}
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
-              <i data-lucide="pause-circle" class="w-4 h-4 mr-1"></i>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+              <i data-lucide="pause-circle" class="w-3 h-3 mr-0.5"></i>
               無効
             </span>
           {% endif %}
         </div>
 
         <!-- Action buttons -->
-        <div class="flex items-center space-x-2">
-          <button type="button" class="edit-btn px-3 py-1.5 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors border border-gray-200 text-sm flex items-center" aria-label="編集 {{ s.name }}" title="編集" style="color: #374151 !important;">
-            <i data-lucide="edit-2" class="w-4 h-4 mr-1 flex-shrink-0"></i>
-            <span style="color: inherit !important;">編集</span>
+        <div class="flex items-center space-x-1">
+          <button type="button" class="edit-btn p-1.5 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors border border-gray-200 text-sm" aria-label="編集 {{ s.name }}" title="編集" style="color: #374151 !important;">
+            <i data-lucide="edit-2" class="w-4 h-4 flex-shrink-0"></i>
           </button>
-          
-          <button hx-put="/api/admin/sources/{{ s.id }}?html=1" hx-vals='{"enabled": {{ 0 if s.enabled else 1 }}}' hx-swap="outerHTML:closest #sources-list" class="px-3 py-1.5 text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors border border-gray-200 text-sm flex items-center" aria-label="状態切替 {{ s.name }}" title="{{ '無効化' if s.enabled else '有効化' }}" style="color: #374151 !important;" data-confirm="{{ 'このソースを無効化します。よろしいですか？' if s.enabled else 'このソースを有効化します。よろしいですか？' }}">
-            <i data-lucide="{{ 'eye-off' if s.enabled else 'eye' }}" class="w-4 h-4 mr-1 flex-shrink-0"></i>
-            <span style="color: inherit !important;">{{ '無効化' if s.enabled else '有効化' }}</span>
+
+          <button hx-put="/api/admin/sources/{{ s.id }}?html=1" hx-vals='{"enabled": {{ 0 if s.enabled else 1 }}}' hx-swap="outerHTML:closest #sources-list" class="p-1.5 text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors border border-gray-200 text-sm" aria-label="状態切替 {{ s.name }}" title="{{ '無効化' if s.enabled else '有効化' }}" style="color: #374151 !important;" data-confirm="{{ 'このソースを無効化します。よろしいですか？' if s.enabled else 'このソースを有効化します。よろしいですか？' }}">
+            <i data-lucide="{{ 'eye-off' if s.enabled else 'eye' }}" class="w-4 h-4 flex-shrink-0"></i>
           </button>
-          
-          <button hx-delete="/api/admin/sources/{{ s.id }}?html=1" hx-swap="outerHTML:closest #sources-list" class="px-3 py-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors border border-red-200 text-sm flex items-center" aria-label="削除 {{ s.name }}" title="削除" style="color: #dc2626 !important;" data-confirm="このソースを削除します。復元できません。よろしいですか？">
-            <i data-lucide="trash-2" class="w-4 h-4 mr-1 flex-shrink-0"></i>
-            <span style="color: inherit !important;">削除</span>
+
+          <button hx-delete="/api/admin/sources/{{ s.id }}?html=1" hx-swap="outerHTML:closest #sources-list" class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors border border-red-200 text-sm" aria-label="削除 {{ s.name }}" title="削除" style="color: #dc2626 !important;" data-confirm="このソースを削除します。復元できません。よろしいですか？">
+            <i data-lucide="trash-2" class="w-4 h-4 flex-shrink-0"></i>
           </button>
         </div>
       </div>
