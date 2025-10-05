@@ -1,0 +1,22 @@
+{
+  "feature_name": "admin-postprocess-jobs-link",
+  "created_at": "2025-10-05T02:14:19Z",
+  "updated_at": "2025-10-05T02:19:12Z",
+  "language": "ja",
+  "phase": "tasks-generated",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": false
+    }
+  },
+  "ready_for_implementation": false
+}

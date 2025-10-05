@@ -11,8 +11,21 @@
         <h1 class="text-3xl font-bold text-gray-900">ソース管理</h1>
         <p class="mt-2 text-gray-600">フィードや外部ソースの登録・スケジュール・有効/無効の管理を行います。</p>
       </div>
-      <div class="text-sm text-gray-500">
-        合計: <span id="source-count" class="font-semibold text-gray-900">{{ sources|length }}</span> 件
+      <div class="flex items-center gap-4">
+        <!-- 新規追加: Jobs Dashboard リンク -->
+        <a
+          href="/admin/postprocess_jobs"
+          class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors"
+          aria-label="Postprocess Jobs Dashboard へ移動"
+          title="ジョブダッシュボード"
+        >
+          <i data-lucide="activity" class="w-4 h-4"></i>
+          <span>ジョブダッシュボード</span>
+        </a>
+        <!-- 既存: ソース件数表示 -->
+        <div class="text-sm text-gray-500">
+          合計: <span id="source-count" class="font-semibold text-gray-900">{{ sources|length }}</span> 件
+        </div>
       </div>
     </div>
     
