@@ -143,6 +143,7 @@ class Document(Base):
     source = Column(String, nullable=True)
     original_url = Column(String, nullable=True)
     thumbnail_url = Column(String, nullable=True)
+    pdf_path = Column(String, nullable=True)
     fetched_at = Column(DateTime, nullable=True)
     hash = Column(String, nullable=False, index=True)
     created_at = Column(DateTime, default=func.now())
@@ -322,6 +323,7 @@ def create_tables():
                     ("source", "TEXT"),
                     ("original_url", "TEXT"),
                     ("thumbnail_url", "TEXT"),
+                    ("pdf_path", "TEXT"),
                     ("fetched_at", "TEXT"),
                 ]
 
