@@ -50,7 +50,10 @@ class SpeakerDeckHandler:
         """
         try:
             parsed = urlparse(url)
-            return parsed.netloc.lower() == self.SPEAKERDECK_DOMAIN
+            # Use hostname for a normalized check (handles ports and case)
+            hostname = (parsed.hostname or "").lower()
+            # Accept exact domain or any subdomain of speakerdeck.com (e.g. www.speakerdeck.com)
+            return hostname == self.SPEAKERDECK_DOMAIN or hostname.endswith(f".{self.SPEAKERDECK_DOMAIN}")
         except Exception as e:
             logger.warning(f"Failed to parse URL {url}: {e}")
             return False

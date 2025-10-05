@@ -512,7 +512,7 @@ async def download_pdf(
     Returns the PDF file if available, otherwise raises 404.
     Includes security validations to prevent path traversal attacks.
     """
-    from fastapi.responses import FileResponse
+    from fastapi.responses import FileResponse, RedirectResponse
     from pathlib import Path
     from sqlalchemy import text
     import re
@@ -531,6 +531,11 @@ async def download_pdf(
     # Check if PDF path exists
     if not pdf_path:
         raise HTTPException(status_code=404, detail="PDF not available for this document")
+
+    # If pdf_path is an external URL, redirect to it
+    if isinstance(pdf_path, str) and pdf_path.lower().startswith(('http://', 'https://')):
+        # Use RedirectResponse so browser navigates to the external PDF URL
+        return RedirectResponse(url=pdf_path)
     
     # Construct full file path
     base_dir = Path("data")
