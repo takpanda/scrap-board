@@ -16,6 +16,8 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 
 ### Active Specifications
 - `admin-postprocess-jobs-link`: 管理画面にPostprocess Jobs Dashboardへのナビゲーションリンクを追加
+- `recommended-exclude-bookmarked`: ドキュメント一覧で「おすすめ順」選択時にブックマーク済み記事を除外
+- `article-card-icon-only-button`: 記事カードの「詳細を表示」ボタンをアイコンのみのシンプルな表示に変更
 
 ## Development Guidelines
 - Think in English, but generate responses in Japanese (思考は英語、回答の生成は日本語で行うように)
