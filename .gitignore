@@ -24,6 +24,8 @@ share/python-wheels/
 MANIFEST
 old
 screenshots/
+.playwright-mcp/
+.pytest_cache/
 
 # Virtual environments
 .env
