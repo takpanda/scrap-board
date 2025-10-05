@@ -2,125 +2,139 @@
 
 ## アーキテクチャ概要
 
-Scrap-Boardは、FastAPIバックエンド、HTMX駆動のフロントエンド、ローカルLLMサービスの3層構成で設計されています。
+Scrap-Boardは、シンプルで保守しやすいモノリシックWebアプリケーションとして設計されています。
+
+### アーキテクチャパターン
+- **モノリシック**: 単一のFastAPIアプリケーション
+- **テンプレート駆動型**: Jinja2テンプレートによるサーバーサイドレンダリング
+- **HTMXベースSPA風UI**: AJAX的な部分更新をHTMXで実現
+- **非同期バックグラウンド処理**: APScheduler + スレッドプールで要約・埋め込み生成
+
+### システム構成図
 
 ```
 ┌─────────────────┐
-│   HTMX + Jinja2 │ フロントエンド（ブラウザ）
+│  ブラウザ       │
+│  (HTMX + Jinja2)│
 └────────┬────────┘
-         │ HTTP/HTMX
+         │ HTTP
 ┌────────▼────────┐
-│     FastAPI     │ アプリケーションサーバー
+│  FastAPI App    │
+│  (uvicorn)      │
 ├─────────────────┤
-│  SQLite + ORM   │ データ永続化層
-└────────┬────────┘
-         │ HTTP API
+│  SQLite DB      │
+│  (SQLAlchemy)   │
+└─────────────────┘
+         │
 ┌────────▼────────┐
-│  LM Studio/     │ LLMサービス（ローカル）
-│    Ollama       │
+│  LM Studio/     │
+│  Ollama         │
+│  (OpenAI API互換)│
 └─────────────────┘
 ```
 
 ## バックエンド
 
 ### 言語・フレームワーク
-- **Python 3.13+**: メイン言語
-- **FastAPI**: 高速・モダンなWeb フレームワーク
-- **SQLAlchemy 2.0+**: ORM/データベース抽象化
-- **Pydantic 2.0+**: データバリデーション・設定管理
+- **Python 3.13+**: メイン開発言語
+- **FastAPI 0.104+**: 高速なWeb APIフレームワーク
+- **Uvicorn**: ASGI サーバー（標準モード、リロード対応）
+- **SQLAlchemy 2.0+**: ORM（Object-Relational Mapping）
+- **Alembic 1.12+**: データベースマイグレーション管理
 
 ### データベース
-- **SQLite**: 開発・個人利用向けの軽量DB
-- **Alembic**: マイグレーション管理（将来的な本番運用向け）
-- **カスタムマイグレーションスクリプト**: ローカル開発向け簡易スクリプト（`migrations/`）
+- **SQLite**: 軽量・ファイルベースのRDB
+  - パス: `./data/scraps.db`
+  - フルテキスト検索: FTS5（タイトル、コンテンツ）
+  - ベクトル埋め込み: BLOBとして保存（将来的に専用ベクトルストア検討）
 
-### 主要ライブラリ
+### コンテンツ抽出
+- **Trafilatura 1.6+**: HTML→Markdown変換、Webページ抽出
+- **Docling 2.0+**: PDF抽出（プライマリ、高精度）
+- **pdfminer.six**: PDF抽出（フォールバック、軽量）
+- **Feedparser 6.0+**: RSS/Atomフィード解析
 
-#### コンテンツ抽出
-- **Trafilatura**: HTML記事抽出（プライマリ）
-- **Docling 2.0+**: PDF処理（高精度テキスト・構造抽出）
-- **pdfminer.six**: PDFフォールバック処理
+### LLM統合
+- **httpx 0.25+**: 非同期HTTPクライアント
+- **OpenAI SDK 1.0+**: LM Studio/Ollama（OpenAI互換API）との連携
+- **LM Studio**: ローカルLLM（推奨、GUIで簡単セットアップ）
+- **Ollama**: ローカルLLM（代替、CLIベース）
 
-#### LLM統合
-- **httpx**: 非同期HTTPクライアント
-- **openai**: OpenAI互換API クライアント（LM Studio/Ollama向け）
+### バックグラウンドジョブ
+- **APScheduler 3.10+**: cron形式のスケジューリング
+- **スレッドプール**: 要約・埋め込み生成の非同期実行
+- **DBキュー**: `postprocess_jobs`テーブルでジョブ管理（リトライ対応）
 
-#### データ処理
-- **numpy**: 数値計算・埋め込みベクトル処理
-- **pandas**: データ分析・統計処理
-- **langdetect**: 言語検出
-
-#### バックグラウンドジョブ
-- **APScheduler**: スケジューラ（RSS定期取得等）
-- **カスタムジョブキュー**: `postprocess_jobs`, `personalization_jobs` テーブルベース
-
-#### その他
-- **feedparser**: RSSフィード解析
-- **python-dateutil**: 日付パース（RFC 2822等）
-- **aiofiles**: 非同期ファイルI/O
+### ユーティリティ
+- **python-dotenv 1.0+**: 環境変数管理（`.env`ファイル）
+- **Pydantic 2.0+**: データバリデーション・設定管理
+- **langdetect 1.0.9+**: 言語検出（日本語/英語判定）
+- **python-dateutil 2.8.2+**: RFC 2822等の日付パース
+- **aiofiles 23.0+**: 非同期ファイル操作
 
 ## フロントエンド
 
-### アーキテクチャ
-- **HTMX**: サーバーサイドHTMLレンダリング + 部分更新
-- **Jinja2**: テンプレートエンジン
-- **Tailwind CSS**: ユーティリティファーストCSSフレームワーク
+### テンプレートエンジン
+- **Jinja2 3.1+**: Pythonテンプレートエンジン
+  - パス: `app/templates/`
+  - 部分テンプレート: `app/templates/partials/`（再利用可能コンポーネント）
 
-### JavaScript（最小限）
-- **htmx-minimal.js**: HTMX拡張
-- **markdown-preview.js**: マークダウンプレビュー
-- **personalized-sort.js**: パーソナライズソートUI
-- **icons.js**: アイコン表示ヘルパー
+### CSSフレームワーク
+- **Tailwind CSS**: ユーティリティファーストCSS
+  - 最小化版: `app/static/css/tailwind.min.css`
+  - カスタムスタイル: `app/static/css/style.css`（グローバルボタンスタイル等）
+  - カード装飾: `app/static/css/card-edge-fix.css`
 
-### 設計方針
-- **SPAフレームワーク不使用**: React/Vueなどに依存しない軽量実装
-- **プログレッシブエンハンスメント**: JavaScriptなしでも基本機能が動作
-- **サーバーサイドレンダリング**: SEO対応・初期表示高速化
+### JavaScript
+- **Vanilla JavaScript**: フレームワークなし、軽量実装
+  - `app/static/js/personalized-sort.js`: パーソナライズ機能のトグル・UI
+  - `app/static/js/markdown-preview.js`: Markdown表示
+  - `app/static/js/icons.js`: Lucideアイコンの初期化
+- **HTMX（minimal版）**: `app/static/js/htmx-minimal.js`
+  - AJAX的な部分更新（`hx-get`, `hx-post`, `hx-target`）
+  - プッシュ履歴（`hx-push-url`）
+  - ローディングインジケーター（`hx-indicator`）
 
-## LLM統合
-
-### サポート対象
-- **LM Studio**（推奨）: GUIでモデル管理、OpenAI互換API提供
-- **Ollama**: CLIベースのローカルLLM実行環境
-
-### API構成
-- **チャットAPI** (`CHAT_API_BASE`): 要約・分類生成
-- **埋め込みAPI** (`EMBED_API_BASE`): ベクトル化・類似検索
-
-### 接続設定
-```env
-CHAT_API_BASE=http://localhost:1234/v1
-CHAT_MODEL=gpt-4o-mini-compat-or-your-local
-EMBED_API_BASE=http://localhost:1234/v1
-EMBED_MODEL=text-embedding-3-large-or-nomic-embed-text
-```
+### アイコンシステム
+- **Lucide Icons**: SVGアイコンライブラリ
+  - CDN経由で読み込み
+  - `data-lucide`属性で動的にレンダリング
 
 ## 開発環境
 
 ### 必須ツール
-- **Python 3.13+**: ランタイム
-- **pip**: パッケージマネージャ
-- **venv**: 仮想環境（`.venv/`）
-- **Git**: バージョン管理
+- **Python 3.13+**: 開発言語
+- **pip**: パッケージ管理
+- **virtualenv**: 仮想環境（推奨: `.venv/`）
+- **SQLite3**: データベースCLI（デバッグ・マイグレーション）
 
 ### 推奨ツール
-- **Docker + docker-compose**: コンテナ環境構築
-- **Playwright**: E2Eテスト・スクリーンショットテスト
-- **pytest**: ユニット・統合テスト
+- **LM Studio**: ローカルLLM（GUI、簡単セットアップ）
+- **Ollama**: ローカルLLM（CLI、代替）
+- **Docker + docker-compose**: コンテナ実行（オプション）
+- **pytest**: テスト実行
+- **Playwright**: E2Eテスト（ブラウザ自動化）
 
-### セットアップ手順
+### エディタ/IDE
+- **VS Code**: 推奨（Python拡張、Jinja2シンタックスハイライト）
+- **PyCharm**: 代替
+- **Claude Code**: AI駆動開発（spec-driven development）
+
+## よく使うコマンド
+
+### 開発環境セットアップ
+
 ```bash
-# 仮想環境作成・有効化
+# 仮想環境作成（fishシェル例）
 python -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-# または .venv\Scripts\activate  # Windows
+source .venv/bin/activate.fish
 
-# 依存関係インストール
+# 依存パッケージインストール
 pip install -r requirements.txt
 
 # 環境変数設定
 cp .env.example .env
-# .envを編集してLLMエンドポイント設定
+# .envを編集してLLMエンドポイントを設定
 
 # データベース初期化
 python -m app.database.init
@@ -129,23 +143,21 @@ python -m app.database.init
 python migrations/apply_migrations.py --db ./data/scraps.db
 ```
 
-## 共通コマンド
+### アプリケーション起動
 
-### 開発サーバー起動
 ```bash
+# 開発サーバー起動（ホットリロード有効）
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
 
-### ワーカープロセス起動
-```bash
-# ポストプロセスワーカー（要約・埋め込み生成）
+# ポストプロセスワーカー起動（別ターミナル）
 python -m app.services.postprocess_queue
 
-# パーソナライゼーションワーカー（嗜好プロファイル更新）
-python -m app.services.personalization_queue
+# パーソナライゼーションワーカー起動（別ターミナル）
+PYTHONPATH=. python scripts/run_preference_worker.py --interval 2.0 
 ```
 
 ### テスト実行
+
 ```bash
 # 全テスト実行
 pytest
@@ -153,90 +165,225 @@ pytest
 # 特定テスト実行
 pytest tests/test_postprocess.py -v
 
-# Playwrightテスト
+# Playwrightテスト（E2E）
 pytest tests/test_browser.py --headed
+
+# カバレッジ付きテスト
+pytest --cov=app --cov-report=html
 ```
 
-### マイグレーション
+### データベース操作
+
 ```bash
-# バックアップ作成（必須）
-mkdir -p data/backup
+# SQLite CLIで接続
+sqlite3 data/scraps.db
+
+# スキーマ確認
+sqlite3 data/scraps.db ".schema documents"
+
+# バックアップ作成
 cp data/scraps.db data/backup/scraps.db.$(date +%Y%m%d%H%M%S)
-
-# マイグレーション適用
-python migrations/apply_migrations.py --db ./data/scraps.db
-
-# ゲストユーザーマイグレーション
-python migrations/migrate_null_to_guest.py --dry-run
-python migrations/migrate_null_to_guest.py
 ```
 
-### Docker運用
+### Docker実行
+
 ```bash
-# コンテナ起動
+# コンテナビルド＆起動
 docker-compose up -d --build
 
 # ログ確認
 docker-compose logs -f app
 docker-compose logs -f worker
 
-# コンテナ内でコマンド実行
-docker exec -it scrap-board-app-1 python migrations/apply_migrations.py --db ./data/scraps.db
+# コンテナ停止
+docker-compose down
 ```
 
 ## 環境変数
 
+### 必須設定（`.env`ファイル）
+
+```env
+# データベース
+DB_URL=sqlite:///./data/scraps.db
+
+# LLM設定（LM Studio）
+CHAT_API_BASE=http://localhost:1234/v1
+CHAT_MODEL=your-local-chat-model
+EMBED_API_BASE=http://localhost:1234/v1
+EMBED_MODEL=your-local-embed-model
+
+# タイムアウト設定
+TIMEOUT_SEC=30
+
+# パーソナライゼーション設定
+PERSONALIZATION_ENABLED=true
+PERSONALIZATION_MIN_BOOKMARKS=3
+```
+
+### オプション設定
+
+```env
+# ログレベル
+LOG_LEVEL=INFO
+
+# ワーカー設定
+WORKER_POLL_INTERVAL=5
+WORKER_MAX_RETRIES=3
+
+# フィードバック設定
+FEEDBACK_SCORE_PENALTY=-0.3
+```
+
+## ポート設定
+
+| サービス | ポート | 用途 |
+|---------|--------|------|
+| FastAPI App | 8000 | メインWebアプリケーション |
+| LM Studio | 1234 | ローカルLLM（OpenAI互換API） |
+| Ollama | 11434 | ローカルLLM（代替） |
+
+## CSS競合問題と対策
+
+### グローバルボタンスタイルの影響
+
+`app/static/css/style.css`に定義されたグローバルなボタンスタイルが、Tailwindクラスだけでは上書きできない問題が存在します。
+
+**影響範囲**: すべての`<button>`要素
+
+**対策**: アイコンのみのボタンを実装する際は、インラインスタイルで`!important`を使用してリセット：
+
+```html
+<button
+    type="button"
+    style="background: none !important; border: none !important; padding: 0 !important; margin: 0 !important; outline: none !important;">
+    <i data-lucide="icon-name"></i>
+</button>
+```
+
+**理由**: グローバルCSSルールがボタンに背景、ボーダー、パディングを強制的に適用しているため。
+
+**今後の改善**: グローバルボタンスタイルをクラスベース（`.btn`等）に変更し、デフォルトボタンへの影響を削減する。
+
+## 依存関係管理
+
+### requirements.txtの構成
+
+```
+# Core FastAPI dependencies
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.12.0
+
+# Content extraction
+trafilatura>=1.6.0
+docling>=2.0.0
+pdfminer.six>=20221105
+
+# LLM and embeddings
+httpx>=0.25.0
+openai>=1.0.0
+
+# Background jobs
+apscheduler>=3.10.0
+
+# Development dependencies
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+playwright>=1.40.0
+```
+
+### バージョン管理戦略
+- **メジャーバージョン固定**: 破壊的変更を避ける（`>=`で最小バージョン指定）
+- **定期更新**: 月1回程度、依存関係の更新を確認
+- **セキュリティパッチ**: 脆弱性報告があれば即座に更新
+
+## パフォーマンス最適化
+
 ### データベース
-- `DB_URL`: SQLite接続文字列（例: `sqlite:///./data/scraps.db`）
+- **インデックス**: `documents.title`, `documents.created_at`等に作成
+- **FTS5**: フルテキスト検索の高速化
+- **PRAGMA最適化**: `journal_mode=WAL`, `synchronous=NORMAL`
 
-### LLM設定
-- `CHAT_API_BASE`: チャットAPIエンドポイント
-- `CHAT_MODEL`: チャットモデル名
-- `EMBED_API_BASE`: 埋め込みAPIエンドポイント
-- `EMBED_MODEL`: 埋め込みモデル名
-- `TIMEOUT_SEC`: APIタイムアウト（デフォルト: 30秒）
-- `MAX_RETRIES`: リトライ回数（デフォルト: 3回）
+### 非同期処理
+- **バックグラウンドジョブ**: 要約・埋め込み生成は非同期実行
+- **DBキュー**: リトライ・エラーハンドリング対応
+- **スレッドプール**: 並列処理で高速化
 
-### アプリケーション
-- `APP_TITLE`: アプリケーション名（デフォルト: "Scrap-Board"）
-- `APP_VERSION`: バージョン（デフォルト: "1.0.0"）
-- `SECRET_KEY`: セッション暗号化キー（本番環境では変更必須）
-- `LOG_LEVEL`: ログレベル（INFO/DEBUG/WARNING/ERROR）
+### フロントエンド
+- **HTMX**: 部分更新で全ページリロードを回避
+- **Lazy loading**: 画像の遅延読み込み（`loading="lazy"`）
+- **Tailwind CSS圧縮**: 最小化版を使用
 
-### ファイル管理
-- `UPLOAD_DIR`: アップロードファイル保存先（デフォルト: `./data/uploads`）
-- `ASSETS_DIR`: 静的アセット保存先（デフォルト: `./data/assets`）
-- `MAX_FILE_SIZE`: 最大ファイルサイズ（デフォルト: 50MB）
+## セキュリティ考慮事項
 
-## ポート構成
+### プライバシー保護
+- **ローカル実行**: LLMはローカルで動作、データは外部送信なし
+- **個人データ**: すべてローカルSQLiteに保存
 
-### 開発環境（標準）
-- **8000**: FastAPIアプリケーション（uvicorn）
-- **1234**: LM Studio APIサーバー
-- **11434**: Ollama APIサーバー
+### 入力バリデーション
+- **Pydantic**: リクエストデータの型検証
+- **SQLAlchemy**: SQLインジェクション対策（パラメータ化クエリ）
+- **HTMLエスケープ**: Jinja2のautoescapeでXSS対策
 
-### Docker環境
-- **8000**: 公開ポート（ホスト → コンテナ）
-- `host.docker.internal`: コンテナ→ホストLLMサービス接続用
+### 認証・認可
+- **現状**: 単一ユーザー前提（認証なし）
+- **将来**: マルチユーザー対応時に認証機能追加予定
 
-## アーキテクチャ設計の主要原則
+## テスト戦略
 
-### シンプルさ優先
-- **最小限のJavaScript**: サーバーサイドレンダリング中心
-- **モノリシック構成**: マイクロサービスではなく単一アプリケーション
-- **標準ライブラリ優先**: 独自実装よりも実績あるライブラリを活用
+### 単体テスト
+- **pytest**: 関数・クラス単位のテスト
+- **モック**: LLMクライアント等の外部依存をモック化
 
-### プライバシー・セキュリティ
-- **ローカルLLM対応**: データ外部送信なし
-- **セルフホスト可能**: 外部サービス依存なし
-- **認証・認可**: ゲストユーザーモデル（将来的にマルチユーザー拡張可能）
+### 統合テスト
+- **データベース**: テスト用SQLiteで実データ操作
+- **APIエンドポイント**: FastAPIのTestClientで検証
 
-### スケーラビリティ
-- **非同期処理**: バックグラウンドジョブキュー
-- **キャッシング**: 埋め込みベクトルのDB永続化
-- **DB抽象化**: SQLAlchemyによるDB切り替え容易性（PostgreSQL等への移行可能）
+### E2Eテスト
+- **Playwright**: ブラウザ自動化でUI操作テスト
+- **日本語対応**: フォント設定（Noto Sans JP）で日本語文字化け対策
 
-### テスタビリティ
-- **pytest + モック**: ユニット・統合テスト
-- **Playwright**: E2Eテスト・UI回帰テスト
-- **CI/CD対応**: テスト自動化前提の設計
+## 開発ワークフロー
+
+### 1. 仕様駆動開発（Spec-Driven Development）
+- `/kiro:spec-init`: 機能仕様の初期化
+- `/kiro:spec-requirements`: 要件定義の生成
+- `/kiro:spec-design`: 技術設計の作成
+- `/kiro:spec-tasks`: 実装タスクの生成
+- `/kiro:spec-impl`: タスクの実装
+
+### 2. Git運用
+- **ブランチ戦略**: main（本番）、feature/〇〇（機能開発）
+- **コミットメッセージ**: `feat:`, `fix:`, `docs:`等のプレフィックス
+- **プルリクエスト**: `gh pr create`でPR作成
+
+### 3. デプロイ
+- **ローカル開発**: `uvicorn --reload`でホットリロード
+- **本番環境**: Docker Composeで複数サービス管理（app + worker）
+- **データバックアップ**: `data/backup/`に定期バックアップ
+
+## トラブルシューティング
+
+### LLM接続エラー
+- **確認**: LM Studio/Ollamaが起動しているか
+- **エンドポイント**: `.env`の`CHAT_API_BASE`, `EMBED_API_BASE`が正しいか
+- **モデル**: LM Studioでモデルがロードされているか
+
+### データベースエラー
+- **マイグレーション**: `migrations/apply_migrations.py`で最新スキーマに更新
+- **破損**: バックアップから復元（`data/backup/`）
+- **ロック**: WALモード（`journal_mode=WAL`）で改善
+
+### ワーカー未起動
+- **確認**: `postprocess_jobs`テーブルに`pending`ジョブがあるか
+- **ワーカー**: `python -m app.services.postprocess_queue`が起動しているか
+- **ログ**: ワーカーログでエラーを確認
+
+### Playwrightテスト失敗
+- **フォント**: Noto Sans JPがインストールされているか
+- **ブラウザ**: `playwright install`でブラウザをインストール
+- **タイムアウト**: `--timeout=30000`でタイムアウトを延長

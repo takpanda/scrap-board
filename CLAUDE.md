@@ -15,8 +15,9 @@ Kiro-style Spec Driven Development implementation using claude code slash comman
 **Specs** (`.kiro/specs/`) - Formalize development process for individual features
 
 ### Active Specifications
-- Check `.kiro/specs/` for active specifications
-- Use `/kiro:spec-status [feature-name]` to check progress
+- `admin-postprocess-jobs-link`: 管理画面にPostprocess Jobs Dashboardへのナビゲーションリンクを追加
+- `recommended-exclude-bookmarked`: ドキュメント一覧で「おすすめ順」選択時にブックマーク済み記事を除外
+- `article-card-icon-only-button`: 記事カードの「詳細を表示」ボタンをアイコンのみのシンプルな表示に変更
 
 ## Development Guidelines
 - Think in English, but generate responses in Japanese (思考は英語、回答の生成は日本語で行うように)
@@ -70,3 +71,9 @@ Managed by `/kiro:steering` command. Updates here reflect command changes.
 - **Conditional**: Loaded for specific file patterns (e.g., "*.test.js")
 - **Manual**: Reference with `@filename.md` syntax
 
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
