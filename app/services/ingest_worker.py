@@ -3,6 +3,8 @@ import json
 from typing import Any, Dict, Optional
 from datetime import datetime, timedelta
 import uuid
+import asyncio
+from threading import Thread
 
 import httpx
 from sqlalchemy import text
@@ -25,6 +27,49 @@ from app.services.personalization_queue import schedule_profile_update
 import sys
 
 logger = logging.getLogger(__name__)
+
+
+def _run_coro_in_new_loop(coro):
+    """Run an async coroutine safely in a worker thread without an event loop.
+    
+    This helper creates a new event loop, runs the coroutine, and properly
+    shuts down the loop. It's designed for use in ThreadPoolExecutor or
+    other worker threads that don't have a current event loop.
+    
+    Args:
+        coro: A coroutine object to execute
+        
+    Returns:
+        The result of the coroutine execution
+        
+    Raises:
+        Any exception raised by the coroutine
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    
+    # If there's already a running loop in this thread, execute in a separate
+    # thread to avoid conflicts
+    if loop and loop.is_running():
+        result_container = {}
+        
+        def _runner():
+            try:
+                result_container["res"] = asyncio.run(coro)
+            except Exception as e:
+                result_container["exc"] = e
+        
+        t = Thread(target=_runner, daemon=True)
+        t.start()
+        t.join()
+        if "exc" in result_container:
+            raise result_container["exc"]
+        return result_container.get("res")
+    
+    # No running loop here; safe to use asyncio.run
+    return asyncio.run(coro)
 
 
 def _insert_document_if_new(db, doc: Dict[str, Any], source_name: str):
@@ -374,10 +419,8 @@ def trigger_fetch_for_source(source_id: int):
                 # Use extractor to normalize / re-extract content where possible
                 extracted = None
                 try:
-                    # synchronous call to async extractor via running loop
-                    import asyncio
-
-                    extracted = asyncio.get_event_loop().run_until_complete(content_extractor.extract_from_url(url))
+                    # synchronous call to async extractor via new loop
+                    extracted = _run_coro_in_new_loop(content_extractor.extract_from_url(url))
                 except Exception as e:
                     logger.warning(f"Extractor failed for {url}: {e}")
 
@@ -425,9 +468,7 @@ def trigger_fetch_for_source(source_id: int):
                 url = it.get("link")
                 extracted = None
                 try:
-                    import asyncio
-
-                    extracted = asyncio.get_event_loop().run_until_complete(content_extractor.extract_from_url(url))
+                    extracted = _run_coro_in_new_loop(content_extractor.extract_from_url(url))
                 except Exception as e:
                     logger.warning(f"Extractor failed for {url}: {e}")
 
@@ -471,9 +512,7 @@ def trigger_fetch_for_source(source_id: int):
                 url = it.get("link")
                 extracted = None
                 try:
-                    import asyncio
-
-                    extracted = asyncio.get_event_loop().run_until_complete(content_extractor.extract_from_url(url))
+                    extracted = _run_coro_in_new_loop(content_extractor.extract_from_url(url))
                 except Exception as e:
                     logger.warning(f"Extractor failed for {url}: {e}")
 
@@ -521,9 +560,7 @@ def trigger_fetch_for_source(source_id: int):
                 
                 extracted = None
                 try:
-                    import asyncio
-
-                    extracted = asyncio.get_event_loop().run_until_complete(content_extractor.extract_from_url(url))
+                    extracted = _run_coro_in_new_loop(content_extractor.extract_from_url(url))
                 except Exception as e:
                     logger.warning(f"Extractor failed for {url}: {e}")
 
