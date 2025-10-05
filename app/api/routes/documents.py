@@ -4,10 +4,10 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import and_, case, or_
 from sqlalchemy.orm import Session, aliased
 from typing import Optional, List, Dict
-from datetime import datetime
 from html import escape
 
 from app.core.database import get_db, Document, Classification, PersonalizedScore, Bookmark
+from app.core.timezone import JST, jst_isoformat, to_utc_naive
 from app.core.user_utils import normalize_user_id
 from app.services.llm_client import LLMClient
 from app.services.personalized_feedback import PersonalizedFeedbackService
@@ -174,7 +174,14 @@ async def list_documents(
             # Accept ISO and common RFC date formats
             from dateutil import parser as _dateutil_parser
             from_dt = _dateutil_parser.parse(from_date)
-            query = query.filter(Document.created_at >= from_dt)
+            if from_dt.tzinfo is None:
+                from_dt = from_dt.replace(tzinfo=JST)
+            else:
+                from_dt = from_dt.astimezone(JST)
+            normalized_from = to_utc_naive(from_dt)
+            if normalized_from is None:
+                raise ValueError
+            query = query.filter(Document.created_at >= normalized_from)
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid from date format")
     
@@ -182,7 +189,14 @@ async def list_documents(
         try:
             from dateutil import parser as _dateutil_parser
             to_dt = _dateutil_parser.parse(to_date)
-            query = query.filter(Document.created_at <= to_dt)
+            if to_dt.tzinfo is None:
+                to_dt = to_dt.replace(tzinfo=JST)
+            else:
+                to_dt = to_dt.astimezone(JST)
+            normalized_to = to_utc_naive(to_dt)
+            if normalized_to is None:
+                raise ValueError
+            query = query.filter(Document.created_at <= normalized_to)
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid to date format")
     
@@ -208,7 +222,7 @@ async def list_documents(
             "domain": doc.domain,
             "author": doc.author,
             "published_at": doc.published_at.isoformat() if doc.published_at else None,
-            "created_at": doc.created_at.isoformat(),
+            "created_at": jst_isoformat(doc.created_at),
             "lang": doc.lang,
             "content_preview": doc.content_text[:200] + "..." if len(doc.content_text) > 200 else doc.content_text
         }
@@ -223,10 +237,8 @@ async def list_documents(
         score_dto = score_map.get(doc.id)
         if score_dto is not None:
             is_cold_start = bool(getattr(score_dto, "cold_start", False))
-            rank_for_display = None
-            if not is_cold_start:
-                rank_for_display = display_rank
-                display_rank += 1  # おすすめ記事の場合のみrankをインクリメント
+            rank_for_display = display_rank
+            display_rank += 1  # おすすめ記事が見つかったら表示用rankを進める
             doc_data["personalized"] = {
                 "score": score_dto.score,
                 "rank": rank_for_display,
@@ -264,9 +276,9 @@ async def get_document(
         "domain": document.domain,
         "author": document.author,
         "published_at": document.published_at.isoformat() if document.published_at else None,
-        "fetched_at": document.fetched_at.isoformat() if document.fetched_at else None,
-        "created_at": document.created_at.isoformat() if document.created_at else None,
-        "updated_at": document.updated_at.isoformat() if document.updated_at else None,
+    "fetched_at": jst_isoformat(document.fetched_at),
+    "created_at": jst_isoformat(document.created_at),
+    "updated_at": jst_isoformat(document.updated_at),
         "lang": document.lang,
         "content_md": document.content_md,
         "content_text": document.content_text,
