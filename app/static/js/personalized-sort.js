@@ -944,18 +944,25 @@
             case "ready":
                 message = "おすすめ順で表示しています";
                 if (Array.isArray(payload)) {
-                    var stamp = "";
+                    // Find the most recent computed_at among returned documents and show that.
+                    var latestDate = null;
                     for (var i = 0; i < payload.length; i += 1) {
                         var doc = payload[i];
                         if (doc && doc.personalized && doc.personalized.computed_at) {
-                            stamp = formatTimestamp(doc.personalized.computed_at);
-                            if (stamp) {
-                                break;
+                            var parsed = parseIsoTimestamp(doc.personalized.computed_at);
+                            if (parsed) {
+                                if (!latestDate || parsed.getTime() > latestDate.getTime()) {
+                                    latestDate = parsed;
+                                }
                             }
                         }
                     }
-                    if (stamp) {
-                        message += "（更新: " + stamp + "）";
+                    if (latestDate) {
+                        // formatTimestamp accepts an ISO string, so convert Date -> ISO
+                        var stamp = formatTimestamp(latestDate.toISOString());
+                        if (stamp) {
+                            message += "（更新: " + stamp + "）";
+                        }
                     }
                 }
                 break;
