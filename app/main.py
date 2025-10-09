@@ -181,6 +181,10 @@ async def documents_page(
     sort_mode = (sort or "recent").lower()
     score_map = {}
     if sort_mode == "personalized":
+        # おすすめ記事は直近2日間に登録された記事を対象とする
+        from datetime import datetime, timedelta
+        two_days_ago = datetime.utcnow() - timedelta(days=2)
+        query = query.filter(Document.created_at >= two_days_ago)
         # Fetch personalized documents (this returns documents and score_map)
         user_id = _resolve_user_id(request)
         documents, score_map = _fetch_personalized_documents(query, user_id, 0, 50, db)
