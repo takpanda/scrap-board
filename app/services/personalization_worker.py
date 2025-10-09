@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 from sqlalchemy.orm import joinedload
@@ -71,8 +72,11 @@ def _load_documents(session, *, target_ids: Set[str], limit: int) -> List[Docume
 	if len(documents) < limit:
 		remaining = max(limit - len(documents), 0)
 		if remaining:
+			# おすすめ記事は直近2日間に登録された記事を対象とする
+			two_days_ago = datetime.utcnow() - timedelta(days=2)
 			extra_rows = (
-				query.order_by(Document.created_at.desc())
+				query.filter(Document.created_at >= two_days_ago)
+				.order_by(Document.created_at.desc())
 				.limit(limit)
 				.all()
 			)

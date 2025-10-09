@@ -205,6 +205,10 @@ async def list_documents(
 
     score_map = {}
     if use_personalized:
+        # おすすめ記事は直近2日間に登録された記事を対象とする
+        from datetime import datetime, timedelta
+        two_days_ago = datetime.utcnow() - timedelta(days=2)
+        query = query.filter(Document.created_at >= two_days_ago)
         # パーソナライズドソート時はuser_idを取得してブックマーク除外などを適用
         user_id = _resolve_user_id(request)
         documents, score_map = _fetch_personalized_documents(query, user_id, offset, limit, db)
