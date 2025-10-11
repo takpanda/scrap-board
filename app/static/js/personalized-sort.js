@@ -115,6 +115,17 @@
         return loadSubmittedSet().has(documentId);
     }
 
+    function removeFeedbackSubmitted(documentId) {
+        if (!documentId) {
+            return;
+        }
+        var set = loadSubmittedSet();
+        if (set.has(documentId)) {
+            set.delete(documentId);
+            persistSubmittedSet();
+        }
+    }
+
     function renderFeedbackAsCompleted(container, message, state) {
         if (!container) {
             return;
@@ -126,9 +137,27 @@
         container.className = "flex items-center gap-2 text-xs font-medium rounded-lg px-3 py-2" + paletteClasses;
         container.setAttribute("data-feedback-state", state);
         container.setAttribute("data-feedback-message", safeMessage);
+        
+        var documentId = container.getAttribute("data-document-id");
+        var cancelButton = state === "submitted" 
+            ? '<button type="button" class="ml-2 text-xs underline hover:no-underline" data-feedback-cancel-button aria-label="取り消す">取り消す</button>'
+            : '';
+        
         container.innerHTML = '' +
             '<i data-lucide="' + (state === "submitted" ? "smile" : "info") + '" class="w-4 h-4" aria-hidden="true"></i>' +
-            '<span>' + safeMessage + '</span>';
+            '<span>' + safeMessage + '</span>' +
+            cancelButton;
+        
+        if (state === "submitted") {
+            var cancelBtn = container.querySelector("[data-feedback-cancel-button]");
+            if (cancelBtn) {
+                cancelBtn.addEventListener("click", function(event) {
+                    event.preventDefault();
+                    handleFeedbackCancel(container, documentId);
+                });
+            }
+        }
+        
         if (typeof window.createIcons === "function") {
             window.createIcons();
         }
@@ -193,6 +222,90 @@
             });
     }
 
+    function handleFeedbackCancel(container, documentId) {
+        if (!container || !documentId) {
+            return;
+        }
+        
+        // Disable UI during request
+        container.classList.add("opacity-60", "pointer-events-none");
+        
+        var sessionId = getFeedbackSessionId();
+        
+        fetch("/api/documents/" + encodeURIComponent(documentId) + "/personalized-feedback", {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json"
+            }
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error("feedback cancel request failed");
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                // Remove from submitted set
+                removeFeedbackSubmitted(documentId);
+                
+                // Reset container to pending state by replacing with button
+                renderFeedbackAsPending(container, documentId);
+                
+                if (typeof window.showNotification === "function") {
+                    window.showNotification(data.message || "フィードバックを取り消しました。", "success");
+                }
+            })
+            .catch(function (error) {
+                container.classList.remove("opacity-60", "pointer-events-none");
+                if (typeof window.showNotification === "function") {
+                    window.showNotification("フィードバックの取り消しに失敗しました。時間をおいて再試行してください。", "error");
+                }
+            });
+    }
+
+    function renderFeedbackAsPending(container, documentId) {
+        if (!container || !documentId) {
+            return;
+        }
+        
+        container.className = "flex items-center";
+        container.setAttribute("data-feedback-state", "pending");
+        container.innerHTML = '' +
+            '<button type="button" ' +
+            'class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-white text-graphite border border-mist hover:bg-rose-50 hover:border-rose-200 transition-colors" ' +
+            'data-personalized-feedback-button ' +
+            'data-feedback-reason="low_relevance" ' +
+            'aria-label="関連性が低いとフィードバックする">' +
+            '<i data-lucide="thumbs-down" class="w-4 h-4 mr-2"></i>' +
+            '<span>関連性が低い</span>' +
+            '</button>';
+        
+        // Re-bind the feedback button
+        var button = container.querySelector("[data-personalized-feedback-button]");
+        if (button) {
+            button.dataset.feedbackBound = "true";
+            if (!window.htmx) {
+                button.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    handleFeedbackFetch(button);
+                });
+            } else {
+                button.addEventListener("click", function () {
+                    ensureSessionFieldValue();
+                });
+                // Re-process HTMX attributes
+                if (typeof window.htmx !== "undefined" && typeof window.htmx.process === "function") {
+                    window.htmx.process(button);
+                }
+            }
+        }
+        
+        if (typeof window.createIcons === "function") {
+            window.createIcons();
+        }
+    }
+
     function initFeedbackUI(root) {
         ensureSessionFieldValue();
         var scope = root && root.querySelectorAll ? root : document;
@@ -249,37 +362,20 @@
         return Math.round(value * 100);
     }
 
-    function parseIsoTimestamp(isoString) {
-        if (typeof isoString !== "string" || !isoString) {
-            return null;
-        }
-        var normalized = isoString.trim();
-        // タイムゾーン情報が明示されていない場合はUTCとして解釈する
-        if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized)) {
-            normalized = normalized + "Z";
-        }
-        var date = new Date(normalized);
-        if (isNaN(date.getTime())) {
-            date = new Date(isoString);
-        }
-        return isNaN(date.getTime()) ? null : date;
-    }
-
     function formatTimestamp(isoString) {
         if (!isoString) {
             return "";
         }
         try {
-            var date = parseIsoTimestamp(isoString);
-            if (!date) {
+            var date = new Date(isoString);
+            if (isNaN(date.getTime())) {
                 return "";
             }
             return new Intl.DateTimeFormat("ja-JP", {
                 month: "numeric",
                 day: "numeric",
                 hour: "2-digit",
-                minute: "2-digit",
-                timeZone: "Asia/Tokyo"
+                minute: "2-digit"
             }).format(date);
         } catch (err) {
             return "";
@@ -306,9 +402,9 @@
 
         this.originalOrderIds = [];
         this.abortController = null;
-        this.serverFallbackInFlight = false;
+        this.serverFallbackRequested = false;
         this.currentSort = this.loadPreference();
-        this.refreshStructure({ updateBaseline: true });
+        this.refreshStructure();
 
         this.bindEvents();
         this.updateToggleUI();
@@ -322,36 +418,17 @@
         this.observeHtmx();
     }
 
-    PersonalizedSortController.prototype.getArticleElements = function () {
-        if (!this.grid) {
-            return [];
-        }
-        var children = this.grid.children;
-        if (!children || children.length === 0) {
-            return [];
-        }
-        return Array.prototype.filter.call(children, function (child) {
-            return child && child.nodeType === 1 && child.hasAttribute("data-document-id");
-        });
-    };
-
-    PersonalizedSortController.prototype.refreshStructure = function (options) {
-        var opts = options || {};
-        var shouldUpdateBaseline = !!opts.updateBaseline;
+    PersonalizedSortController.prototype.refreshStructure = function () {
         this.container = document.getElementById("documents-container");
         this.grid = this.container ? this.container.querySelector("[data-documents-grid]") : null;
         if (!this.grid) {
-            if (shouldUpdateBaseline) {
-                this.originalOrderIds = [];
-            }
+            this.originalOrderIds = [];
             return;
         }
-        var articles = this.getArticleElements();
-        if (shouldUpdateBaseline || this.originalOrderIds.length === 0) {
-            this.originalOrderIds = articles.map(function (article) {
-                return article.getAttribute("data-document-id");
-            });
-        }
+        var articles = this.grid.querySelectorAll("[data-document-id]");
+        this.originalOrderIds = Array.prototype.map.call(articles, function (article) {
+            return article.getAttribute("data-document-id");
+        });
     };
 
     PersonalizedSortController.prototype.bindEvents = function () {
@@ -374,7 +451,7 @@
                 return;
             }
             if (event.target.id === "documents-container") {
-                self.refreshStructure({ updateBaseline: self.currentSort !== PERSONALIZED_SORT });
+                self.refreshStructure();
                 self.updateToggleUI();
                 if (self.currentSort === PERSONALIZED_SORT) {
                     self.applyPersonalizedSort();
@@ -389,11 +466,32 @@
     PersonalizedSortController.prototype.onSortChange = function (sort) {
         this.currentSort = sort === PERSONALIZED_SORT ? PERSONALIZED_SORT : DEFAULT_SORT;
         this.savePreference(this.currentSort);
+        this.updateHistory();
         this.updateToggleUI();
         if (this.currentSort === PERSONALIZED_SORT) {
             this.applyPersonalizedSort();
         } else {
             this.restoreDefaultOrder();
+        }
+    };
+
+    PersonalizedSortController.prototype.updateHistory = function () {
+        if (!window.history || typeof window.history.replaceState !== "function") {
+            return;
+        }
+        try {
+            var url = new URL(window.location.href);
+            if (this.currentSort === PERSONALIZED_SORT) {
+                url.searchParams.set("sort", PERSONALIZED_SORT);
+            } else {
+                url.searchParams.delete("sort");
+            }
+            var next = url.toString();
+            if (next !== window.location.href) {
+                window.history.replaceState({}, document.title, next);
+            }
+        } catch (err) {
+            /* ignore URL parsing errors */
         }
     };
 
@@ -514,19 +612,10 @@
                     _this.restoreDefaultOrder("empty");
                     return;
                 }
-                var reorderResult = _this.reorderWithData(data.documents);
-                if (reorderResult && reorderResult.applied) {
+                _this.reorderWithData(data.documents);
+                if (_this.container) {
                     _this.container.setAttribute("data-documents-limit", String(data.documents.length));
-                    _this.reapplyIcons();
                 }
-
-                if (reorderResult && reorderResult.missingIds && reorderResult.missingIds.length > 0) {
-                    var fallbackParams = new URLSearchParams(params);
-                    fallbackParams.delete("limit");
-                    _this.requestServerRenderedPersonalized(fallbackParams);
-                    return;
-                }
-                _this.setStatus("ready", data.documents);
             })
             .catch(function (error) {
                 if (error && error.name === "AbortError") {
@@ -537,24 +626,108 @@
             });
     };
 
+    PersonalizedSortController.prototype.requestServerRenderedPersonalized = function () {
+        if (this.serverFallbackRequested) {
+            return;
+        }
+        this.serverFallbackRequested = true;
+        this.setStatus("loading");
+        try {
+            var url = new URL(window.location.href);
+            url.searchParams.set("sort", PERSONALIZED_SORT);
+            var href = url.toString();
+            if (window.htmx && typeof window.htmx.ajax === "function") {
+                var targetSelector = "#documents-container";
+                if (this.container && this.container.id) {
+                    targetSelector = "#" + this.container.id;
+                }
+                var self = this;
+                var xhr;
+                try {
+                    xhr = window.htmx.ajax("GET", href, {
+                        target: targetSelector,
+                        swap: "outerHTML",
+                        headers: {
+                            "X-Personalized-Fallback": "true"
+                        }
+                    });
+                } catch (ajaxError) {
+                    console.warn("personalized sort fallback ajax failed", ajaxError);
+                    this.serverFallbackRequested = false;
+                    window.location.assign(href);
+                    return;
+                }
+
+                if (xhr && typeof xhr.addEventListener === "function") {
+                    xhr.addEventListener("load", function () {
+                        if (xhr.status >= 400) {
+                            console.warn("personalized sort fallback ajax returned status", xhr.status);
+                            window.location.assign(href);
+                        }
+                    });
+                    xhr.addEventListener("error", function () {
+                        console.warn("personalized sort fallback ajax network error");
+                        window.location.assign(href);
+                    });
+                    xhr.addEventListener("loadend", function () {
+                        self.serverFallbackRequested = false;
+                    });
+                } else {
+                    this.serverFallbackRequested = false;
+                }
+            } else {
+                window.location.assign(href);
+            }
+        } catch (err) {
+            this.serverFallbackRequested = false;
+            console.warn("failed to construct personalized fallback url", err);
+        }
+    };
+
     PersonalizedSortController.prototype.reorderWithData = function (documents) {
         if (!this.grid) {
-            return { missingIds: [], applied: false };
+            this.setStatus("ready", documents);
+            return;
         }
-        var articles = this.getArticleElements();
+        var articles = this.grid.querySelectorAll("[data-document-id]");
         var byId = new Map();
-        articles.forEach(function (article) {
+        forEachNode(articles, function (article) {
             byId.set(article.getAttribute("data-document-id"), article);
         });
 
-        var orderedArticles = [];
-        var self = this;
-        var missingIds = [];
+        var matched = [];
+        var missingCount = 0;
         documents.forEach(function (doc) {
             var article = byId.get(doc.id);
             if (!article) {
-                missingIds.push(doc.id);
+                missingCount += 1;
                 return;
+            }
+            matched.push({ doc: doc, article: article });
+        });
+
+        if (missingCount > 0) {
+            this.requestServerRenderedPersonalized();
+            return;
+        }
+
+        var orderedArticles = [];
+        var displayRank = 1;
+        var self = this;
+        matched.forEach(function (pair) {
+            var doc = pair.doc;
+            var article = pair.article;
+            if (doc && doc.personalized) {
+                var p = doc.personalized;
+                if (typeof p.rank === "number" && !isNaN(p.rank)) {
+                    p.rank_original = p.rank;
+                }
+                if (p.cold_start) {
+                    p.rank = null;
+                } else if (typeof p.rank === "number" || p.rank == null) {
+                    p.rank = displayRank;
+                    displayRank += 1;
+                }
             }
             self.decorateArticle(article, doc);
             orderedArticles.push(article);
@@ -571,83 +744,10 @@
             fragment.appendChild(article);
         });
 
-
         this.grid.innerHTML = "";
         this.grid.appendChild(fragment);
-        return { missingIds: missingIds, applied: true };
-    };
-
-    PersonalizedSortController.prototype.requestServerRenderedPersonalized = function (params) {
-        if (this.serverFallbackInFlight) {
-            return;
-        }
-        this.serverFallbackInFlight = true;
-        this.setStatus("loading");
-
-        var query = "";
-        if (params instanceof URLSearchParams) {
-            query = params.toString();
-        } else if (typeof params === "string") {
-            query = params;
-        }
-        if (query.indexOf("sort=") === -1) {
-            query = query ? query + "&sort=" + PERSONALIZED_SORT : "sort=" + PERSONALIZED_SORT;
-        }
-        var url = "/documents" + (query ? "?" + query : "");
-
-        var self = this;
-        fetch(url, {
-            headers: {
-                "HX-Request": "true",
-                Accept: "text/html"
-            }
-        })
-            .then(function (response) {
-                if (!response.ok) {
-                    throw new Error("Failed to fetch server-rendered personalized view");
-                }
-                return response.text();
-            })
-            .then(function (html) {
-                var parser = new DOMParser();
-                var parsed = parser.parseFromString(html, "text/html");
-                var newContainer = parsed.getElementById("documents-container");
-                if (!newContainer) {
-                    throw new Error("documents-container not found in server response");
-                }
-                var currentContainer = document.getElementById("documents-container");
-                if (!currentContainer || !currentContainer.parentNode) {
-                    throw new Error("Existing documents container missing");
-                }
-                currentContainer.parentNode.replaceChild(newContainer, currentContainer);
-                self.container = newContainer;
-                self.refreshStructure({ updateBaseline: false });
-                self.decorateExistingArticles();
-                self.reapplyIcons();
-                initFeedbackUI(newContainer);
-                if (typeof window.scrapMarkdownRefresh === "function") {
-                    try {
-                        window.scrapMarkdownRefresh(newContainer);
-                    } catch (err) {
-                        console.warn("Failed to refresh markdown after fallback", err);
-                    }
-                }
-                try {
-                    var currentUrl = new URL(window.location.href);
-                    currentUrl.searchParams.set("sort", PERSONALIZED_SORT);
-                    window.history.replaceState({}, "", currentUrl.toString());
-                } catch (err) {
-                    console.warn("Failed to update history state", err);
-                }
-                self.setStatus("ready");
-            })
-            .catch(function (error) {
-                console.error("Server-rendered personalized fallback failed", error);
-                self.restoreDefaultOrder("error");
-            })
-            .finally(function () {
-                self.serverFallbackInFlight = false;
-            });
+        this.setStatus("ready", documents);
+        this.reapplyIcons();
     };
 
     PersonalizedSortController.prototype.restoreDefaultOrder = function (stateOverride) {
@@ -655,10 +755,10 @@
             this.setStatus(stateOverride || "default");
             return;
         }
-        var articles = this.getArticleElements();
+        var articles = this.grid.querySelectorAll("[data-document-id]");
         var lookup = new Map();
         var self = this;
-        articles.forEach(function (article) {
+        forEachNode(articles, function (article) {
             self.clearArticle(article);
             lookup.set(article.getAttribute("data-document-id"), article);
         });
@@ -714,24 +814,6 @@
                 updatedEl.textContent = "";
                 updatedEl.classList.add("hidden");
             }
-            // 詳細エリアも非表示にする
-            var detailsEl = block.querySelector("[data-personalized-details]");
-            if (detailsEl) {
-                detailsEl.classList.add("hidden");
-            }
-            // トグルボタンの状態をリセット
-            var toggleButton = block.querySelector("[data-personalized-toggle]");
-            if (toggleButton) {
-                toggleButton.setAttribute("aria-expanded", "false");
-                var toggleText = toggleButton.querySelector("[data-personalized-toggle-text]");
-                if (toggleText) {
-                    toggleText.textContent = "詳細を表示";
-                }
-                var toggleIcon = toggleButton.querySelector("[data-personalized-toggle-icon]");
-                if (toggleIcon) {
-                    toggleIcon.setAttribute("data-lucide", "chevron-down");
-                }
-            }
         }
         var fallback = article.querySelector("[data-personalized-fallback]");
         if (fallback) {
@@ -741,22 +823,21 @@
                 fallbackText.textContent = "記事をブックマークすると、あなた好みのおすすめ順で表示されます。";
             }
         }
+        article.removeAttribute("data-personalized-score");
+        article.removeAttribute("data-personalized-rank");
+        article.removeAttribute("data-personalized-explanation");
+        article.removeAttribute("data-personalized-components");
+        article.removeAttribute("data-personalized-computed-at");
+        article.removeAttribute("data-personalized-cold-start");
+        article.removeAttribute("data-personalized-original-rank");
     };
 
     PersonalizedSortController.prototype.decorateArticle = function (article, doc) {
-        this.clearArticle(article);
-        var block = article.querySelector("[data-personalized-block]");
-        var fallback = article.querySelector("[data-personalized-fallback]");
-        if (!block || !fallback) {
-            return;
-        }
-        
-        // Try to get personalized data from doc object first, then from data attributes
-        var personalized = doc && doc.personalized;
-        if (!personalized && article.hasAttribute("data-personalized-score")) {
-            // Read from data attributes (server-side rendered data)
+        var personalizedFromAttributes = null;
+        // Try to read any pre-rendered personalization attributes before clearing them
+        if (!doc && article.hasAttribute("data-personalized-score")) {
             try {
-                personalized = {
+                personalizedFromAttributes = {
                     score: parseFloat(article.getAttribute("data-personalized-score")),
                     rank: parseInt(article.getAttribute("data-personalized-rank"), 10),
                     explanation: article.getAttribute("data-personalized-explanation"),
@@ -766,10 +847,23 @@
                 };
             } catch (e) {
                 console.error("Failed to parse personalized data from attributes:", e);
-                personalized = null;
+                personalizedFromAttributes = null;
             }
         }
-        
+
+        this.clearArticle(article);
+        var block = article.querySelector("[data-personalized-block]");
+        var fallback = article.querySelector("[data-personalized-fallback]");
+        if (!block || !fallback) {
+            return;
+        }
+
+        // Prefer doc payload but fall back to attributes captured before clearing
+        var personalized = doc && doc.personalized ? doc.personalized : personalizedFromAttributes;
+        if (personalized && typeof personalized.rank === "number" && isNaN(personalized.rank)) {
+            personalized.rank = null;
+        }
+
         if (!personalized) {
             fallback.classList.remove("hidden");
             return;
@@ -785,6 +879,30 @@
 
         fallback.classList.add("hidden");
         block.classList.remove("hidden");
+
+        var scoreAttr = isNumber(personalized.score) ? String(personalized.score) : "";
+        var rankAttr = personalized.rank != null && !isNaN(personalized.rank) ? String(personalized.rank) : "";
+        var originalRankAttr = personalized.rank_original != null && !isNaN(personalized.rank_original)
+            ? String(personalized.rank_original)
+            : "";
+        var componentsPayload = "{}";
+        try {
+            componentsPayload = JSON.stringify(personalized.components || {});
+        } catch (err) {
+            componentsPayload = "{}";
+        }
+
+        if (scoreAttr) {
+            article.setAttribute("data-personalized-score", scoreAttr);
+        }
+        article.setAttribute("data-personalized-rank", rankAttr);
+        if (personalized.explanation) {
+            article.setAttribute("data-personalized-explanation", personalized.explanation);
+        }
+        article.setAttribute("data-personalized-components", componentsPayload);
+        article.setAttribute("data-personalized-computed-at", personalized.computed_at || "");
+        article.setAttribute("data-personalized-cold-start", personalized.cold_start ? "true" : "false");
+        article.setAttribute("data-personalized-original-rank", originalRankAttr);
 
         var rankEl = block.querySelector("[data-personalized-rank]");
         if (rankEl) {
@@ -835,7 +953,7 @@
                     var label = COMPONENT_LABELS[item[0]] || item[0];
                     var value = item[1];
                     var badge = document.createElement("span");
-                    badge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald/10 text-emerald-700 border border-emerald/20 text-xs";
+                    badge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald/10 text-emerald-700 border border-emerald/20 text-[11px]";
                     if (isNumber(value)) {
                         badge.textContent = label + " " + safeFormatPercent(value) + "%";
                     } else {
@@ -857,69 +975,6 @@
                 updatedEl.classList.add("hidden");
             }
         }
-
-        // 折り畳み/展開ボタンのイベントリスナーを設定
-        this.setupToggleButton(block);
-    };
-
-    PersonalizedSortController.prototype.setupToggleButton = function (block) {
-        var toggleButton = block.querySelector("[data-personalized-toggle]");
-        var detailsEl = block.querySelector("[data-personalized-details]");
-        var toggleText = block.querySelector("[data-personalized-toggle-text]");
-        var toggleIcon = block.querySelector("[data-personalized-toggle-icon]");
-        
-        if (!toggleButton || !detailsEl) {
-            return;
-        }
-
-        // 既存のイベントリスナーを削除
-        var newButton = toggleButton.cloneNode(true);
-        toggleButton.parentNode.replaceChild(newButton, toggleButton);
-        toggleButton = newButton;
-
-        // 新しい参照を取得
-        toggleText = toggleButton.querySelector("[data-personalized-toggle-text]");
-        toggleIcon = toggleButton.querySelector("[data-personalized-toggle-icon]");
-
-        toggleButton.addEventListener("click", function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            var isExpanded = detailsEl.classList.contains("hidden");
-            
-            if (isExpanded) {
-                // 展開
-                detailsEl.classList.remove("hidden");
-                toggleButton.setAttribute("aria-expanded", "true");
-                toggleButton.setAttribute("aria-label", "おすすめの詳細を非表示");
-                if (toggleText) {
-                    toggleText.textContent = "詳細を非表示";
-                }
-                if (toggleIcon) {
-                    toggleIcon.setAttribute("data-lucide", "chevron-up");
-                }
-            } else {
-                // 折り畳み
-                detailsEl.classList.add("hidden");
-                toggleButton.setAttribute("aria-expanded", "false");
-                toggleButton.setAttribute("aria-label", "おすすめの詳細を表示");
-                if (toggleText) {
-                    toggleText.textContent = "詳細を表示";
-                }
-                if (toggleIcon) {
-                    toggleIcon.setAttribute("data-lucide", "chevron-down");
-                }
-            }
-            
-            // アイコンを再描画
-            if (typeof window.createIcons === "function") {
-                try {
-                    window.createIcons();
-                } catch (err) {
-                    console.warn("createIcons() failed after toggle", err);
-                }
-            }
-        });
     };
 
     PersonalizedSortController.prototype.reapplyIcons = function () {
@@ -944,25 +999,18 @@
             case "ready":
                 message = "おすすめ順で表示しています";
                 if (Array.isArray(payload)) {
-                    // Find the most recent computed_at among returned documents and show that.
-                    var latestDate = null;
+                    var stamp = "";
                     for (var i = 0; i < payload.length; i += 1) {
                         var doc = payload[i];
                         if (doc && doc.personalized && doc.personalized.computed_at) {
-                            var parsed = parseIsoTimestamp(doc.personalized.computed_at);
-                            if (parsed) {
-                                if (!latestDate || parsed.getTime() > latestDate.getTime()) {
-                                    latestDate = parsed;
-                                }
+                            stamp = formatTimestamp(doc.personalized.computed_at);
+                            if (stamp) {
+                                break;
                             }
                         }
                     }
-                    if (latestDate) {
-                        // formatTimestamp accepts an ISO string, so convert Date -> ISO
-                        var stamp = formatTimestamp(latestDate.toISOString());
-                        if (stamp) {
-                            message += "（更新: " + stamp + "）";
-                        }
+                    if (stamp) {
+                        message += "（更新: " + stamp + "）";
                     }
                 }
                 break;
