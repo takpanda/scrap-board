@@ -87,9 +87,11 @@ def test_recent_sort_returns_jst_iso(client: TestClient, db_session: Session):
 def test_personalized_sort_returns_ranked_documents(client: TestClient, db_session: Session):
     repo = PersonalizedScoreRepository(db_session)
 
-    first_doc = _persist_document(db_session, title="先頭に来る記事", created_at=datetime.utcnow() - timedelta(days=2))
-    second_doc = _persist_document(db_session, title="2番目の記事", created_at=datetime.utcnow() - timedelta(days=1))
-    fallback_doc = _persist_document(db_session, title="おすすめ外の記事", created_at=datetime.utcnow())
+    # おすすめ記事は直近2日間の記事が対象なので、境界値を避けて1.5日前と0.5日前に設定
+    # fallback_docは2日以内だがスコアを持たない記事
+    first_doc = _persist_document(db_session, title="先頭に来る記事", created_at=datetime.utcnow() - timedelta(days=1, hours=12))
+    second_doc = _persist_document(db_session, title="2番目の記事", created_at=datetime.utcnow() - timedelta(hours=12))
+    fallback_doc = _persist_document(db_session, title="おすすめ外の記事", created_at=datetime.utcnow() - timedelta(hours=6))
 
     scores = [
         PersonalizedScoreDTO(
@@ -138,8 +140,9 @@ def test_personalized_sort_returns_ranked_documents(client: TestClient, db_sessi
 
 
 def test_personalized_sort_without_scores_returns_recent_order(client: TestClient, db_session: Session):
+    # おすすめ記事は直近2日間の記事が対象なので、両方とも2日以内に設定
     first_doc = _persist_document(db_session, title="最新記事", created_at=datetime.utcnow())
-    older_doc = _persist_document(db_session, title="古い記事", created_at=datetime.utcnow() - timedelta(days=3))
+    older_doc = _persist_document(db_session, title="古い記事", created_at=datetime.utcnow() - timedelta(days=1, hours=18))
 
     response = client.get(
         "/api/documents",
@@ -224,8 +227,9 @@ def test_personalized_sort_excludes_bookmarked_documents(client: TestClient, db_
 def test_personalized_sort_uses_user_specific_scores_over_global(client: TestClient, db_session: Session):
     repo = PersonalizedScoreRepository(db_session)
 
-    user_doc = _persist_document(db_session, title="ユーザー個別おすすめ", created_at=datetime.utcnow() - timedelta(days=5))
-    global_doc = _persist_document(db_session, title="グローバルおすすめ", created_at=datetime.utcnow() - timedelta(days=4))
+    # おすすめ記事は直近2日間の記事が対象なので、2日以内に設定
+    user_doc = _persist_document(db_session, title="ユーザー個別おすすめ", created_at=datetime.utcnow() - timedelta(days=1, hours=18))
+    global_doc = _persist_document(db_session, title="グローバルおすすめ", created_at=datetime.utcnow() - timedelta(days=1, hours=12))
     fallback_doc = _persist_document(db_session, title="通常順序", created_at=datetime.utcnow())
 
     now = datetime.utcnow()
@@ -275,14 +279,16 @@ def test_personalized_sort_uses_user_specific_scores_over_global(client: TestCli
     docs_user = response_user.json()["documents"]
 
     assert docs_user[0]["id"] == user_doc.id
-    assert docs_user[0]["personalized"]["rank"] == 1
+    # コールドスタート記事は順序ランクを持たない（issue #18422667430 の修正に対応）
+    assert docs_user[0]["personalized"]["rank"] is None
     assert docs_user[0]["personalized"]["cold_start"] is True
     assert docs_user[0]["personalized"]["components"]["similarity"] == pytest.approx(0.92)
 
     # 2番目はグローバルスコアを持つ記事（フォールバックとして使用される）
     assert docs_user[1]["id"] == global_doc.id
     assert "personalized" in docs_user[1]
-    assert docs_user[1]["personalized"]["rank"] == 2
+    # グローバルスコアの記事は表示順で1番目のおすすめ記事なので rank=1
+    assert docs_user[1]["personalized"]["rank"] == 1
     assert docs_user[1]["personalized"]["score"] == pytest.approx(0.9)
     
     # 3番目はスコアを持たない記事

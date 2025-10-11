@@ -332,23 +332,71 @@ def test_database_override(tmp_path_factory):
 
 @pytest.fixture(autouse=True)
 def _reset_database_between_tests(test_database_override):
-    """Ensure each test runs against a clean SQLite database."""
+    """Ensure each test runs against a clean SQLite database by deleting all data."""
+    from sqlalchemy import create_engine, inspect, text
+    from sqlalchemy.orm import sessionmaker
+    from app.core.database import Base
+    
+    # Create a new engine for cleanup to ensure we're not using cached connections
+    cleanup_engine = create_engine(
+        test_database_override,
+        connect_args={"check_same_thread": False},
+        poolclass=None,  # Disable connection pooling for cleanup
+    )
+    
+    # Ensure tables exist before the test runs
+    Base.metadata.create_all(bind=cleanup_engine)
+    
+    # Clean up data BEFORE the test runs to ensure a clean slate
     try:
-        from sqlalchemy import create_engine
-        from app.core.database import Base
-
-        engine = create_engine(
-            test_database_override,
-            connect_args={"check_same_thread": False},
-        )
-        Base.metadata.drop_all(bind=engine)
-        Base.metadata.create_all(bind=engine)
-        yield
-    finally:
+        SessionLocal = sessionmaker(bind=cleanup_engine)
+        session = SessionLocal()
         try:
-            engine.dispose()
+            # Get all table names
+            inspector = inspect(cleanup_engine)
+            table_names = inspector.get_table_names()
+            
+            # Disable foreign key constraints for SQLite
+            if "sqlite" in test_database_override:
+                session.execute(text("PRAGMA foreign_keys = OFF"))
+            
+            # Delete all data from each table in reverse order to handle foreign keys
+            for table in reversed(Base.metadata.sorted_tables):
+                if table.name in table_names:
+                    session.execute(table.delete())
+            
+            session.commit()
+            
+            # Re-enable foreign key constraints for SQLite
+            if "sqlite" in test_database_override:
+                session.execute(text("PRAGMA foreign_keys = ON"))
+                session.commit()
+        except Exception:
+            session.rollback()
+        finally:
+            session.close()
+    except Exception:
+        pass
+    finally:
+        # Always dispose the cleanup engine
+        try:
+            cleanup_engine.dispose()
         except Exception:
             pass
+    
+    yield
+    
+    # After test completes, dispose connections to ensure next test gets fresh state
+    try:
+        from app.core import database as app_db
+        if hasattr(app_db, 'engine') and app_db.engine is not None:
+            app_db.engine.dispose()
+    except Exception:
+        pass
+    
+    # Note: We don't clean up after the test to avoid interfering with
+    # any teardown logic the test itself might have. The next test will
+    # clean up before it runs.
 
 
 # Note: Do NOT apply `live_server` as a global fixture here.
