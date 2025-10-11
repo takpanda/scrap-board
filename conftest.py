@@ -384,15 +384,15 @@ def _reset_database_between_tests(test_database_override):
         except Exception:
             pass
     
-    # Force disposal of any app-level engines/sessions to ensure fresh connections
+    yield
+    
+    # After test completes, dispose connections to ensure next test gets fresh state
     try:
         from app.core import database as app_db
         if hasattr(app_db, 'engine') and app_db.engine is not None:
             app_db.engine.dispose()
     except Exception:
         pass
-    
-    yield
     
     # Note: We don't clean up after the test to avoid interfering with
     # any teardown logic the test itself might have. The next test will
