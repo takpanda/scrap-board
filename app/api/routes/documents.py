@@ -241,8 +241,12 @@ async def list_documents(
         score_dto = score_map.get(doc.id)
         if score_dto is not None:
             is_cold_start = bool(getattr(score_dto, "cold_start", False))
-            rank_for_display = display_rank
-            display_rank += 1  # おすすめ記事が見つかったら表示用rankを進める
+            # Cold-start documents should not have an ordinal rank
+            if is_cold_start:
+                rank_for_display = None
+            else:
+                rank_for_display = display_rank
+                display_rank += 1  # おすすめ記事が見つかったら表示用rankを進める
             doc_data["personalized"] = {
                 "score": score_dto.score,
                 "rank": rank_for_display,
