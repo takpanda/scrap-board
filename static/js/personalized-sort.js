@@ -115,6 +115,17 @@
         return loadSubmittedSet().has(documentId);
     }
 
+    function removeFeedbackSubmitted(documentId) {
+        if (!documentId) {
+            return;
+        }
+        var set = loadSubmittedSet();
+        if (set.has(documentId)) {
+            set.delete(documentId);
+            persistSubmittedSet();
+        }
+    }
+
     function renderFeedbackAsCompleted(container, message, state) {
         if (!container) {
             return;
@@ -126,9 +137,27 @@
         container.className = "flex items-center gap-2 text-xs font-medium rounded-lg px-3 py-2" + paletteClasses;
         container.setAttribute("data-feedback-state", state);
         container.setAttribute("data-feedback-message", safeMessage);
+        
+        var documentId = container.getAttribute("data-document-id");
+        var cancelButton = state === "submitted" 
+            ? '<button type="button" class="ml-2 text-xs underline hover:no-underline" data-feedback-cancel-button aria-label="取り消す">取り消す</button>'
+            : '';
+        
         container.innerHTML = '' +
             '<i data-lucide="' + (state === "submitted" ? "smile" : "info") + '" class="w-4 h-4" aria-hidden="true"></i>' +
-            '<span>' + safeMessage + '</span>';
+            '<span>' + safeMessage + '</span>' +
+            cancelButton;
+        
+        if (state === "submitted") {
+            var cancelBtn = container.querySelector("[data-feedback-cancel-button]");
+            if (cancelBtn) {
+                cancelBtn.addEventListener("click", function(event) {
+                    event.preventDefault();
+                    handleFeedbackCancel(container, documentId);
+                });
+            }
+        }
+        
         if (typeof window.createIcons === "function") {
             window.createIcons();
         }
@@ -191,6 +220,90 @@
             .finally(function () {
                 delete button.dataset.feedbackLoading;
             });
+    }
+
+    function handleFeedbackCancel(container, documentId) {
+        if (!container || !documentId) {
+            return;
+        }
+        
+        // Disable UI during request
+        container.classList.add("opacity-60", "pointer-events-none");
+        
+        var sessionId = getFeedbackSessionId();
+        
+        fetch("/api/documents/" + encodeURIComponent(documentId) + "/personalized-feedback", {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json"
+            }
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error("feedback cancel request failed");
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                // Remove from submitted set
+                removeFeedbackSubmitted(documentId);
+                
+                // Reset container to pending state by replacing with button
+                renderFeedbackAsPending(container, documentId);
+                
+                if (typeof window.showNotification === "function") {
+                    window.showNotification(data.message || "フィードバックを取り消しました。", "success");
+                }
+            })
+            .catch(function (error) {
+                container.classList.remove("opacity-60", "pointer-events-none");
+                if (typeof window.showNotification === "function") {
+                    window.showNotification("フィードバックの取り消しに失敗しました。時間をおいて再試行してください。", "error");
+                }
+            });
+    }
+
+    function renderFeedbackAsPending(container, documentId) {
+        if (!container || !documentId) {
+            return;
+        }
+        
+        container.className = "flex items-center";
+        container.setAttribute("data-feedback-state", "pending");
+        container.innerHTML = '' +
+            '<button type="button" ' +
+            'class="pill nowrap-tag inline-flex items-center h-6 px-2 text-xs bg-white text-graphite border border-mist hover:bg-rose-50 hover:border-rose-200 transition-colors" ' +
+            'data-personalized-feedback-button ' +
+            'data-feedback-reason="low_relevance" ' +
+            'aria-label="関連性が低いとフィードバックする">' +
+            '<i data-lucide="thumbs-down" class="w-4 h-4 mr-2"></i>' +
+            '<span>関連性が低い</span>' +
+            '</button>';
+        
+        // Re-bind the feedback button
+        var button = container.querySelector("[data-personalized-feedback-button]");
+        if (button) {
+            button.dataset.feedbackBound = "true";
+            if (!window.htmx) {
+                button.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    handleFeedbackFetch(button);
+                });
+            } else {
+                button.addEventListener("click", function () {
+                    ensureSessionFieldValue();
+                });
+                // Re-process HTMX attributes
+                if (typeof window.htmx !== "undefined" && typeof window.htmx.process === "function") {
+                    window.htmx.process(button);
+                }
+            }
+        }
+        
+        if (typeof window.createIcons === "function") {
+            window.createIcons();
+        }
     }
 
     function initFeedbackUI(root) {
