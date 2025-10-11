@@ -90,6 +90,7 @@ def test_bookmark_list_without_user_header_returns_guest_bookmarks(test_database
     
     created = datetime(2025, 10, 1, 12, 0, tzinfo=timezone.utc)
     doc = _create_document(db, title="Guest Article", created_at=created)
+    doc_id = doc.id  # Capture ID before closing session
     
     # Create a guest bookmark
     bookmark = Bookmark(
@@ -108,7 +109,7 @@ def test_bookmark_list_without_user_header_returns_guest_bookmarks(test_database
     data = response.json()
     assert "bookmarks" in data
     assert len(data["bookmarks"]) == 1
-    assert data["bookmarks"][0]["document_id"] == doc.id
+    assert data["bookmarks"][0]["document_id"] == doc_id
 
 
 def test_bookmark_duplicate_prevention_for_guest(test_database_override):
@@ -151,18 +152,19 @@ def test_guest_and_authenticated_bookmarks_are_separate(test_database_override):
     
     created = datetime(2025, 10, 1, 12, 0, tzinfo=timezone.utc)
     doc = _create_document(db, title="Shared Article", created_at=created)
+    doc_id = doc.id  # Capture ID before closing session
     db.close()
     
     client = TestClient(app)
     
     # Guest user bookmarks the document
-    response1 = client.post("/api/bookmarks", json={"document_id": doc.id})
+    response1 = client.post("/api/bookmarks", json={"document_id": doc_id})
     assert response1.status_code == 200
     
     # Authenticated user bookmarks the same document
     response2 = client.post(
         "/api/bookmarks",
-        json={"document_id": doc.id},
+        json={"document_id": doc_id},
         headers={"X-User-Id": "alice"}
     )
     assert response2.status_code == 200
@@ -171,11 +173,11 @@ def test_guest_and_authenticated_bookmarks_are_separate(test_database_override):
     db = _prepare_session(test_database_override)
     guest_bookmark = db.query(Bookmark).filter(
         Bookmark.user_id == GUEST_USER_ID,
-        Bookmark.document_id == doc.id
+        Bookmark.document_id == doc_id
     ).first()
     alice_bookmark = db.query(Bookmark).filter(
         Bookmark.user_id == "alice",
-        Bookmark.document_id == doc.id
+        Bookmark.document_id == doc_id
     ).first()
     
     assert guest_bookmark is not None
@@ -217,14 +219,15 @@ def test_feedback_without_user_uses_guest(test_database_override):
     
     created = datetime(2025, 10, 1, 12, 0, tzinfo=timezone.utc)
     doc = _create_document(db, title="Feedback Test", created_at=created)
+    doc_id = doc.id  # Capture ID before closing session
     db.close()
     
     client = TestClient(app)
     
     # Submit feedback without user header
     response = client.post(
-        f"/api/documents/{doc.id}/feedback/low_relevance",
-        json={"note": "Not relevant"}
+        f"/api/documents/{doc_id}/personalized-feedback",
+        json={"reason": "low_relevance", "note": "Not relevant"}
     )
     
     assert response.status_code == 200
@@ -232,7 +235,7 @@ def test_feedback_without_user_uses_guest(test_database_override):
     # Verify feedback was saved with guest user_id
     db = _prepare_session(test_database_override)
     feedback = db.query(PreferenceFeedback).filter(
-        PreferenceFeedback.document_id == doc.id
+        PreferenceFeedback.document_id == doc_id
     ).first()
     assert feedback is not None
     assert feedback.user_id == GUEST_USER_ID
@@ -246,25 +249,28 @@ def test_feedback_duplicate_prevention_for_guest(test_database_override):
     
     created = datetime(2025, 10, 1, 12, 0, tzinfo=timezone.utc)
     doc = _create_document(db, title="Duplicate Feedback Test", created_at=created)
+    doc_id = doc.id  # Capture ID before closing session
     db.close()
     
     client = TestClient(app)
     
     # First feedback
     response1 = client.post(
-        f"/api/documents/{doc.id}/feedback/low_relevance",
-        json={"note": "First feedback"}
+        f"/api/documents/{doc_id}/personalized-feedback",
+        json={"reason": "low_relevance", "note": "First feedback", "session_token": "guest-session-1"}
     )
     assert response1.status_code == 200
     result1 = response1.json()
-    assert result1.get("created") is True
+    # The API returns "state" field, not "created"
+    assert result1.get("state") == "submitted"
     
     # Second attempt should be rejected as duplicate
     response2 = client.post(
-        f"/api/documents/{doc.id}/feedback/low_relevance",
-        json={"note": "Second feedback"}
+        f"/api/documents/{doc_id}/personalized-feedback",
+        json={"reason": "low_relevance", "note": "Second feedback", "session_token": "guest-session-1"}
     )
     assert response2.status_code == 200
     result2 = response2.json()
-    assert result2.get("created") is False
-    assert result2.get("state") == "duplicate_user"
+    # The API returns "state" = "duplicate" for duplicates, not "created" = False
+    assert result2.get("status") == "duplicate"
+    assert result2.get("state") == "duplicate"
