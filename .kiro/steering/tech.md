@@ -204,35 +204,41 @@ docker-compose down
 ### 必須設定（`.env`ファイル）
 
 ```env
-# データベース
+# データベース設定
 DB_URL=sqlite:///./data/scraps.db
 
-# LLM設定（LM Studio）
+# LLM設定（LM Studio既定）
 CHAT_API_BASE=http://localhost:1234/v1
-CHAT_MODEL=your-local-chat-model
+CHAT_MODEL=gpt-4o-mini-compat-or-your-local
 EMBED_API_BASE=http://localhost:1234/v1
-EMBED_MODEL=your-local-embed-model
+EMBED_MODEL=text-embedding-3-large-or-nomic-embed-text
 
-# タイムアウト設定
+# API設定
 TIMEOUT_SEC=30
+MAX_RETRIES=3
 
-# パーソナライゼーション設定
-PERSONALIZATION_ENABLED=true
-PERSONALIZATION_MIN_BOOKMARKS=3
+# アプリケーション設定
+APP_TITLE="Scrap-Board"
+APP_VERSION="1.0.0"
+SECRET_KEY=change-this-secret-key-in-production
 ```
 
 ### オプション設定
 
 ```env
-# ログレベル
+# ログ設定
 LOG_LEVEL=INFO
 
-# ワーカー設定
-WORKER_POLL_INTERVAL=5
-WORKER_MAX_RETRIES=3
+# ファイル設定
+UPLOAD_DIR=./data/uploads
+ASSETS_DIR=./data/assets
+MAX_FILE_SIZE=50000000  # 50MB
 
-# フィードバック設定
-FEEDBACK_SCORE_PENALTY=-0.3
+# 要約設定
+SUMMARY_MODE=sync  # sync | async
+SUMMARY_TIMEOUT_SEC=30
+SHORT_SUMMARY_MAX_CHARS=1024
+MEDIUM_SUMMARY_MAX_CHARS=4096
 ```
 
 ## ポート設定

@@ -108,12 +108,14 @@ templates/
 ├── index.html                # トップページ
 ├── documents.html            # ドキュメント一覧
 ├── document_detail.html      # ドキュメント詳細
-├── bookmarks.html            # ブックマーク一覧
+├── bookmarks_only.html       # ブックマーク専用ページ
 ├── preferences.html          # 嗜好分析ページ
+├── reader.html               # Reader Mode表示
 ├── admin/                    # 管理画面テンプレート
 │   ├── export.html
-│   └── sources.html
-└── components/               # 再利用可能コンポーネント
+│   ├── sources.html
+│   └── admin_postprocess.html
+└── partials/                 # 部分テンプレート（再利用可能コンポーネント）
     ├── document_card.html
     └── pagination.html
 ```
