@@ -5,6 +5,8 @@ from sqlalchemy import and_, case, or_
 from sqlalchemy.orm import Session, aliased
 from typing import Optional, List, Dict
 from html import escape
+from markdown_it import MarkdownIt
+from datetime import timezone, timedelta
 
 from app.core.database import get_db, Document, Classification, PersonalizedScore, Bookmark
 from app.core.timezone import JST, jst_isoformat, to_utc_naive
@@ -21,6 +23,34 @@ llm_client = LLMClient()
 
 # テンプレート
 templates = Jinja2Templates(directory="app/templates")
+
+# register minimal filters used by the template if not already present
+md = MarkdownIt()
+def markdown_filter(text):
+    if not text:
+        return ""
+    return md.render(text)
+
+def to_jst(dt, fmt="%Y年%m月%d日 %H:%M"):
+    if not dt:
+        return ""
+    try:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        try:
+            from zoneinfo import ZoneInfo
+            jst = dt.astimezone(ZoneInfo("Asia/Tokyo"))
+        except Exception:
+            jst = dt.astimezone(timezone(timedelta(hours=9)))
+        return jst.strftime(fmt)
+    except Exception:
+        try:
+            return dt.strftime(fmt)
+        except Exception:
+            return ""
+
+templates.env.filters.setdefault("markdown", markdown_filter)
+templates.env.filters.setdefault("to_jst", to_jst)
 
 
 def _resolve_user_id(request: Request) -> str:
@@ -507,6 +537,45 @@ async def get_similar_documents(
     else:
         # Return JSON for API calls
         return {"similar_documents": formatted_docs}
+
+
+@router.get("/{document_id}/modal", response_class=HTMLResponse)
+async def get_document_modal(
+    request: Request,
+    document_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    記事詳細のモーダル用HTML部分テンプレートを返却
+
+    Args:
+        request: FastAPIのRequestオブジェクト
+        document_id: 記事ID
+        db: データベースセッション
+
+    Returns:
+        HTMLResponse: modal_content.html の部分テンプレート
+
+    Raises:
+        HTTPException(404): 記事が存在しない場合
+    """
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # ブックマーク状態を付与（既存のロジックを再利用）
+    try:
+        document.bookmarked = bool(document.bookmarks and len(document.bookmarks) > 0)
+    except Exception:
+        document.bookmarked = False
+
+    return templates.TemplateResponse(
+        "partials/modal_content.html",
+        {
+            "request": request,
+            "document": document
+        }
+    )
 
 
 @router.get("/{document_id}/pdf")
