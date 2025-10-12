@@ -1,12 +1,20 @@
+# Base image
 FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    git \
+# Set timezone to Japan by default inside the image. This installs tzdata
+# non-interactively and configures /etc/localtime so services (cron, system
+# utilities) will observe JST. Keeping package set minimal.
+ENV TZ=Asia/Tokyo
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        tzdata \
+        curl \
+        git \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching

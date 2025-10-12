@@ -9,6 +9,7 @@ services:
       - ./data:/app/data
       - ./.env:/app/.env
     environment:
+      - TZ=Asia/Tokyo
       - DB_URL=sqlite:///./data/scraps.db
       - TIMEOUT_SEC=30
     restart: unless-stopped
@@ -39,6 +40,7 @@ services:
       - ./data:/app/data
       - ./.env:/app/.env
     environment:
+      - TZ=Asia/Tokyo
       - DB_URL=sqlite:///./data/scraps.db
       - TIMEOUT_SEC=180
     restart: unless-stopped
@@ -51,6 +53,7 @@ services:
       - ./data:/app/data
       - ./.env:/app/.env
     environment:
+      - TZ=Asia/Tokyo
       - DB_URL=sqlite:///./data/scraps.db
       - TIMEOUT_SEC=180
       - PYTHONPATH=/app
