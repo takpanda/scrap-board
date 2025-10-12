@@ -52,6 +52,37 @@ def start_scheduler():
     _load_sources_and_schedule()
 
 
+def reload_sources():
+    """Reload sources from DB and reschedule all jobs.
+    
+    This function removes all existing source-related jobs and re-reads
+    the sources table to schedule jobs according to current DB state.
+    Useful for immediately reflecting changes made through the admin UI.
+    """
+    logger.info("Reloading sources and rescheduling jobs...")
+    
+    # Get all existing source jobs
+    existing_jobs = []
+    try:
+        for job in scheduler.get_jobs():
+            if job.id.startswith("fetch_source_"):
+                existing_jobs.append(job.id)
+    except Exception:
+        logger.exception("Failed to list existing jobs")
+    
+    # Remove all source jobs
+    for job_id in existing_jobs:
+        try:
+            scheduler.remove_job(job_id)
+            logger.debug(f"Removed job {job_id}")
+        except Exception:
+            logger.exception(f"Failed to remove job {job_id}")
+    
+    # Reload from DB
+    _load_sources_and_schedule()
+    logger.info("Source reload complete")
+
+
 def stop_scheduler():
     try:
         # Only shutdown if scheduler is running to avoid SchedulerNotRunningError
