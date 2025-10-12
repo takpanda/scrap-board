@@ -51,6 +51,12 @@
         if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
           lucide.createIcons();
         }
+        // Read-more トグルの初期化（モーダル内に追加された要素に対して）
+        try {
+          initModalReadMore(modalContainer);
+        } catch (e) {
+          console.warn('[modal] initModalReadMore failed', e);
+        }
         // 描画タイミングの差で表示が反映されないことがあるため、
         // requestAnimationFrame で次フレームに再保証するフォールバックを追加
         try {
@@ -391,6 +397,46 @@
       } else {
         console.warn('[modal] htmx is not available; cannot load modal content via AJAX');
       }
+    }
+  }
+
+  /**
+   * モーダル内の "もっと見る" トグルを初期化する
+   * @param {HTMLElement} root
+   */
+  function initModalReadMore(root) {
+    if (!root) return;
+    try {
+      var toggles = root.querySelectorAll('.modal-readmore-toggle');
+      toggles.forEach(function(btn) {
+        // 二重バインド防止
+        if (btn._readmoreBound) return;
+        btn._readmoreBound = true;
+
+        btn.addEventListener('click', function(e) {
+          var expanded = btn.getAttribute('aria-expanded') === 'true';
+          var preview = btn.closest('.modal-content-wrap').querySelector('.modal-content-preview');
+          if (!preview) return;
+
+          if (!expanded) {
+            // 展開
+            preview.style.maxHeight = 'none';
+            preview.style.overflow = 'visible';
+            btn.textContent = '折りたたむ';
+            btn.setAttribute('aria-expanded', 'true');
+          } else {
+            // 折りたたむ
+            preview.style.maxHeight = '40vh';
+            preview.style.overflow = 'hidden';
+            btn.textContent = 'もっと見る';
+            btn.setAttribute('aria-expanded', 'false');
+            // スクロール位置を先頭に戻す
+            try { preview.scrollTop = 0; } catch (e) {}
+          }
+        });
+      });
+    } catch (e) {
+      console.warn('[modal] initModalReadMore error', e);
     }
   }
 

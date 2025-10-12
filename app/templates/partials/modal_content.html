@@ -45,15 +45,25 @@
     </div>
     {% endif %}
 
-    <!-- 記事本文プレビュー -->
+    <!-- 記事本文プレビュー (読みやすさ改善: prose, max-w, 行間, 折りたたみ) -->
     <div class="mb-6">
       <h2 class="text-lg font-semibold text-ink mb-2 flex items-center">
         <i data-lucide="file-text" class="w-5 h-5 mr-2"></i>
         コンテンツプレビュー
       </h2>
       <div class="prose max-w-none">
-        {% set preview_content = document.content_md[:500] %}{% if document.content_md|length > 500 %}{% set preview_content = preview_content + "\n\n..." %}{% endif %}
-        <div class="modal-content-preview" data-md-inline="{{ preview_content | replace('"', '&quot;') }}"></div>
+        {% set preview_content = document.content_md %}
+        <!-- ラップする container に可読性用クラスを追加 -->
+        <div class="modal-content-wrap">
+          <!-- 初期表示は高さ制限をつけて折りたたむ -->
+          <div class="modal-content-preview overflow-hidden" data-md-inline="{{ preview_content | replace('"', '&quot;') }}" style="max-height:40vh; line-height:1.7; overflow:hidden; position:relative; padding-top:1px; box-sizing:border-box;">
+          </div>
+
+          <!-- トグル: もっと見る / 折りたたむ -->
+          <div class="mt-3">
+            <button type="button" class="text-sm text-emerald hover:underline modal-readmore-toggle" aria-expanded="false">もっと見る</button>
+          </div>
+        </div>
       </div>
     </div>
 
