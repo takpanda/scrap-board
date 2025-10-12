@@ -1,4 +1,4 @@
-<div class="relative bg-white rounded-lg max-w-4xl mx-auto my-8" data-modal-dialog>
+<div class="relative bg-white rounded-lg w-full h-full md:max-w-4xl md:w-auto md:h-auto md:mx-auto md:my-8 md:rounded-lg" data-modal-dialog>
   <!-- ヘッダー: タイトルと閉じるボタン -->
   <div class="flex items-start justify-between p-6 border-b">
     <div class="flex-1 min-w-0">
@@ -15,7 +15,7 @@
   </div>
 
   <!-- コンテンツ: 本文、メタデータ -->
-  <div class="p-6 max-h-[70vh] overflow-y-auto">
+  <div class="p-6 h-[calc(100vh-12rem)] md:h-auto md:max-h-[70vh] overflow-y-auto">
     <!-- カテゴリとタグ -->
     {% if document.classifications %}
     <div class="tag-list flex items-center mb-6 flex-wrap">
@@ -82,17 +82,10 @@
   <div class="flex items-center justify-between p-6 border-t">
     <div class="flex gap-3">
       <!-- ブックマークボタン -->
-      <button
-        id="modal-bookmark-btn"
-        class="inline-flex items-center px-4 py-2 bg-mist/80 text-graphite border border-mist rounded-md hover:bg-mist transition-colors"
-        aria-pressed="{{ 'true' if document.bookmarked else 'false' }}"
-        data-doc-id="{{ document.id }}"
-        onclick="toggleBookmark(this)"
-        type="button"
-      >
-        <i data-lucide="heart" class="w-5 h-5 mr-2 {% if document.bookmarked %}text-rose-600{% else %}text-graphite{% endif %}"></i>
-        ブックマーク
-      </button>
+      {% set btn_context = "modal" %}
+      {% set btn_document_id = document.id %}
+      {% set btn_bookmarked = document.bookmarked %}
+      {% include 'partials/bookmark_button.html' %}
 
       <!-- 元記事リンク -->
       {% if document.url %}

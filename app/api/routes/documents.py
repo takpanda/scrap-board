@@ -554,14 +554,24 @@ async def get_document_modal(
         db: データベースセッション
 
     Returns:
-        HTMLResponse: modal_content.html の部分テンプレート
+        HTMLResponse: modal_content.html の部分テンプレート、
+                     または404エラー時は error_modal.html
 
     Raises:
         HTTPException(404): 記事が存在しない場合
     """
     document = db.query(Document).filter(Document.id == document_id).first()
     if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
+        # モーダル用のHTMLエラーレスポンスを返す
+        return templates.TemplateResponse(
+            "partials/error_modal.html",
+            {
+                "request": request,
+                "error_title": "記事が見つかりませんでした",
+                "error_message": "指定された記事は存在しないか、削除された可能性があります。"
+            },
+            status_code=404
+        )
 
     # ブックマーク状態を付与（既存のロジックを再利用）
     try:

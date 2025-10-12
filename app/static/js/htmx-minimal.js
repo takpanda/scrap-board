@@ -1,6 +1,67 @@
 /**
- * Minimal HTMX-like implementation for similar documents loading
+ * Minimal HTMX-like implementation for similar documents loading and modal functionality
  */
+
+// Create a global htmx object for compatibility with modal.js
+window.htmx = window.htmx || {};
+window.htmx.ajax = function(method, url, options) {
+    const target = options.target ? document.querySelector(options.target) : document.body;
+    const swap = options.swap || 'innerHTML';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'HX-Request': 'true'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.text();
+    })
+    .then(html => {
+        if (swap === 'innerHTML' && target) {
+            target.innerHTML = html;
+        } else if (swap === 'outerHTML' && target) {
+            target.outerHTML = html;
+        }
+
+        // Trigger afterSwap event
+        const afterSwapEvent = new CustomEvent('htmx:afterSwap', {
+            detail: {
+                target: target,
+                xhr: null
+            }
+        });
+        document.body.dispatchEvent(afterSwapEvent);
+
+        // Re-initialize icons
+        if (window.lucide) {
+            window.lucide.createIcons();
+        } else if (window.createIcons) {
+            window.createIcons();
+        }
+
+        // Re-bind hx handlers
+        if (typeof initHxBindings === 'function') {
+            initHxBindings();
+        }
+    })
+    .catch(error => {
+        console.error('htmx.ajax error:', error);
+
+        // Trigger responseError event
+        const errorEvent = new CustomEvent('htmx:responseError', {
+            detail: {
+                target: target,
+                error: error
+            }
+        });
+        document.body.dispatchEvent(errorEvent);
+    });
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     initHxBindings();
     // Trigger initial hx-get loads
@@ -77,6 +138,86 @@ function initHxBindings() {
                 initHxBindings();
             })
             .catch(err => console.error('hx-put error', err));
+        });
+    });
+
+    // Attach click handlers for hx-get (links, buttons)
+    const hxGetElems = document.querySelectorAll('a[hx-get], button[hx-get]');
+    hxGetElems.forEach(elem => {
+        if (elem._hxGetBound) return;
+        elem._hxGetBound = true;
+        elem.addEventListener('click', function(e) {
+            e.preventDefault();
+            const url = elem.getAttribute('hx-get');
+            const target = elem.getAttribute('hx-target');
+            const hxSwap = elem.getAttribute('hx-swap') || 'innerHTML';
+            const hxPushUrl = elem.getAttribute('hx-push-url');
+
+            if (!url) return;
+
+            // Find target element
+            let targetElement = target ? document.querySelector(target) : elem;
+            if (!targetElement) {
+                console.error('Target element not found:', target);
+                return;
+            }
+
+            // Update URL history if hx-push-url is set
+            if (hxPushUrl) {
+                window.history.pushState({}, '', hxPushUrl);
+            }
+
+            // Fetch content
+            fetch(url, {
+                headers: {
+                    'HX-Request': 'true'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.text();
+            })
+            .then(html => {
+                // Perform swap
+                if (hxSwap === 'innerHTML') {
+                    targetElement.innerHTML = html;
+                } else if (hxSwap === 'outerHTML') {
+                    targetElement.outerHTML = html;
+                }
+
+                // Trigger HTMX afterSwap event
+                const afterSwapEvent = new CustomEvent('htmx:afterSwap', {
+                    detail: {
+                        target: targetElement,
+                        xhr: null
+                    }
+                });
+                document.body.dispatchEvent(afterSwapEvent);
+
+                // Re-initialize icons
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                } else if (window.createIcons) {
+                    window.createIcons();
+                }
+
+                // Re-bind hx handlers
+                initHxBindings();
+            })
+            .catch(error => {
+                console.error('hx-get error:', error);
+
+                // Trigger HTMX responseError event
+                const errorEvent = new CustomEvent('htmx:responseError', {
+                    detail: {
+                        target: targetElement,
+                        error: error
+                    }
+                });
+                document.body.dispatchEvent(errorEvent);
+            });
         });
     });
 

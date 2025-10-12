@@ -221,17 +221,22 @@
             }
         }
     </style>
-    
-    <!-- Local HTMX-like functionality -->
-    <script src="/static/js/htmx-minimal.js"></script>
-
-    <!-- Local Icons -->
-    <script src="/static/js/icons.js"></script>
-
-    <!-- Document Detail Modal State Management -->
-    <script src="/static/js/modal.js"></script>
 </head>
 <body class="overflow-x-auto md:overflow-x-visible">
+    <script>
+        // Fallback no-op to prevent ReferenceError when inline templates
+        // call createIcons before /static/js/icons.js has loaded.
+        if (typeof window !== 'undefined') {
+            if (!window.createIcons) {
+                window.createIcons = function() { /* no-op until icons.js loads */ };
+            }
+            if (!window.lucide) {
+                window.lucide = { createIcons: window.createIcons };
+            } else if (!window.lucide.createIcons) {
+                window.lucide.createIcons = window.createIcons;
+            }
+        }
+    </script>
     <!-- Header -->
     <header class="header">
         <div class="header-content max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center md:justify-between gap-3">
@@ -698,6 +703,15 @@
 
         // mobile menu removed - no toggle functions remain
     </script>
-    
+
+    <!-- Local HTMX-like functionality -->
+    <script src="/static/js/htmx-minimal.js"></script>
+
+    <!-- Local Icons -->
+    <script src="/static/js/icons.js"></script>
+
+    <!-- Document Detail Modal State Management -->
+    <script src="/static/js/modal.js"></script>
+
 </body>
 </html>

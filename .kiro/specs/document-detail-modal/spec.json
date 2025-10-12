@@ -1,9 +1,9 @@
 {
   "feature_name": "document-detail-modal",
   "created_at": "2025-10-12T14:02:00Z",
-  "updated_at": "2025-10-12T16:45:00Z",
+  "updated_at": "2025-10-13T02:00:00Z",
   "language": "ja",
-  "phase": "tasks-generated",
+  "phase": "completed",
   "approvals": {
     "requirements": {
       "generated": true,
@@ -15,8 +15,10 @@
     },
     "tasks": {
       "generated": true,
-      "approved": false
+      "approved": true
     }
   },
-  "ready_for_implementation": false
+  "ready_for_implementation": true,
+  "implementation_completed": true,
+  "tests_passing": true
 }

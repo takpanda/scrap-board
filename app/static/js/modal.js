@@ -40,8 +40,9 @@
 
   /**
    * モーダルを閉じる
+   * @param {boolean} skipHistoryUpdate - URL履歴の更新をスキップ（戻るボタンの場合）
    */
-  function closeModal() {
+  function closeModal(skipHistoryUpdate = false) {
     // モーダルを非表示
     modalContainer.classList.add('hidden');
 
@@ -56,6 +57,15 @@
       previousFocusElement.focus();
     }
     previousFocusElement = null;
+
+    // URL履歴から?doc={id}を削除（popstateの場合はスキップ）
+    if (!skipHistoryUpdate) {
+      const url = new URL(window.location);
+      if (url.searchParams.has('doc')) {
+        url.searchParams.delete('doc');
+        window.history.pushState({}, '', url);
+      }
+    }
   }
 
   /**
@@ -123,6 +133,37 @@
     }
   }
 
+  /**
+   * ブラウザの戻るボタン対応: popstateイベントでモーダルを閉じる
+   */
+  function handlePopState(event) {
+    const url = new URL(window.location);
+    const docId = url.searchParams.get('doc');
+
+    if (!docId && !modalContainer.classList.contains('hidden')) {
+      // URLに?doc={id}がなく、モーダルが開いている場合は閉じる
+      closeModal(true); // skipHistoryUpdate=trueでURL更新をスキップ
+    }
+  }
+
+  /**
+   * ディープリンク対応: ページロード時に?doc={id}があれば自動的にモーダルを開く
+   */
+  function handleDeepLink() {
+    const url = new URL(window.location);
+    const docId = url.searchParams.get('doc');
+
+    if (docId && modalContainer) {
+      // HTMXでモーダルコンテンツを取得
+      if (typeof htmx !== 'undefined') {
+        htmx.ajax('GET', `/api/documents/${docId}/modal`, {
+          target: '#modal-container',
+          swap: 'innerHTML'
+        });
+      }
+    }
+  }
+
   // HTMX afterSwap イベントリスナー: モーダルコンテンツが挿入された後に自動的に開く
   document.body.addEventListener('htmx:afterSwap', function(event) {
     if (event.detail.target && event.detail.target.id === 'modal-container') {
@@ -134,11 +175,48 @@
     }
   });
 
+  // HTMX responseError イベントリスナー: ネットワークエラー時の処理
+  document.body.addEventListener('htmx:responseError', function(event) {
+    if (event.detail.target && event.detail.target.id === 'modal-container') {
+      console.error('Modal content fetch error:', event.detail);
+
+      // エラートーストを表示（グローバルなshowNotification関数が利用可能な場合）
+      if (typeof showNotification === 'function') {
+        showNotification('記事の読み込みに失敗しました', 'error');
+      }
+
+      // モーダルを閉じる
+      closeModal();
+    }
+  });
+
+  // HTMX responseError イベントリスナー: DOM構造エラー時の処理
+  document.body.addEventListener('htmx:beforeSwap', function(event) {
+    // 404や500エラーの場合でも、HTMLレスポンスがあればモーダルに表示する
+    if (event.detail.xhr && event.detail.xhr.status >= 400 && event.detail.xhr.status < 600) {
+      const contentType = event.detail.xhr.getResponseHeader('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        // HTMLエラーレスポンスの場合は、モーダルに表示を許可
+        event.detail.shouldSwap = true;
+        event.detail.isError = false;
+      }
+    }
+  });
+
   // イベントリスナーの登録
   modalContainer.addEventListener('click', handleOverlayClick);
   modalContainer.addEventListener('click', handleCloseClick);
   document.addEventListener('keydown', handleEscapeKey);
   document.addEventListener('keydown', handleFocusTrap);
+  window.addEventListener('popstate', handlePopState);
+
+  // DOMContentLoaded: ディープリンク対応
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', handleDeepLink);
+  } else {
+    // すでに読み込み済みの場合は即座に実行
+    handleDeepLink();
+  }
 
   // グローバルに公開（URL履歴管理で使用）
   window.modalManager = {

@@ -1,0 +1,46 @@
+{# ブックマークボタンの部分テンプレート
+   btn_context: "modal" または "card" - ボタンの表示コンテキスト
+   btn_document_id: 記事ID
+   btn_bookmarked: ブックマーク済みかどうか（True/False）
+#}
+{% if btn_context == 'modal' %}
+<button
+  id="modal-bookmark-btn"
+  class="inline-flex items-center px-4 py-2 {% if btn_bookmarked %}bg-rose-50 text-rose-600 border-rose-200{% else %}bg-mist/80 text-graphite border-mist{% endif %} border rounded-md hover:bg-mist transition-colors"
+  aria-pressed="{{ 'true' if btn_bookmarked else 'false' }}"
+  data-doc-id="{{ btn_document_id }}"
+  {% if btn_bookmarked %}
+  hx-delete="/api/bookmarks?document_id={{ btn_document_id }}"
+  {% else %}
+  hx-post="/api/bookmarks"
+  hx-vals='{"document_id": "{{ btn_document_id }}"}'
+  {% endif %}
+  hx-swap="outerHTML"
+  hx-target="#modal-bookmark-btn"
+  type="button"
+>
+  <i data-lucide="heart" class="w-5 h-5 mr-2 {% if btn_bookmarked %}fill-current text-rose-600{% else %}text-graphite{% endif %}"></i>
+  {% if btn_bookmarked %}ブックマーク済み{% else %}ブックマーク{% endif %}
+</button>
+{% else %}
+<button
+  id="card-{{ btn_document_id }}-bookmark-btn"
+  class="bookmark-btn pill nowrap-tag inline-flex items-center h-6 px-2 text-xs ml-2 {% if btn_bookmarked %}{% else %}bg-mist/80 text-graphite border border-mist{% endif %}"
+  aria-pressed="{{ 'true' if btn_bookmarked else 'false' }}"
+  data-doc-id="{{ btn_document_id }}"
+  {% if btn_bookmarked %}
+  hx-delete="/api/bookmarks?document_id={{ btn_document_id }}"
+  {% else %}
+  hx-post="/api/bookmarks"
+  hx-vals='{"document_id": "{{ btn_document_id }}"}'
+  {% endif %}
+  hx-swap="outerHTML"
+  hx-target="#card-{{ btn_document_id }}-bookmark-btn"
+  title="ブックマーク"
+  type="button"
+  {% if btn_bookmarked %}style="background-color:#fff1f2;color:#9f1239;border-color:#fecdd3"{% endif %}
+>
+  <i data-lucide="heart" class="w-4 h-4 mr-2 {% if btn_bookmarked %}text-rose-600{% else %}text-graphite{% endif %}" {% if btn_bookmarked %}style="color: #9f1239;"{% endif %}></i>
+  <span class="text-xs">ブックマーク</span>
+</button>
+{% endif %}

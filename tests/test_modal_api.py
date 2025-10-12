@@ -126,3 +126,77 @@ def test_document_card_has_modal_trigger(client: TestClient, db_with_document: S
     assert 'hx-get="/api/documents/' in html
     assert '/modal"' in html
     assert 'hx-target="#modal-container"' in html
+
+
+def test_bookmark_api_returns_json_for_non_htmx_request(client: TestClient, db_with_document: Session):
+    """非HTMXリクエストの場合、ブックマークAPIはJSONを返す"""
+    doc_id = "test-doc-123"
+
+    # HTMXヘッダーなしでブックマーク追加
+    response = client.post("/api/bookmarks", json={"document_id": doc_id})
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/json"
+
+    json_data = response.json()
+    assert json_data["status"] == "success"
+    assert json_data["bookmarked"] is True
+
+    # クリーンアップ
+    db_with_document.query(Bookmark).filter(Bookmark.document_id == doc_id).delete()
+    db_with_document.commit()
+
+
+def test_bookmark_api_returns_html_for_htmx_request(client: TestClient, db_with_document: Session):
+    """HTMXリクエストの場合、ブックマークAPIはout-of-band swap用のHTMLを返す"""
+    doc_id = "test-doc-123"
+
+    # HTMXヘッダー付きでブックマーク追加
+    response = client.post(
+        "/api/bookmarks",
+        json={"document_id": doc_id},
+        headers={"HX-Request": "true"}
+    )
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+
+    html = response.text
+
+    # out-of-band swap用のHTML断片が含まれることを確認
+    assert "hx-swap-oob" in html
+    assert "modal-bookmark-btn" in html
+    assert f"card-{doc_id}-bookmark" in html or "bookmark-btn" in html
+
+    # クリーンアップ
+    db_with_document.query(Bookmark).filter(Bookmark.document_id == doc_id).delete()
+    db_with_document.commit()
+
+
+def test_bookmark_delete_with_htmx(client: TestClient, db_with_document: Session):
+    """HTMXリクエストでブックマーク削除し、out-of-band swap用のHTMLを返す"""
+    doc_id = "test-doc-123"
+
+    # ブックマークを追加
+    bookmark = Bookmark(
+        document_id=doc_id,
+        user_id="guest",
+        created_at=datetime.now(timezone.utc)
+    )
+    db_with_document.add(bookmark)
+    db_with_document.commit()
+
+    # HTMXヘッダー付きでブックマーク削除
+    response = client.delete(
+        f"/api/bookmarks?document_id={doc_id}",
+        headers={"HX-Request": "true"}
+    )
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+
+    html = response.text
+
+    # out-of-band swap用のHTML断片が含まれることを確認
+    assert "hx-swap-oob" in html
+    assert 'aria-pressed="false"' in html or "bookmarked" not in html.lower()
