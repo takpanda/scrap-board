@@ -327,3 +327,61 @@ def test_reload_sources_function():
         
     finally:
         db.close()
+
+
+def test_reload_sources_with_invalid_cron(client):
+    """Test that reload_sources handles invalid cron expressions gracefully."""
+    # Create a source with invalid cron
+    response = client.post(
+        "/api/admin/sources/",
+        json={
+            "name": "Invalid Cron Feed",
+            "type": "rss",
+            "config": {"url": "https://example.com/feed.xml"},
+            "enabled": True,
+            "cron_schedule": "invalid cron"
+        }
+    )
+    assert response.status_code == 200
+    source_id = response.json()["id"]
+
+    # Manually reload scheduler (should not crash)
+    scheduler.reload_sources()
+
+    # Verify no job was scheduled for invalid cron
+    job_id = f"fetch_source_{source_id}"
+    jobs = scheduler.scheduler.get_jobs()
+    assert not any(j.id == job_id for j in jobs), "Invalid cron should not create a job"
+
+
+def test_multiple_reloads_are_idempotent(client):
+    """Test that multiple reload_sources calls produce the same result."""
+    # Create a source
+    response = client.post(
+        "/api/admin/sources/",
+        json={
+            "name": "Idempotent Test Feed",
+            "type": "rss",
+            "config": {"url": "https://example.com/feed.xml"},
+            "enabled": True,
+            "cron_schedule": "0 * * * *"
+        }
+    )
+    assert response.status_code == 200
+    source_id = response.json()["id"]
+
+    # First reload
+    scheduler.reload_sources()
+    jobs_after_first = scheduler.scheduler.get_jobs()
+    job_id = f"fetch_source_{source_id}"
+    assert any(j.id == job_id for j in jobs_after_first), "Job should exist after first reload"
+
+    # Second reload (should be idempotent)
+    scheduler.reload_sources()
+    jobs_after_second = scheduler.scheduler.get_jobs()
+    assert any(j.id == job_id for j in jobs_after_second), "Job should still exist after second reload"
+
+    # Verify same number of jobs
+    source_jobs_first = [j for j in jobs_after_first if j.id.startswith("fetch_source_")]
+    source_jobs_second = [j for j in jobs_after_second if j.id.startswith("fetch_source_")]
+    assert len(source_jobs_first) == len(source_jobs_second), "Number of jobs should be the same"
