@@ -6,10 +6,28 @@ import json
 from urllib.parse import urlparse
 from sqlalchemy import text
 from app.core.database import get_db
+import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin/sources", tags=["admin-sources"])
 
 templates = Jinja2Templates(directory="app/templates")
+
+
+def _reload_scheduler_if_available():
+    """Safely reload scheduler if not in test mode."""
+    # Skip scheduler reload during tests
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        logger.debug("Test mode detected; skipping scheduler reload")
+        return
+    
+    try:
+        from app.services import scheduler
+        scheduler.reload_sources()
+    except Exception:
+        logger.exception("Failed to reload scheduler after source change")
 
 
 class SourceCreate(BaseModel):
@@ -131,6 +149,9 @@ async def create_source(request: Request, db=Depends(get_db)):
     )
     db.commit()
 
+    # Reload scheduler to immediately reflect the new source
+    _reload_scheduler_if_available()
+
     # Get last insert id (SQLite compatible)
     try:
         last_id = db.execute(text("SELECT last_insert_rowid()"))
@@ -243,6 +264,9 @@ async def update_source(source_id: int, request: Request, db=Depends(get_db)):
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="source not found")
 
+    # Reload scheduler to immediately reflect the updated source
+    _reload_scheduler_if_available()
+
     if request.query_params.get("html") == "1" or request.headers.get("accept", "").find("text/html") != -1:
         return await list_sources(request, db)
 
@@ -255,6 +279,9 @@ async def delete_source(source_id: int, request: Request, db=Depends(get_db)):
     db.commit()
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="source not found")
+
+    # Reload scheduler to immediately remove the deleted source's job
+    _reload_scheduler_if_available()
 
     if request.query_params.get("html") == "1" or request.headers.get("accept", "").find("text/html") != -1:
         return await list_sources(request, db)
