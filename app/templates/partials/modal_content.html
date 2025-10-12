@@ -40,7 +40,7 @@
         AI要約
       </h2>
       <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-        <div class="text-sm text-gray-700">{{ document.short_summary | safe }}</div>
+        <div class="prose prose-sm max-w-none text-gray-700 modal-summary-content" data-md-inline="{{ document.short_summary | replace('"', '&quot;') }}"></div>
       </div>
     </div>
     {% endif %}
@@ -52,10 +52,8 @@
         コンテンツプレビュー
       </h2>
       <div class="prose max-w-none">
-        {{ document.content_md[:500] | markdown | safe }}
-        {% if document.content_md|length > 500 %}
-        <span class="text-gray-400">...</span>
-        {% endif %}
+        {% set preview_content = document.content_md[:500] %}{% if document.content_md|length > 500 %}{% set preview_content = preview_content + "\n\n..." %}{% endif %}
+        <div class="modal-content-preview" data-md-inline="{{ preview_content | replace('"', '&quot;') }}"></div>
       </div>
     </div>
 

@@ -37,6 +37,16 @@
     document.body.addEventListener('htmx:afterSwap', function(event) {
       if (event.detail.target && event.detail.target.id === 'modal-container') {
         openModal();
+        
+        // Markdownプレビューのレンダリング
+        if (typeof window.scrapMarkdownRenderInline === 'function') {
+          try {
+            window.scrapMarkdownRenderInline(modalContainer);
+          } catch (e) {
+            console.warn('[modal] Markdown rendering failed:', e);
+          }
+        }
+        
         // Lucide iconsの再レンダリング
         if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
           lucide.createIcons();
