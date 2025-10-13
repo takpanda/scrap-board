@@ -1,0 +1,358 @@
+/* Modal Responsive Styles (scoped) - document detail modal */
+/* Scoped under [data-modal-dialog] to avoid global conflicts */
+
+[data-modal-dialog] {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100vh; /* ensure dialog is bounded by viewport */
+    display: flex;
+    flex-direction: column;
+}
+
+[data-modal-dialog] {
+    will-change: transform, opacity;
+}
+
+[data-modal-dialog] [data-modal-scrollable] {
+    -webkit-overflow-scrolling: touch; /* momentum scrolling */
+    overflow-y: auto;
+    /* Allow the scrollable area to grow larger so the dialog can occupy more vertical space */
+    max-height: 98vh; /* increased to let dialog span further down */
+}
+
+[data-modal-dialog] .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+
+/* Badge-style tags inside modal */
+[data-modal-dialog] .dify-tag-primary,
+[data-modal-dialog] .dify-tag-secondary {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.375rem !important;
+    padding: 0.18rem 0.5rem !important; /* compact pill */
+    border-radius: 999px !important;
+    font-size: 0.75rem !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    box-shadow: none !important;
+}
+
+[data-modal-dialog] .dify-tag-primary {
+    background: #eef2ff !important; /* indigo-50 */
+    color: #4f46e5 !important; /* indigo-600 */
+    border: 1px solid rgba(79,70,229,0.08) !important;
+}
+
+[data-modal-dialog] .dify-tag-secondary {
+    background: #f3f4f6 !important; /* gray-100 */
+    color: #374151 !important; /* gray-700 */
+    border: 1px solid rgba(15,23,42,0.04) !important;
+}
+
+[data-modal-dialog] .dify-tag-primary,
+[data-modal-dialog] .dify-tag-secondary {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    [data-modal-dialog] > .flex.items-start,
+    [data-modal-dialog] > .flex.items-center {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        /* Reduce vertical padding on mobile so header fits within 56px */
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+
+    /* Add small top margin so modal header is not flush against screen top on mobile */
+    [data-modal-dialog] {
+        /* reset any previous top margin so dialog aligns with overlay top */
+        margin-top: 0 !important;
+    }
+
+    /* Reduce top padding of the scrollable content on small screens to tighten the gap under the header */
+    [data-modal-dialog] [data-modal-scrollable] {
+        padding-top: 0.5rem !important;
+    }
+
+    /* Ensure modal dialog is fixed within the viewport on small screens to avoid any vertical overflow.
+       Use inset with safe-area insets so the dialog never extends beyond device UI areas. */
+    [data-modal-dialog] {
+        position: fixed !important;
+        left: env(safe-area-inset-left, 0.5rem) !important;
+        right: env(safe-area-inset-right, 0.5rem) !important;
+        top: env(safe-area-inset-top, 0.5rem) !important;
+        bottom: env(safe-area-inset-bottom, 0.5rem) !important;
+        width: calc(100% - 1rem) !important;
+        max-width: calc(100% - 1rem) !important;
+        max-height: calc(100vh - env(safe-area-inset-top, 1rem) - env(safe-area-inset-bottom, 1rem)) !important;
+        margin: 0 auto !important;
+        border-radius: 10px !important;
+        overflow: hidden !important; /* keep the dialog itself clipped to viewport */
+        display: flex !important;
+        flex-direction: column !important;
+        transform: none !important; /* cancel any translate that could push dialog off-screen */
+    }
+
+    /* Let the scrollable content take the remaining space and be responsible for scrolling. */
+    [data-modal-dialog] [data-modal-scrollable] {
+        flex: 1 1 auto !important;
+        min-height: 0 !important; /* allow flex children to shrink and enable scrolling */
+        max-height: none !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+
+/* Modal overlay root: ensure full-screen fixed overlay that hides underlying page */
+#modal-container {
+    position: fixed !important;
+    inset: 0 !important; /* top:0; right:0; bottom:0; left:0 */
+    align-items: flex-start !important; /* align dialog to top */
+    justify-content: center !important;
+    background: rgba(0, 0, 0, 0.6) !important; /* darker overlay so underlying page is not visible */
+    z-index: 2147483001 !important;
+    /* minimize overlay padding so dialog can extend closer to device edges; still respect safe-area if provided */
+    padding-top: env(safe-area-inset-top, 0) !important; /* respect notch */
+    padding-bottom: env(safe-area-inset-bottom, 0) !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Keep overlay non-interactive and hidden when the hidden class is present */
+#modal-container.hidden {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+/* When the modal is visible, enable layout and pointer events */
+#modal-container:not(.hidden) {
+    display: flex !important;
+    pointer-events: auto !important;
+}
+
+/* Ensure dialog doesn't get cut off at very top on mobile */
+[data-modal-dialog] {
+    /* Remove extra margins so dialog can extend to near full viewport height. */
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    /* Use the viewport height minus any safe areas to occupy the largest possible vertical space. */
+    max-height: calc(100vh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0)) !important;
+    height: auto !important;
+    /* Prevent the dialog itself from extending beyond the viewport; let inner area scroll. */
+    overflow: hidden !important;
+    position: relative !important;
+}
+    [data-modal-dialog] h2 {
+        font-size: 1rem;
+        line-height: 1.25;
+        margin-bottom: 0.25rem;
+    }
+
+    [data-modal-dialog] button,
+    [data-modal-dialog] a.btn,
+    [data-modal-dialog] a {
+           min-width: 44px;
+           min-height: 32px;
+           padding: 0.15rem 0.4rem;
+    }
+
+    [data-modal-dialog] .modal-content-wrap {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    [data-modal-dialog] .modal-content-preview {
+        max-height: 40vh !important; /* match template intent and provide consistent collapsed height */
+        overflow: auto !important; /* make collapsed state scrollable to avoid visible clipping */
+        -webkit-overflow-scrolling: touch !important; /* momentum scrolling on iOS */
+        padding-bottom: 1.25rem !important; /* increased breathing room so last line isn't clipped */
+        scrollbar-gutter: stable both-edges !important; /* avoid content shift and scrollbar overlay */
+        overflow-anchor: none !important; /* avoid scroll anchoring jumps */
+        box-sizing: border-box !important;
+        line-height: 1.7 !important;
+    }
+
+    /* Add a small spacer at the end of the preview so the last line is not hidden behind rounded containers/scrollbars */
+    [data-modal-dialog] .modal-content-preview::after {
+        content: '';
+        display: block;
+        height: 2rem;
+        width: 100%;
+        pointer-events: none;
+    }
+
+    /* Ensure the preview isn't collapsed to zero height on very short viewports */
+    [data-modal-dialog] .modal-content-preview {
+        min-height: 6rem !important;
+        /* On small viewports allow preview to expand more before scrolling kicks in */
+        max-height: 70vh !important;
+    }
+
+    /* Ensure media inside the preview scale down and don't cause layout overflow */
+    [data-modal-dialog] .modal-content-preview img,
+    [data-modal-dialog] .modal-content-preview video,
+    [data-modal-dialog] .modal-content-preview iframe {
+        max-width: 100% !important;
+        height: auto !important;
+        display: block !important;
+    }
+
+    /* Reduce thumbnail size and tighten title spacing specifically for modal header on mobile */
+    [data-modal-dialog] .dify-thumb {
+        display: block !important;
+        width: 34px !important;
+        height: 34px !important;
+        max-width: none !important;
+    object-fit: cover !important; /* preserve aspect ratio, avoid squashing */
+    box-sizing: border-box !important;
+    overflow: visible !important;
+        flex-shrink: 0;
+        margin: 0 !important;
+        border-radius: 6px !important;
+    }
+
+    [data-modal-dialog] .dify-title-with-thumb {
+        gap: 0.15rem !important; /* smaller gap between thumb and title */
+        align-items: center;
+        margin-top: 0.25rem !important; /* reduced to fit header height constraint on mobile */
+        min-height: 34px !important; /* ensure parent is tall enough to avoid clipping the thumbnail */
+    }
+
+    [data-modal-dialog] .dify-title {
+        font-size: 0.95rem !important;
+        line-height: 1 !important;
+    }
+
+    /* Make section headings icon-only (badge-like) on small screens to save horizontal space */
+    [data-modal-dialog] h2 .label-text {
+        display: inline !important;
+    }
+
+    @media (max-width: 480px) {
+        /* Keep label text visible on small screens per design request */
+        [data-modal-dialog] h2 .label-text {
+            display: inline !important;
+            margin-left: 0.25rem !important;
+        }
+
+        [data-modal-dialog] h2 i[data-lucide] {
+            width: 1.25rem !important;
+            height: 1.25rem !important;
+            margin-right: 0.25rem !important; /* restore spacing between icon and text */
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.03) !important;
+            border-radius: 999px !important;
+            padding: 0.25rem !important;
+        }
+    }
+
+    /* Hide additional metadata in header on small screens to reduce header height */
+    [data-modal-dialog] .dify-meta-grid {
+        display: none !important;
+    }
+
+    /* Make the footer '閉じる' button more compact in the modal (scoped to avoid global changes) */
+    [data-modal-dialog] > .flex.items-center.justify-between button[data-modal-close] {
+        padding: 0.25rem 0.6rem !important;
+        font-size: 0.875rem !important;
+        line-height: 1 !important;
+        min-width: 0 !important;
+    }
+
+    /* Prevent footer links from wrapping; keep icon and text on one line */
+    [data-modal-dialog] .modal-footer-link,
+    [data-modal-dialog] .modal-footer-link i[data-lucide] {
+        white-space: nowrap !important;
+    }
+
+    /* If footer action group overflows horizontally on very small screens, allow horizontal scroll instead of wrapping */
+    [data-modal-dialog] .flex.gap-3 {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-gutter: stable both-edges;
+    }
+}
+
+/* Also apply a slightly smaller size on wider screens to keep modal controls compact */
+[data-modal-dialog] > .flex.items-center.justify-between button[data-modal-close] {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+}
+
+[data-modal-dialog] button:focus,
+[data-modal-dialog] a:focus {
+    outline: 3px solid rgba(16, 185, 129, 0.18);
+    outline-offset: 2px;
+}
+
+/* Make the header close button circular and translucent (top-right X) */
+[data-modal-dialog] > .flex.items-start button[data-modal-close],
+[data-modal-dialog] > .flex.items-center button[data-modal-close] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0.25rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--graphite);
+    transition: background 120ms ease, transform 120ms ease;
+}
+
+[data-modal-dialog] > .flex.items-start button[data-modal-close]:hover,
+[data-modal-dialog] > .flex.items-center button[data-modal-close]:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+    [data-modal-dialog] > .flex.items-start button[data-modal-close],
+    [data-modal-dialog] > .flex.items-center button[data-modal-close] {
+        width: 32px;
+        height: 32px;
+        padding: 0.15rem;
+    }
+}
+
+/* Icon-only close button in modal footer */
+.modal-close-icon {
+    background: var(--emerald, #10b981) !important;
+    color: #fff !important;
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0.2rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.modal-close-icon i[data-lucide] {
+    width: 0.9rem !important;
+    height: 0.9rem !important;
+}
+
+[data-modal-dialog] [data-modal-scrollable]::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+[data-modal-dialog] [data-modal-scrollable]::-webkit-scrollbar-thumb {
+    background: rgba(16, 24, 40, 0.08);
+    border-radius: 999px;
+}
+
+[data-modal-dialog] .prose, [data-modal-dialog] .modal-content-wrap {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}

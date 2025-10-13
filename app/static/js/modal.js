@@ -196,6 +196,8 @@
         modalContainer.style.left = '0px';
         modalContainer.style.right = '0px';
         modalContainer.style.bottom = '0px';
+        // Force overlay background color (inline) to ensure dimming even if CSS utilities are missing
+        try { modalContainer.style.backgroundColor = 'rgba(243,244,246,0.6)'; } catch (e) {}
       } catch (e) {
         console.warn('[modal] openModal: unable to set inline display/aria', e);
       }
@@ -471,14 +473,22 @@
           if (!preview) return;
 
           if (!expanded) {
-            // 展開
-            preview.style.maxHeight = 'none';
+            // 展開 - setProperty with priority to override CSS !important
+            try {
+              preview.style.setProperty('max-height', 'none', 'important');
+            } catch (e) {
+              preview.style.maxHeight = 'none';
+            }
             preview.style.overflow = 'visible';
             btn.textContent = '折りたたむ';
             btn.setAttribute('aria-expanded', 'true');
           } else {
             // 折りたたむ
-            preview.style.maxHeight = '40vh';
+            try {
+              preview.style.setProperty('max-height', '40vh', 'important');
+            } catch (e) {
+              preview.style.maxHeight = '40vh';
+            }
             preview.style.overflow = 'hidden';
             btn.textContent = 'もっと見る';
             btn.setAttribute('aria-expanded', 'false');

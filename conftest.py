@@ -399,6 +399,70 @@ def _reset_database_between_tests(test_database_override):
     # clean up before it runs.
 
 
+@pytest.fixture(scope="function", autouse=True)
+def seed_demo_documents(test_database_override, _reset_database_between_tests):
+    """Seed a small demo document into the test DB so E2E tests have content.
+
+    This runs once per test session after the temporary DB is created by
+    `test_database_override`. It is intentionally permissive and best-effort
+    so it doesn't fail the test run if seeding cannot be performed.
+    """
+    try:
+        from app.core.database import SessionLocal, create_tables, Document, Classification
+        # Ensure tables exist
+        create_tables()
+        session = SessionLocal()
+
+        doc_id = "demo-seed-doc-1"
+        # Remove any previous demo doc to allow repeated runs
+        try:
+            session.query(Classification).filter(Classification.document_id == doc_id).delete()
+            session.query(Document).filter(Document.id == doc_id).delete()
+            session.commit()
+        except Exception:
+            session.rollback()
+
+        # Insert a small demo document used by E2E tests
+        from datetime import datetime, timezone
+
+        document = Document(
+            id=doc_id,
+            title="デモ記事: モバイルモーダルテスト",
+            url="https://example.com/demo-mobile-modal",
+            domain="example.com",
+            content_md="# デモコンテンツ\n\nこれはテスト用のデモ記事です。",
+            content_text="デモコンテンツ - これはテスト用のデモ記事です。",
+            short_summary="モバイルモーダルのデモ記事",
+            hash="demo-seed-hash-1",
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+            fetched_at=datetime.now(timezone.utc),
+        )
+        session.add(document)
+
+        classification = Classification(
+            document_id=doc_id,
+            primary_category="テスト/モーダル",
+            topics=["モーダル", "レスポンシブ"],
+            # Include at least one extremely long tag to force overflow/truncation in mobile modal
+            tags=[
+                "e2e",
+                "playwright",
+                "this-is-a-very-long-tag-name-for-testing-overflow-behavior-please-ignore-0123456789-" * 2,
+            ],
+            confidence=0.95,
+            method="manual",
+        )
+        session.add(classification)
+
+        session.commit()
+        session.close()
+    except Exception:
+        # Best-effort: don't fail the entire test session if seeding fails.
+        pass
+    yield
+
+
 # Note: Do NOT apply `live_server` as a global fixture here.
 # Browser tests should opt in with `@pytest.mark.usefixtures("live_server")`
 # to avoid starting the test server for every test file.
