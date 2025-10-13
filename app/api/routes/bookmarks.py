@@ -1,7 +1,9 @@
 import logging
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, joinedload
@@ -13,6 +15,7 @@ from app.services.personalization_queue import schedule_profile_update
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+templates = Jinja2Templates(directory="app/templates")
 
 
 class BookmarkCreate(BaseModel):
@@ -20,9 +23,67 @@ class BookmarkCreate(BaseModel):
     note: Optional[str] = None
 
 
+def _render_bookmark_response(
+    request: Request,
+    document_id: str,
+    bookmarked: bool,
+    bookmark_data: dict
+):
+    """
+    ブックマーク操作のレスポンスを生成（HTMXリクエストならHTML、それ以外はJSON）
+
+    Args:
+        request: FastAPIのRequestオブジェクト
+        document_id: 記事ID
+        bookmarked: ブックマーク済みかどうか
+        bookmark_data: JSON応答用のブックマークデータ
+
+    Returns:
+        HTMLResponse または dict（FastAPIがJSONに変換）
+    """
+    is_htmx = request.headers.get("HX-Request") == "true"
+
+    if is_htmx:
+        # モーダル内のブックマークボタン
+        modal_btn_html = templates.get_template("partials/bookmark_button.html").render(
+            btn_context="modal",
+            btn_document_id=document_id,
+            btn_bookmarked=bookmarked
+        )
+
+        # 記事カード内のブックマークボタン
+        card_btn_html = templates.get_template("partials/bookmark_button.html").render(
+            btn_context="card",
+            btn_document_id=document_id,
+            btn_bookmarked=bookmarked
+        )
+
+        # out-of-band swap用のHTML
+        html = f"""
+        <div id="modal-bookmark-btn" hx-swap-oob="true">
+            {modal_btn_html}
+        </div>
+        <div id="card-{document_id}-bookmark" hx-swap-oob="true">
+            {card_btn_html}
+        </div>
+        """
+        return HTMLResponse(content=html)
+    else:
+        # 通常のJSON応答
+        return {
+            **bookmark_data,
+            "status": "success",
+            "bookmarked": bookmarked
+        }
+
+
 @router.post("")
-async def create_bookmark(payload: BookmarkCreate, db: Session = Depends(get_db)):
-    """ブックマーク作成（最小実装）"""
+async def create_bookmark(
+    request: Request,
+    payload: BookmarkCreate,
+    db: Session = Depends(get_db)
+):
+    """ブックマーク作成（HTMX対応：out-of-band swap用HTMLまたはJSON）"""
     document_id = payload.document_id
     note = payload.note
     # document の存在確認
@@ -50,12 +111,13 @@ async def create_bookmark(payload: BookmarkCreate, db: Session = Depends(get_db)
     try:
         existing = db.query(Bookmark).filter(Bookmark.user_id == GUEST_USER_ID, Bookmark.document_id == document_id).first()
         if existing:
-            return {
+            bookmark_data = {
                 "id": existing.id,
                 "document_id": existing.document_id,
                 "note": existing.note,
                 "created_at": existing.created_at.isoformat(),
             }
+            return _render_bookmark_response(request, document_id, True, bookmark_data)
 
         bm = Bookmark(user_id=GUEST_USER_ID, document_id=document_id, note=note)
         db.add(bm)
@@ -66,12 +128,13 @@ async def create_bookmark(payload: BookmarkCreate, db: Session = Depends(get_db)
         if job_id:
             logger.debug("bookmarks.create: scheduled preference job %s for document %s", job_id, bm.document_id)
 
-        return {
+        bookmark_data = {
             "id": bm.id,
             "document_id": bm.document_id,
             "note": bm.note,
             "created_at": bm.created_at.isoformat()
         }
+        return _render_bookmark_response(request, document_id, True, bookmark_data)
     except OperationalError:
         # テーブルが無い等での失敗を想定。まずテーブル作成を試みる。
         try:
@@ -86,12 +149,13 @@ async def create_bookmark(payload: BookmarkCreate, db: Session = Depends(get_db)
             new_db = app_db.SessionLocal()
             existing = new_db.query(Bookmark).filter(Bookmark.user_id == GUEST_USER_ID, Bookmark.document_id == document_id).first()
             if existing:
-                return {
+                bookmark_data = {
                     "id": existing.id,
                     "document_id": existing.document_id,
                     "note": existing.note,
                     "created_at": existing.created_at.isoformat(),
                 }
+                return _render_bookmark_response(request, document_id, True, bookmark_data)
 
             bm = Bookmark(user_id=GUEST_USER_ID, document_id=document_id, note=note)
             new_db.add(bm)
@@ -102,12 +166,13 @@ async def create_bookmark(payload: BookmarkCreate, db: Session = Depends(get_db)
             if job_id:
                 logger.debug("bookmarks.create: scheduled preference job %s for document %s (fallback)", job_id, bm.document_id)
 
-            return {
+            bookmark_data = {
                 "id": bm.id,
                 "document_id": bm.document_id,
                 "note": bm.note,
                 "created_at": bm.created_at.isoformat()
             }
+            return _render_bookmark_response(request, document_id, True, bookmark_data)
         finally:
             if new_db:
                 try:
@@ -222,8 +287,13 @@ async def list_bookmarks(limit: int = Query(50, le=200), offset: int = Query(0),
 
 
 @router.delete("")
-async def delete_bookmark_by_document(document_id: Optional[str] = None, db: Session = Depends(get_db)):
-    """Delete bookmark by document_id via query parameter. Used by UI where only document_id is known.
+async def delete_bookmark_by_document(
+    request: Request,
+    document_id: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    ブックマーク削除（document_id経由、HTMX対応：out-of-band swap用HTMLまたはJSON）
     If no document_id provided, return 400.
     """
     if not document_id:
@@ -249,7 +319,7 @@ async def delete_bookmark_by_document(document_id: Optional[str] = None, db: Ses
             job_id = schedule_profile_update(new_db, user_id=bookmark_user_id, document_id=bookmark_document_id)
             if job_id:
                 logger.debug("bookmarks.delete_by_document: scheduled preference job %s for document %s (fallback)", job_id, bookmark_document_id)
-            return {"message": "deleted"}
+            return _render_bookmark_response(request, bookmark_document_id, False, {"message": "deleted"})
         finally:
             if new_db:
                 try:
@@ -268,4 +338,4 @@ async def delete_bookmark_by_document(document_id: Optional[str] = None, db: Ses
     job_id = schedule_profile_update(db, user_id=bookmark_user_id, document_id=bookmark_document_id)
     if job_id:
         logger.debug("bookmarks.delete_by_document: scheduled preference job %s for document %s", job_id, bookmark_document_id)
-    return {"message": "deleted"}
+    return _render_bookmark_response(request, bookmark_document_id, False, {"message": "deleted"})

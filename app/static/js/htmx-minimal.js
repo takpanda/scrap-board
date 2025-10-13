@@ -1,6 +1,67 @@
 /**
- * Minimal HTMX-like implementation for similar documents loading
+ * Minimal HTMX-like implementation for similar documents loading and modal functionality
  */
+
+// Create a global htmx object for compatibility with modal.js
+window.htmx = window.htmx || {};
+window.htmx.ajax = function(method, url, options) {
+    const target = options.target ? document.querySelector(options.target) : document.body;
+    const swap = options.swap || 'innerHTML';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'HX-Request': 'true'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.text();
+    })
+    .then(html => {
+        if (swap === 'innerHTML' && target) {
+            target.innerHTML = html;
+        } else if (swap === 'outerHTML' && target) {
+            target.outerHTML = html;
+        }
+
+        // Trigger afterSwap event
+        const afterSwapEvent = new CustomEvent('htmx:afterSwap', {
+            detail: {
+                target: target,
+                xhr: null
+            }
+        });
+        document.body.dispatchEvent(afterSwapEvent);
+
+        // Re-initialize icons
+        if (window.lucide) {
+            window.lucide.createIcons();
+        } else if (window.createIcons) {
+            window.createIcons();
+        }
+
+        // Re-bind hx handlers
+        if (typeof initHxBindings === 'function') {
+            initHxBindings();
+        }
+    })
+    .catch(error => {
+        console.error('htmx.ajax error:', error);
+
+        // Trigger responseError event
+        const errorEvent = new CustomEvent('htmx:responseError', {
+            detail: {
+                target: target,
+                error: error
+            }
+        });
+        document.body.dispatchEvent(errorEvent);
+    });
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     initHxBindings();
     // Trigger initial hx-get loads
@@ -80,6 +141,149 @@ function initHxBindings() {
         });
     });
 
+    // Attach click handlers for hx-get (links, buttons)
+    const hxGetElems = document.querySelectorAll('a[hx-get], button[hx-get]');
+    hxGetElems.forEach(elem => {
+        if (elem._hxGetBound) return;
+        elem._hxGetBound = true;
+        elem.addEventListener('click', function(e) {
+            e.preventDefault();
+            const url = elem.getAttribute('hx-get');
+            const target = elem.getAttribute('hx-target');
+            const hxSwap = elem.getAttribute('hx-swap') || 'innerHTML';
+            const hxPushUrl = elem.getAttribute('hx-push-url');
+
+            if (!url) return;
+
+            // Find target element
+            let targetElement = target ? document.querySelector(target) : elem;
+            if (!targetElement) {
+                console.error('Target element not found:', target);
+                return;
+            }
+
+            // Update URL history if hx-push-url is set
+            if (hxPushUrl) {
+                window.history.pushState({}, '', hxPushUrl);
+            }
+
+            // Fetch content
+            fetch(url, {
+                headers: {
+                    'HX-Request': 'true'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.text();
+            })
+            .then(html => {
+                // Perform swap
+                if (hxSwap === 'innerHTML') {
+                    targetElement.innerHTML = html;
+                } else if (hxSwap === 'outerHTML') {
+                    targetElement.outerHTML = html;
+                }
+
+                // Trigger HTMX afterSwap event
+                const afterSwapEvent = new CustomEvent('htmx:afterSwap', {
+                    detail: {
+                        target: targetElement,
+                        xhr: null
+                    }
+                });
+                document.body.dispatchEvent(afterSwapEvent);
+
+                // Re-initialize icons
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                } else if (window.createIcons) {
+                    window.createIcons();
+                }
+
+                // Re-bind hx handlers
+                initHxBindings();
+            })
+            .catch(error => {
+                console.error('hx-get error:', error);
+
+                // Trigger HTMX responseError event
+                const errorEvent = new CustomEvent('htmx:responseError', {
+                    detail: {
+                        target: targetElement,
+                        error: error
+                    }
+                });
+                document.body.dispatchEvent(errorEvent);
+            });
+        });
+    });
+
+    // Attach click handlers for hx-post on non-form elements (buttons/links)
+    const hxPostElems = document.querySelectorAll('[hx-post]');
+    hxPostElems.forEach(elem => {
+        // skip forms (handled separately)
+        if (elem.tagName.toLowerCase() === 'form') return;
+        if (elem._hxPostBound) return;
+        elem._hxPostBound = true;
+        elem.addEventListener('click', function(e) {
+            e.preventDefault();
+            const url = elem.getAttribute('hx-post');
+            const hxSwap = elem.getAttribute('hx-swap') || '';
+
+            // hx-vals may contain small JSON to send as body
+            const vals = elem.getAttribute('hx-vals');
+            let body = null;
+            let headers = { 'HX-Request': 'true' };
+            if (vals) {
+                try {
+                    body = JSON.stringify(JSON.parse(vals));
+                    headers['Content-Type'] = 'application/json';
+                } catch (err) {
+                    body = vals;
+                }
+            }
+
+            fetch(url, { method: 'POST', body: body, headers: headers })
+            .then(response => response.text())
+            .then(html => {
+                // Response received - process OOB fragments and swaps
+
+                // Parse response and apply OOB fragments first.
+                // Then perform the normal swap only for any remaining non-OOB HTML.
+                try {
+                    const container = document.createElement('div');
+                    container.innerHTML = html;
+
+                    // Find OOB nodes in the response
+                    const oobNodes = container.querySelectorAll('[hx-swap-oob]');
+                    if (oobNodes.length > 0) {
+                        // Apply OOB using the raw response so applyOob's logic is reused.
+                        try { applyOob(html); } catch (e) { console.warn('applyOob failed', e); }
+
+                        // Remove the OOB nodes from the container so remaining HTML can be swapped into place
+                        oobNodes.forEach(n => n.remove());
+                    }
+
+                    const remaining = container.innerHTML.trim();
+                    if (remaining) {
+                        performSwap(remaining, hxSwap, elem);
+                    }
+                } catch (e) {
+                    console.warn('hx-post: parse/apply error', e);
+                    // fallback: perform swap with raw html
+                    try { performSwap(html, hxSwap, elem); } catch (ee) { console.warn('performSwap fallback failed', ee); }
+                }
+
+                // Defer binding re-init to next microtask so DOM replacements settle
+                try { Promise.resolve().then(() => initHxBindings()); } catch (e) { try { initHxBindings(); } catch (ee) {} }
+            })
+            .catch(err => console.error('hx-post error', err));
+        });
+    });
+
     // Attach click handlers for hx-put and hx-delete (buttons, links)
     const hxActionElems = document.querySelectorAll('[hx-put],[hx-delete]');
     hxActionElems.forEach(elem => {
@@ -146,6 +350,74 @@ function initHxBindings() {
         });
     });
 
+}
+
+/**
+ * Apply out-of-band swaps contained in an HTML fragment.
+ * The server may return fragments wrapped with ids and attribute hx-swap-oob="true".
+ * This function will parse the fragment and for each element with an id
+ * attempt to replace the corresponding element in the current document
+ * with the fragment's innerHTML (preserving outer id where appropriate).
+ */
+function applyOob(html) {
+    if (!html) return;
+    try {
+        const container = document.createElement('div');
+        container.innerHTML = html;
+
+        // Only consider elements that explicitly request OOB swaps
+        const candidates = container.querySelectorAll('[hx-swap-oob]');
+        candidates.forEach(node => {
+            const id = node.id;
+            // If there is no id on the OOB node, skip — server should provide ids for OOB targets
+            if (!id) return;
+
+            const target = document.getElementById(id);
+            if (target) {
+                try {
+                    const nodeHasSameIdDescendant = !!node.querySelector(`#${id}`);
+                    const tagMismatch = target.tagName.toLowerCase() !== node.tagName.toLowerCase();
+
+                    // If the response node contains a descendant with the same id (or the wrapper tag differs),
+                    // replace the entire target element with the inner HTML from the response. This avoids
+                    // nesting elements with identical ids (which breaks strict selectors in Playwright).
+                    if (nodeHasSameIdDescendant || tagMismatch) {
+                        try {
+                            target.outerHTML = node.innerHTML || node.outerHTML;
+                        } catch (e) {
+                            console.warn('applyOob: outerHTML replace failed for', id, e);
+                            // fallback: set innerHTML
+                            try { target.innerHTML = node.innerHTML; } catch (ee) { console.warn('applyOob fallback innerHTML failed for', id, ee); }
+                        }
+                    } else {
+                        // Otherwise, preserve the wrapper and replace its inner content
+                        try {
+                            target.innerHTML = node.innerHTML;
+                        } catch (e) {
+                            console.warn('applyOob: innerHTML replace failed for', id, e);
+                            try { target.outerHTML = node.outerHTML || node.innerHTML; } catch (ee) { console.warn('applyOob fallback outerHTML failed for', id, ee); }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('applyOob: error applying node for', id, e);
+                }
+            } else {
+                    // Target not found in current document; append the node to body as a last resort
+                try {
+                    const imported = document.importNode(node, true);
+                    document.body.appendChild(imported);
+                } catch (e) {
+                    console.warn('applyOob: failed to append missing target', id, e);
+                }
+            }
+        });
+
+        // After applying OOB swaps, re-init icons and bindings in next microtask
+        try { if (window.lucide) Promise.resolve().then(() => { try { window.lucide.createIcons(); } catch(e){} }); } catch (e) {}
+        try { Promise.resolve().then(() => { try { initHxBindings(); } catch(e){} }); } catch (e) {}
+    } catch (e) {
+        console.warn('applyOob parse error', e);
+    }
 }
 
 function loadHxContent(url, targetSelectorOrElement) {

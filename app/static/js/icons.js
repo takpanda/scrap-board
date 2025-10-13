@@ -60,14 +60,11 @@ const icons = {
 
 // Function to create icons (replaces lucide.createIcons())
 function createIcons() {
-    console.log('createIcons called');
     const elements = document.querySelectorAll('[data-lucide]');
-    console.log(`Found ${elements.length} elements with data-lucide`);
-    
-    elements.forEach((element, index) => {
+
+    elements.forEach((element) => {
         const iconName = element.getAttribute('data-lucide');
-        console.log(`Processing icon ${index}: ${iconName}`);
-        
+
         if (icons[iconName]) {
             // Preserve existing classes and styles
             const existingClasses = element.className;
@@ -129,14 +126,10 @@ function createIcons() {
                 svg.style.stroke = 'currentColor';
                 svg.style.fill = useFilledHeart ? 'currentColor' : 'none';
             }
-            
-            console.log(`Icon ${iconName} created successfully`);
         } else {
-            console.warn(`Icon not found: ${iconName}`);
             element.innerHTML = `<span style="font-size: 12px; color: red; font-weight: bold; display: inline-block;">[${iconName}]</span>`;
         }
     });
-    console.log('createIcons completed');
 }
 
 // Create a lucide object for compatibility
@@ -150,12 +143,8 @@ window.createIcons = createIcons;
 
 // Auto-run when DOM is loaded
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM loaded, running createIcons');
-        createIcons();
-    });
+    document.addEventListener('DOMContentLoaded', createIcons);
 } else {
-    console.log('DOM already ready, running createIcons immediately');
     createIcons();
 }
 

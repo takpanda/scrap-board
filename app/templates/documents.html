@@ -209,7 +209,12 @@
 
     <script src="/static/js/personalized-sort.js"></script>
 <script>
-    createIcons();
+    if (typeof window.createIcons === 'function') {
+        window.createIcons();
+    } else if (typeof createIcons === 'function') {
+        // fallback for older environments where window may not be set
+        createIcons();
+    }
     (function(){
         const btn = document.getElementById('filters-toggle');
         const panel = document.getElementById('filters-panel');

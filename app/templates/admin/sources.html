@@ -220,8 +220,12 @@
 {% endblock %}
 
 <script>
-  // Initialize icons
-  createIcons();
+  // Initialize icons (guarded)
+  if (typeof window !== 'undefined' && typeof window.createIcons === 'function') {
+    window.createIcons();
+  } else if (typeof createIcons === 'function') {
+    createIcons();
+  }
 
   // Debug: Check if button text is visible
   document.addEventListener('DOMContentLoaded', function() {
@@ -643,7 +647,10 @@
 
         // Show success message
         successMsg.classList.remove('hidden');
-        createIcons(); // Re-initialize icons in success message
+        // Re-initialize icons (guarded)
+        if (typeof initIcons === 'function') {
+          initIcons();
+        }
 
         // Hide success message after 3 seconds
         setTimeout(function() {

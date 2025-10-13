@@ -221,14 +221,22 @@
             }
         }
     </style>
-    
-    <!-- Local HTMX-like functionality -->
-    <script src="/static/js/htmx-minimal.js"></script>
-    
-    <!-- Local Icons -->
-    <script src="/static/js/icons.js"></script>
 </head>
 <body class="overflow-x-auto md:overflow-x-visible">
+    <script>
+        // Fallback no-op to prevent ReferenceError when inline templates
+        // call createIcons before /static/js/icons.js has loaded.
+        if (typeof window !== 'undefined') {
+            if (!window.createIcons) {
+                window.createIcons = function() { /* no-op until icons.js loads */ };
+            }
+            if (!window.lucide) {
+                window.lucide = { createIcons: window.createIcons };
+            } else if (!window.lucide.createIcons) {
+                window.lucide.createIcons = window.createIcons;
+            }
+        }
+    </script>
     <!-- Header -->
     <header class="header">
         <div class="header-content max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center md:justify-between gap-3">
@@ -453,7 +461,19 @@
     <main class="main">
         {% block content %}{% endblock %}
     </main>
-    
+
+    <!-- Document Detail Modal Container -->
+    <div
+        id="modal-container"
+    class="hidden fixed inset-0 z-50 overflow-hidden bg-black/40 flex items-center justify-center p-0 md:p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        data-modal-container
+    >
+        <!-- Modal content will be inserted here by HTMX -->
+    </div>
+
     <!-- Add Content Modal -->
     <div id="add-content-modal" class="modal">
         <div class="modal-content">
@@ -683,6 +703,19 @@
 
         // mobile menu removed - no toggle functions remain
     </script>
-    
+
+    <!-- Local HTMX-like functionality -->
+    <script src="/static/js/htmx-minimal.js"></script>
+
+    <!-- Local Icons -->
+    <script src="/static/js/icons.js"></script>
+
+    <!-- Document Detail Modal State Management -->
+    <script src="/static/js/modal.js"></script>
+
+    <!-- Markdown Preview Support -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <script src="/static/js/markdown-preview.js"></script>
+
 </body>
 </html>
