@@ -196,6 +196,8 @@
         modalContainer.style.left = '0px';
         modalContainer.style.right = '0px';
         modalContainer.style.bottom = '0px';
+        // Force overlay background color (inline) to ensure dimming even if CSS utilities are missing
+        try { modalContainer.style.backgroundColor = 'rgba(243,244,246,0.6)'; } catch (e) {}
       } catch (e) {
         console.warn('[modal] openModal: unable to set inline display/aria', e);
       }

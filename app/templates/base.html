@@ -18,6 +18,8 @@
     
     <!-- Local CSS overrides (cache-busted) -->
     <link rel="stylesheet" href="/static/css/style.css?v=2">
+    <!-- Modal-specific responsive styles (scoped) -->
+    <link rel="stylesheet" href="/static/css/modal.css?v=1">
     <!-- card-edge fix: loaded after main styles to ensure overrides apply -->
     <link rel="stylesheet" href="/static/css/card-edge-fix.css?v=1">
     <!-- Mobile overflow fixes -->
@@ -465,7 +467,8 @@
     <!-- Document Detail Modal Container -->
     <div
         id="modal-container"
-    class="hidden fixed inset-0 z-50 overflow-hidden bg-black/40 flex items-center justify-center p-0 md:p-4"
+    class="hidden fixed inset-0 z-50 overflow-hidden bg-gray-100/60 flex items-center justify-center p-0 md:p-4"
+        style="background-color: rgba(243,244,246,0.6);"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

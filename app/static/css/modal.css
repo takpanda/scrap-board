@@ -1,0 +1,88 @@
+/* Modal Responsive Styles (scoped) - document detail modal */
+/* Scoped under [data-modal-dialog] to avoid global conflicts */
+
+[data-modal-dialog] {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+[data-modal-dialog] {
+    will-change: transform, opacity;
+}
+
+[data-modal-dialog] [data-modal-scrollable] {
+    -webkit-overflow-scrolling: touch; /* momentum scrolling */
+    overflow-y: auto;
+    max-height: 60vh; /* matches template max-h */
+}
+
+[data-modal-dialog] .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+
+[data-modal-dialog] .dify-tag-primary,
+[data-modal-dialog] .dify-tag-secondary {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    [data-modal-dialog] > .flex.items-start,
+    [data-modal-dialog] > .flex.items-center {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+
+    [data-modal-dialog] h2 {
+        font-size: 1rem;
+        line-height: 1.25;
+        margin-bottom: 0.25rem;
+    }
+
+    [data-modal-dialog] button,
+    [data-modal-dialog] a.btn,
+    [data-modal-dialog] a {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.5rem 0.75rem;
+    }
+
+    [data-modal-dialog] .modal-content-wrap {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    [data-modal-dialog] .modal-content-preview {
+        max-height: 36vh !important;
+    }
+}
+
+[data-modal-dialog] button:focus,
+[data-modal-dialog] a:focus {
+    outline: 3px solid rgba(16, 185, 129, 0.18);
+    outline-offset: 2px;
+}
+
+[data-modal-dialog] [data-modal-scrollable]::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+[data-modal-dialog] [data-modal-scrollable]::-webkit-scrollbar-thumb {
+    background: rgba(16, 24, 40, 0.08);
+    border-radius: 999px;
+}
+
+[data-modal-dialog] .prose, [data-modal-dialog] .modal-content-wrap {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}

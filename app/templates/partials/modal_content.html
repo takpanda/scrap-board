@@ -1,6 +1,6 @@
 <div class="relative bg-white rounded-lg w-full h-full md:max-w-4xl md:w-auto md:h-auto md:max-h-[85vh] md:mx-auto md:my-8 flex flex-col" data-modal-dialog>
   <!-- ヘッダー: タイトルと閉じるボタン -->
-  <div class="flex items-start justify-between p-6 border-b flex-shrink-0">
+  <div class="flex items-start justify-between md:p-6 p-4 border-b flex-shrink-0">
     <div class="flex-1 min-w-0">
       {% include 'partials/_document_meta.html' %}
     </div>
@@ -15,7 +15,7 @@
   </div>
 
   <!-- コンテンツ: 本文、メタデータ -->
-  <div class="p-6 overflow-y-auto flex-1 min-h-0 max-h-[60vh]" data-modal-scrollable style="overflow-y: auto; -webkit-overflow-scrolling: touch;">
+  <div class="md:p-6 p-4 overflow-y-auto flex-1 min-h-0 max-h-[60vh]" data-modal-scrollable style="overflow-y: auto; -webkit-overflow-scrolling: touch;">
     <!-- カテゴリとタグ -->
     {% if document.classifications %}
     <div class="tag-list flex items-center mb-6 flex-wrap">
@@ -87,7 +87,7 @@
   </div>
 
   <!-- フッター: アクション -->
-  <div class="flex items-center justify-between p-6 border-t flex-shrink-0">
+  <div class="flex items-center justify-between md:p-6 p-4 border-t flex-shrink-0">
     <div class="flex gap-3">
       <!-- ブックマークボタン -->
       {% set btn_context = "modal" %}
