@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="/static/css/dify-clean.css">
     
     <!-- Local CSS overrides (cache-busted) -->
-    <link rel="stylesheet" href="/static/css/style.css?v=2">
+    <link rel="stylesheet" href="/static/css/style.css?v=7">
     <!-- Modal-specific responsive styles (scoped) -->
     <link rel="stylesheet" href="/static/css/modal.css?v=1">
     <!-- card-edge fix: loaded after main styles to ensure overrides apply -->
@@ -119,9 +119,9 @@
         }
     </style>
     <style>
-        /* Ensure main content is not hidden under fixed header (header height: 64px) */
-        .main { padding-top: 80px; }
-        @media (min-width: 768px) { .main { padding-top: 80px; } }
+        /* Ensure main content is not hidden under fixed header; runtime sets --sb-header-height */
+        .main { padding-top: var(--sb-header-height, 56px); }
+        @media (min-width: 768px) { .main { padding-top: var(--sb-header-height, 56px); } }
     </style>
     <style>
         /* Small overrides to prevent card content clipping while keeping page from horizontal scroll */
@@ -226,6 +226,91 @@
 </head>
 <body class="overflow-x-auto md:overflow-x-visible">
     <script>
+        // Measure header height and set CSS variable --sb-header-height
+        (function() {
+            const setHeaderHeight = () => {
+                try {
+                    const hdr = document.querySelector('header');
+                    if (!hdr) return;
+                    const rect = hdr.getBoundingClientRect();
+                    // add 8px breathing room to ensure content not cramped
+                    const value = (rect.height ? rect.height : 40) + 8;
+                    document.documentElement.style.setProperty('--sb-header-height', value + 'px');
+                } catch (e) {
+                    // no-op
+                }
+            };
+
+            let t = null;
+            window.addEventListener('resize', () => {
+                clearTimeout(t);
+                t = setTimeout(setHeaderHeight, 120);
+            });
+            // run after DOM content loaded and also on load in case of deferred fonts/images
+            document.addEventListener('DOMContentLoaded', setHeaderHeight);
+            window.addEventListener('load', setHeaderHeight);
+        })();
+        
+        // Ensure nav icons are displayed and text is hidden
+        (function() {
+            const injectIconStyles = () => {
+                const style = document.createElement('style');
+                style.textContent = `
+                    .main-nav a[href="/documents"],
+                    .main-nav a[href="/bookmarks"] {
+                        position: relative !important;
+                        width: 2.5rem !important;
+                        height: 2.5rem !important;
+                        min-width: 2.5rem !important;
+                        display: inline-flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        border-radius: 0.5rem !important;
+                        color: transparent !important;
+                        font-size: 0 !important;
+                        line-height: 0 !important;
+                        overflow: hidden !important;
+                        text-indent: -9999px !important;
+                    }
+                    .main-nav a[href="/documents"]::before {
+                        content: '📄' !important;
+                        position: absolute !important;
+                        left: 50% !important;
+                        top: 50% !important;
+                        transform: translate(-50%, -50%) !important;
+                        font-size: 1.5rem !important;
+                        line-height: 1 !important;
+                        color: #6b7280 !important;
+                        text-indent: 0 !important;
+                    }
+                    .main-nav a[href="/bookmarks"]::before {
+                        content: '🔖' !important;
+                        position: absolute !important;
+                        left: 50% !important;
+                        top: 50% !important;
+                        transform: translate(-50%, -50%) !important;
+                        font-size: 1.5rem !important;
+                        line-height: 1 !important;
+                        color: #6b7280 !important;
+                        text-indent: 0 !important;
+                    }
+                    .main-nav a[href="/documents"]:hover::before,
+                    .main-nav a[href="/bookmarks"]:hover::before {
+                        color: #374151 !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            };
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', injectIconStyles);
+            } else {
+                injectIconStyles();
+            }
+        })();
+    </script>
+    <script>
         // Fallback no-op to prevent ReferenceError when inline templates
         // call createIcons before /static/js/icons.js has loaded.
         if (typeof window !== 'undefined') {
@@ -256,9 +341,9 @@
                     >
                 </div>
 
-                <nav class="main-nav flex items-center space-x-4 text-sm" aria-label="メインナビゲーション">
-                    <a href="/documents" class="nav-link text-gray-700 hover:text-gray-900">ドキュメント</a>
-                    <a href="/bookmarks" class="nav-link text-gray-700 hover:text-gray-900">ブックマーク</a>
+                <nav class="main-nav flex items-center space-x-4" aria-label="メインナビゲーション">
+                    <a href="/documents" class="nav-link" data-mobile-icon="📄">ドキュメント</a>
+                    <a href="/bookmarks" class="nav-link" data-mobile-icon="🔖">ブックマーク</a>
                 </nav>
 
                 <div class="actions flex items-center space-x-3 flex-shrink-0">
