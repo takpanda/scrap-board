@@ -88,7 +88,8 @@ Scrap-Boardは、シンプルで保守しやすいモノリシックWebアプリ
 ### JavaScript
 - **Vanilla JavaScript**: フレームワークなし、軽量実装
   - `app/static/js/personalized-sort.js`: パーソナライズ機能のトグル・UI
-  - `app/static/js/markdown-preview.js`: Markdown表示
+  - `app/static/js/markdown-preview.js`: Markdown表示とハイライト
+  - `app/static/js/modal.js`: モーダルダイアログ管理（開閉・イベント処理）
   - `app/static/js/icons.js`: Lucideアイコンの初期化
 - **HTMX（minimal版）**: `app/static/js/htmx-minimal.js`
   - AJAX的な部分更新（`hx-get`, `hx-post`, `hx-target`）

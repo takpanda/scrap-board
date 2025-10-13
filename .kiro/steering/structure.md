@@ -133,6 +133,7 @@ static/
 └── js/
     ├── htmx-minimal.js       # HTMX拡張
     ├── markdown-preview.js   # マークダウンプレビュー
+    ├── modal.js              # モーダルダイアログ管理
     ├── personalized-sort.js  # パーソナライズソートUI
     └── icons.js              # アイコン表示ヘルパー
 ```
@@ -151,6 +152,7 @@ tests/
 ├── test_postprocess.py       # ポストプロセステスト
 ├── test_ingest_*.py          # 取り込み機能テスト
 ├── test_bookmark*.py         # ブックマーク機能テスト
+├── test_modal_*.py           # モーダル機能テスト（API、UI、レスポンシブ）
 ├── test_personalized_*.py    # パーソナライゼーション機能テスト
 ├── test_preference_*.py      # 嗜好分析テスト
 ├── test_*_ui.py              # UI/E2Eテスト（Playwright）
