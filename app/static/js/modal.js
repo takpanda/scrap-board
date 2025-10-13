@@ -36,6 +36,14 @@
     // HTMX afterSwap イベントリスナー: モーダルコンテンツが挿入された後に自動的に開く
     document.body.addEventListener('htmx:afterSwap', function(event) {
       if (event.detail.target && event.detail.target.id === 'modal-container') {
+        // Ensure hx bindings are initialized for newly swapped content
+        try {
+          if (typeof initHxBindings === 'function') {
+            initHxBindings();
+          }
+        } catch (e) {
+          console.warn('[modal] initHxBindings failed', e);
+        }
         openModal();
         
         // Markdownプレビューのレンダリング
@@ -191,6 +199,20 @@
       } catch (e) {
         console.warn('[modal] openModal: unable to set inline display/aria', e);
       }
+        // Ensure modal dialog respects desktop max width even if CSS utilities fail
+        try {
+          const dialog = modalContainer.querySelector('[data-modal-dialog]');
+          if (dialog && window.matchMedia && window.matchMedia('(min-width: 768px)').matches) {
+            // Save previous inline styles so we can restore them on close
+            dialog._prevInlineStyle = dialog.getAttribute('style') || '';
+            dialog.style.maxWidth = dialog.style.maxWidth || '896px';
+            dialog.style.width = 'auto';
+            dialog.style.marginLeft = dialog.style.marginLeft || 'auto';
+            dialog.style.marginRight = dialog.style.marginRight || 'auto';
+          }
+        } catch (e) {
+          console.warn('[modal] openModal: unable to enforce dialog maxWidth', e);
+        }
     } catch (e) {
       console.error('[modal] openModal error:', e, 'modalContainer=', modalContainer);
     }
@@ -222,6 +244,7 @@
     if (firstFocusable) {
       firstFocusable.focus();
     }
+    try { window.__modal_debug_events = window.__modal_debug_events || []; window.__modal_debug_events.push({ t: Date.now(), ev: 'openModal:end', classes: Array.from(modalContainer.classList) }); console.log('[modal:debug] openModal:end'); } catch (e) {}
   }
 
   /**
@@ -232,6 +255,7 @@
     // モーダルを非表示
     try {
       modalContainer.classList.add('hidden');
+      try { window.__modal_debug_events = window.__modal_debug_events || []; window.__modal_debug_events.push({ t: Date.now(), ev: 'closeModal:added-hidden', classes: Array.from(modalContainer.classList) }); console.log('[modal:debug] closeModal:added-hidden'); } catch (e) {}
     } catch (e) {
       console.error('[modal] closeModal error:', e, 'modalContainer=', modalContainer);
     }
@@ -263,7 +287,29 @@
     } catch (e) {
       console.warn('[modal] closeModal: unable to restore inline display/aria', e);
     }
-    modalContainer.innerHTML = '';
+    // Delay clearing innerHTML slightly to avoid race conditions where tests
+    // or other scripts inspect the container immediately after closing.
+    try {
+      setTimeout(function() {
+        try {
+          modalContainer.innerHTML = '';
+          try { window.__modal_debug_events.push({ t: Date.now(), ev: 'closeModal:cleared-innerHTML' }); console.log('[modal:debug] closeModal:cleared-innerHTML'); } catch (e) {}
+        } catch (e) {
+          console.warn('[modal] closeModal: unable to clear innerHTML', e);
+        }
+      }, 60);
+    } catch (e) {
+      // fallback: immediate clear
+      try { modalContainer.innerHTML = ''; } catch (err) {}
+    }
+    // Remove any dialog inline styles we enforced at openModal
+    try {
+      const dialog = modalContainer.querySelector('[data-modal-dialog]');
+      if (dialog && dialog._prevInlineStyle !== undefined) {
+        dialog.setAttribute('style', dialog._prevInlineStyle);
+        delete dialog._prevInlineStyle;
+      }
+    } catch (e) {}
 
     // 背景のスクロールを復元
     try {
@@ -300,6 +346,7 @@
         window.history.pushState({}, '', url);
       }
     }
+    try { window.__modal_debug_events = window.__modal_debug_events || []; window.__modal_debug_events.push({ t: Date.now(), ev: 'closeModal:end', classes: Array.from(modalContainer.classList) }); console.log('[modal:debug] closeModal:end'); } catch (e) {}
   }
 
   /**
@@ -322,7 +369,12 @@
   function handleOverlayClick(event) {
     // モーダルコンテナ自体をクリックした場合のみ閉じる
     // ダイアログ内（data-modal-dialog）のクリックは無視
+    try {
+      // debug
+      try { window.__modal_debug_events = window.__modal_debug_events || []; window.__modal_debug_events.push({ t: Date.now(), ev: 'overlay:click', targetTag: event.target && event.target.tagName, isModalContainer: event.target === modalContainer, closestDialog: !!event.target.closest('[data-modal-dialog]') }); console.log('[modal:debug] overlay click', { isModalContainer: event.target === modalContainer, closestDialog: !!event.target.closest('[data-modal-dialog]') }); } catch (e) {}
+    } catch (e) {}
     if (event.target === modalContainer && !event.target.closest('[data-modal-dialog]')) {
+      try { modalContainer.setAttribute('data-overlay-clicked', 'true'); } catch (e) {}
       closeModal();
     }
   }

@@ -5,9 +5,37 @@
 
     function log(){ try { console.log.apply(console, arguments); } catch(e){} }
 
+    function escapeHtml(str){
+        return String(str).replace(/[&<>"]+/g, function(match){
+            switch(match){
+                case '&': return '&amp;';
+                case '<': return '&lt;';
+                case '>': return '&gt;';
+                case '"': return '&quot;';
+                default: return match;
+            }
+        });
+    }
+
     function initParser(){
-        try { if (window.markdownit) md = window.markdownit({ html: false, linkify: true, typographer: true }); }
-        catch(e){ log('markdown-preview: parser init failed', e); md = null; }
+        try {
+            if (!window.markdownit) return (md = null);
+            var opts = {
+                html: false,
+                linkify: true,
+                typographer: true,
+                // highlight code blocks if highlight.js is available
+                highlight: function(str, lang){
+                    try{
+                        if (window.hljs && lang && window.hljs.getLanguage && window.hljs.getLanguage(lang)){
+                            return '<pre class="hljs"><code>' + window.hljs.highlight(str, { language: lang }).value + '</code></pre>';
+                        }
+                    }catch(e){ /* ignore and fallback */ }
+                    return '<pre class="hljs"><code>' + escapeHtml(str) + '</code></pre>';
+                }
+            };
+            md = window.markdownit(opts);
+        } catch(e){ log('markdown-preview: parser init failed', e); md = null; }
         return md;
     }
 
@@ -72,11 +100,43 @@
             if (window.markdownit) { initParser(); renderInlineMarkdown(); processAutostarts(); return; }
         }catch(e){ log('markdown-preview:init check failed', e); }
 
-        // dynamically load markdown-it and then render
+        // dynamically load markdown-it (and optionally highlight.js) then render
         var s = document.createElement('script');
         s.src = CDN;
         s.async = true;
-        s.onload = function(){ try{ initParser(); renderInlineMarkdown(); processAutostarts(); }catch(e){ console.warn('markdown-preview after load err', e); } };
+
+        // optional highlight.js CDN (load in parallel); if present we'll use it for code highlighting
+        var HL_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css';
+        var HL_JS = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js';
+        var hlLoaded = false;
+        try{
+            if (!window.hljs){
+                var hlcss = document.createElement('link');
+                hlcss.rel = 'stylesheet';
+                hlcss.href = HL_CSS;
+                hlcss.crossOrigin = '';
+                document.head.appendChild(hlcss);
+
+                var hls = document.createElement('script');
+                hls.src = HL_JS;
+                hls.async = true;
+                hls.onload = function(){ hlLoaded = true; try{ if (window.hljs && window.hljs.highlightAll) { /* ready */ } }catch(e){} };
+                hls.onerror = function(){ hlLoaded = false; };
+                document.head.appendChild(hls);
+            } else {
+                hlLoaded = true;
+            }
+        }catch(e){ hlLoaded = false; }
+
+        s.onload = function(){
+            try{
+                initParser();
+                // If highlight.js loaded, initialize languages (if available)
+                try{ if (window.hljs && typeof window.hljs.highlightAll === 'function') window.hljs.highlightAll(); }catch(e){}
+                renderInlineMarkdown();
+                processAutostarts();
+            }catch(e){ console.warn('markdown-preview after load err', e); }
+        };
         s.onerror = function(e){ console.warn('markdown-preview failed to load CDN', e); renderInlineMarkdown(); processAutostarts(); };
         document.head.appendChild(s);
     }

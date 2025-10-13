@@ -1,4 +1,4 @@
-<div class="relative bg-white rounded-lg w-full h-full md:max-w-4xl md:w-auto md:h-auto md:max-h-[85vh] md:mx-0 md:my-0 flex flex-col" data-modal-dialog>
+<div class="relative bg-white rounded-lg w-full h-full md:max-w-4xl md:w-auto md:h-auto md:max-h-[85vh] md:mx-auto md:my-8 flex flex-col" data-modal-dialog>
   <!-- ヘッダー: タイトルと閉じるボタン -->
   <div class="flex items-start justify-between p-6 border-b flex-shrink-0">
     <div class="flex-1 min-w-0">
@@ -52,11 +52,11 @@
         コンテンツプレビュー
       </h2>
       <div class="prose max-w-none">
-        {% set preview_content = document.content_md %}
+    {% set preview_content = document.content_md %}
         <!-- ラップする container に可読性用クラスを追加 -->
-        <div class="modal-content-wrap">
+          <div class="modal-content-wrap">
           <!-- 初期表示は高さ制限をつけて折りたたむ -->
-          <div class="modal-content-preview overflow-hidden" data-md-inline="{{ preview_content | replace('"', '&quot;') }}" style="max-height:40vh; line-height:1.7; overflow:hidden; position:relative; padding-top:1px; box-sizing:border-box;">
+          <div class="modal-content-preview overflow-hidden" data-md-inline="{{ (preview_content if preview_content else '') | e }}" style="max-height:40vh; line-height:1.7; overflow:hidden; position:relative; padding-top:1px; box-sizing:border-box;">
           </div>
 
           <!-- トグル: もっと見る / 折りたたむ -->

@@ -623,6 +623,12 @@
                 self.container = newContainer;
                 self.refreshStructure({ updateBaseline: false });
                 self.decorateExistingArticles();
+                // Re-bind HTMX handlers for newly injected server-rendered content
+                try {
+                    if (typeof initHxBindings === 'function') initHxBindings();
+                } catch (e) {
+                    console.warn('initHxBindings not available after server-rendered personalized replacement', e);
+                }
                 self.reapplyIcons();
                 initFeedbackUI(newContainer);
                 if (typeof window.scrapMarkdownRefresh === "function") {

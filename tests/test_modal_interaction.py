@@ -91,7 +91,7 @@ def test_modal_closes_with_close_button(page: Page, test_document):
     close_button.click()
 
     # モーダルが閉じることを確認
-    page.wait_for_selector("#modal-container.hidden", timeout=3000)
+    page.wait_for_selector("#modal-container", state="hidden", timeout=3000)
     modal_container = page.locator("#modal-container")
     expect(modal_container).to_have_class(re.compile(r".*hidden.*"))
 
@@ -110,7 +110,7 @@ def test_modal_closes_with_escape_key(page: Page, test_document):
     page.keyboard.press("Escape")
 
     # モーダルが閉じることを確認
-    page.wait_for_selector("#modal-container.hidden", timeout=3000)
+    page.wait_for_selector("#modal-container", state="hidden", timeout=3000)
     modal_container = page.locator("#modal-container")
     expect(modal_container).to_have_class(re.compile(r".*hidden.*"))
 
@@ -133,7 +133,7 @@ def test_modal_closes_with_overlay_click(page: Page, test_document):
     page.mouse.click(box["x"] + 10, box["y"] + 10)
 
     # モーダルが閉じることを確認
-    page.wait_for_selector("#modal-container.hidden", timeout=3000)
+    page.wait_for_selector("#modal-container", state="hidden", timeout=3000)
     expect(modal_container).to_have_class(re.compile(r".*hidden.*"))
 
 
@@ -157,7 +157,7 @@ def test_background_scroll_disabled_when_modal_open(page: Page, test_document):
 
     # モーダルを閉じる
     page.locator('[data-modal-close]').first.click()
-    page.wait_for_selector("#modal-container.hidden")
+    page.wait_for_selector("#modal-container", state="hidden")
 
     # overflowが復元されることを確認
     overflow_after_close = page.evaluate("document.body.style.overflow")
@@ -196,7 +196,8 @@ def test_modal_removes_url_query_when_closed(page: Page, test_document):
 
     # モーダルを閉じる
     page.locator('[data-modal-close]').first.click()
-    page.wait_for_selector("#modal-container.hidden")
+    # Wait for the modal container to be hidden
+    page.wait_for_selector("#modal-container", state="hidden")
 
     # URLから?doc={id}が削除されることを確認
     page.wait_for_url(lambda url: "?doc=" not in url, timeout=3000)
@@ -218,7 +219,7 @@ def test_browser_back_button_closes_modal(page: Page, test_document):
     page.go_back()
 
     # モーダルが閉じることを確認
-    page.wait_for_selector("#modal-container.hidden", timeout=3000)
+    page.wait_for_selector("#modal-container", state="hidden", timeout=3000)
     modal_container = page.locator("#modal-container")
     expect(modal_container).to_have_class(re.compile(r".*hidden.*"))
 
@@ -236,16 +237,16 @@ def test_deep_link_opens_modal_automatically(page: Page, test_document):
     # モーダルが自動的に表示されることを確認
     page.wait_for_selector("[data-modal-dialog]", state="visible", timeout=5000)
     modal_container = page.locator("#modal-container")
-    expect(modal_container).not_to_have_class(lambda c: "hidden" in c)
+    expect(modal_container).not_to_have_class('hidden')
 
     # モーダル内にタイトルが表示されることを確認
     expect(page.locator("#modal-container")).to_contain_text("モーダルテスト記事")
 
 
 @pytest.mark.playwright
-def test_bookmark_button_in_modal(page: Page, test_document):
+def test_bookmark_button_in_modal(page: Page, test_document, live_server):
     """モーダル内のブックマークボタンが動作する"""
-    page.goto("http://localhost:8000/documents")
+    page.goto(f"{live_server}/documents")
     page.wait_for_load_state("networkidle")
 
     # モーダルを開く
@@ -268,9 +269,9 @@ def test_bookmark_button_in_modal(page: Page, test_document):
 
 
 @pytest.mark.playwright
-def test_bookmark_sync_between_modal_and_card(page: Page, test_document):
+def test_bookmark_sync_between_modal_and_card(page: Page, test_document, live_server):
     """モーダル内でブックマークすると記事カードも更新される"""
-    page.goto("http://localhost:8000/documents")
+    page.goto(f"{live_server}/documents")
     page.wait_for_load_state("networkidle")
 
     # 記事カードのブックマークボタンの初期状態を確認
