@@ -127,6 +127,7 @@
     font-weight: 700;
     color: var(--dify-gray-900);
     line-height: 1.25;
+    margin-top: 0.75rem;
     margin-bottom: 1.5rem;
 }
 
@@ -683,7 +684,7 @@
 
 /* Document Meta Styles - Dify */
 .dify-document-meta {
-    margin-bottom: 1.5rem;
+    margin-bottom: 0;
 }
 
 .dify-meta-actions {

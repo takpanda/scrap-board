@@ -4,9 +4,6 @@
 """
 import pytest
 from playwright.sync_api import Page, expect
-import re
-
-
 @pytest.mark.playwright
 def test_modal_opens_with_deep_link(page: Page):
     """ディープリンクでモーダルが開く"""
@@ -17,13 +14,13 @@ def test_modal_opens_with_deep_link(page: Page):
     page.goto(f"http://localhost:8000/documents?doc={doc_id}")
     page.wait_for_load_state("networkidle")
 
-    # モーダルが表示されることを確認
+    # モーダルが表示されることを確認 (aria-hidden を使用して判定)
     modal_container = page.locator("#modal-container")
     page.wait_for_function(
-        "!document.getElementById('modal-container').classList.contains('hidden')",
+        "document.getElementById('modal-container').getAttribute('aria-hidden') === 'false'",
         timeout=5000
     )
-    expect(modal_container).not_to_have_class(re.compile(r".*hidden.*"))
+    expect(modal_container).to_have_attribute("aria-hidden", "false")
 
     # モーダルにコンテンツが表示されることを確認
     expect(modal_container).to_contain_text("セルフレジ")
@@ -38,7 +35,7 @@ def test_modal_closes_with_escape_key(page: Page):
     page.goto(f"http://localhost:8000/documents?doc={doc_id}")
     page.wait_for_load_state("networkidle")
     page.wait_for_function(
-        "!document.getElementById('modal-container').classList.contains('hidden')",
+        "document.getElementById('modal-container').getAttribute('aria-hidden') === 'false'",
         timeout=5000
     )
 
@@ -48,10 +45,10 @@ def test_modal_closes_with_escape_key(page: Page):
     # モーダルが閉じることを確認
     modal_container = page.locator("#modal-container")
     page.wait_for_function(
-        "document.getElementById('modal-container').classList.contains('hidden')",
+        "document.getElementById('modal-container').getAttribute('aria-hidden') === 'true'",
         timeout=3000
     )
-    expect(modal_container).to_have_class(re.compile(r".*hidden.*"))
+    expect(modal_container).to_have_attribute("aria-hidden", "true")
 
 
 @pytest.mark.playwright
@@ -70,13 +67,13 @@ def test_modal_closes_with_close_button(page: Page):
     # JavaScriptで閉じるボタンをクリック
     page.evaluate("document.querySelector('[data-modal-close]').click()")
 
-    # モーダルが閉じることを確認
+    # モーダルが閉じることを確認 (aria-hidden を使用して判定)
     modal_container = page.locator("#modal-container")
     page.wait_for_function(
-        "document.getElementById('modal-container').classList.contains('hidden')",
+        "document.getElementById('modal-container').getAttribute('aria-hidden') === 'true'",
         timeout=3000
     )
-    expect(modal_container).to_have_class(re.compile(r".*hidden.*"))
+    expect(modal_container).to_have_attribute("aria-hidden", "true")
 
 
 @pytest.mark.playwright
@@ -93,7 +90,7 @@ def test_modal_opens_from_card_click(page: Page):
     # モーダルが表示されることを確認
     modal_container = page.locator("#modal-container")
     page.wait_for_function(
-        "!document.getElementById('modal-container').classList.contains('hidden')",
+        "document.getElementById('modal-container').getAttribute('aria-hidden') === 'false'",
         timeout=5000
     )
-    expect(modal_container).not_to_have_class(re.compile(r".*hidden.*"))
+    expect(modal_container).to_have_attribute("aria-hidden", "false")

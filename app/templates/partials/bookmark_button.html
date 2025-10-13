@@ -6,8 +6,9 @@
 {% if btn_context == 'modal' %}
 <button
   id="modal-bookmark-btn"
-  class="inline-flex items-center px-4 py-2 {% if btn_bookmarked %}bg-rose-50 text-rose-600 border-rose-200{% else %}bg-mist/80 text-graphite border-mist{% endif %} border rounded-md hover:bg-mist transition-colors"
+  class="inline-flex items-center justify-center w-9 h-9 p-1 rounded-full {% if btn_bookmarked %}bg-rose-50 text-rose-600 border-rose-200{% else %}bg-mist/80 text-graphite border-mist{% endif %} border hover:bg-mist transition-colors"
   aria-pressed="{{ 'true' if btn_bookmarked else 'false' }}"
+  aria-label="{% if btn_bookmarked %}ブックマーク済み{% else %}ブックマーク{% endif %}"
   data-doc-id="{{ btn_document_id }}"
   {% if btn_bookmarked %}
   hx-delete="/api/bookmarks?document_id={{ btn_document_id }}"
@@ -19,8 +20,7 @@
   hx-target="#modal-bookmark-btn"
   type="button"
 >
-  <i data-lucide="heart" class="w-5 h-5 mr-2 {% if btn_bookmarked %}fill-current text-rose-600{% else %}text-graphite{% endif %}"></i>
-  {% if btn_bookmarked %}ブックマーク済み{% else %}ブックマーク{% endif %}
+  <i data-lucide="heart" class="w-5 h-5 {% if btn_bookmarked %}fill-current text-rose-600{% else %}text-graphite{% endif %}"></i>
 </button>
 {% else %}
 <button
