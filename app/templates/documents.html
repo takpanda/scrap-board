@@ -257,6 +257,71 @@
 <script src="/static/js/markdown-preview.js"></script>
 <!-- Swipe Navigation for Mobile -->
 <script src="/static/js/swipe-navigation.js"></script>
+<script>
+(function() {
+    // ドキュメント一覧ページでのスワイプ統合初期化
+
+    // ViewportDetectorでモバイル環境判定
+    const isMobile = window.viewportDetector.isMobile();
+
+    if (isMobile) {
+        // モバイル環境の場合、記事IDリストをDOMから抽出しDocumentListCacheに保存
+        const documentCards = Array.from(document.querySelectorAll('[data-document-id]'));
+        const documentIds = documentCards.map(card => parseInt(card.getAttribute('data-document-id'), 10));
+
+        if (documentIds.length > 0) {
+            // フィルタパラメータを取得（URLSearchParams経由）
+            const urlParams = new URLSearchParams(window.location.search);
+            const filterParams = {
+                category: urlParams.get('category') || '',
+                tag: urlParams.get('tag') || '',
+                query: urlParams.get('q') || '',
+                sort: urlParams.get('sort') || ''
+            };
+
+            // DocumentListCacheに保存
+            try {
+                window.documentListCache.saveDocumentList(documentIds, filterParams);
+                console.log('Document list cached:', documentIds.length, 'documents');
+            } catch (error) {
+                console.error('Failed to cache document list:', error);
+            }
+        }
+
+        // CardFocusManagerを初期化
+        window.cardFocusManager.initialize();
+
+        // SwipeGestureDetectorのコールバックを登録
+        window.swipeDetector.onSwipe((swipeEvent) => {
+            const direction = swipeEvent.direction === 'left' ? 'next' : 'prev';
+            const success = window.cardFocusManager.moveFocus(direction);
+
+            if (!success) {
+                // リスト端到達時の処理（将来的にエッジインジケーター表示）
+                console.log('Cannot move focus:', direction, '- at list edge');
+            }
+        });
+
+        console.log('Swipe navigation enabled for document list page (mobile)');
+    } else {
+        // デスクトップ環境の場合、スワイプ機能を無効化
+        window.swipeDetector.disable();
+        console.log('Swipe navigation disabled (desktop)');
+    }
+
+    // ウィンドウリサイズでモバイル⇔デスクトップ切り替え時、スワイプ機能を動的に有効化/無効化
+    window.viewportDetector.startMonitoring((isMobileNow) => {
+        if (isMobileNow) {
+            window.swipeDetector.enable();
+            window.cardFocusManager.initialize();
+            console.log('Swipe navigation enabled (resized to mobile)');
+        } else {
+            window.swipeDetector.disable();
+            console.log('Swipe navigation disabled (resized to desktop)');
+        }
+    });
+})();
+</script>
 <!-- Markdown Preview Modal -->
 <div id="md-preview-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center pt-12 px-4" aria-hidden="true">
     <div class="absolute inset-0 bg-black/40"></div>
