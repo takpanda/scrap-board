@@ -3005,4 +3005,20 @@ button *, button span, button [data-lucide] {
     animation: spin 1s linear infinite;
 }
 
+/* Mobile Swipe Navigation - Focus Highlight */
+.focus-highlight {
+    border: 2px solid var(--emerald, #10B981) !important;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1),
+                0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Mobile touch optimization */
+@media (max-width: 767px) {
+    .document-card {
+        touch-action: pan-y; /* 垂直スクロールのみ許可、スワイプジェスチャーとの競合を回避 */
+    }
+}
+
    

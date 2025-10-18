@@ -398,6 +398,164 @@ class DocumentListCache {
   }
 }
 
+/**
+ * CardFocusManager
+ *
+ * ドキュメント一覧ページでの記事カードフォーカス状態を管理し、
+ * スワイプによるフォーカス移動を制御します。
+ */
+class CardFocusManager {
+  /**
+   * コンストラクタ
+   */
+  constructor() {
+    this.cardElements = [];
+    this.currentFocusIndex = 0;
+    this.FOCUS_HIGHLIGHT_CLASS = 'focus-highlight';
+  }
+  
+  /**
+   * 初期化
+   *
+   * ドキュメント一覧ページの記事カード要素を取得し、先頭カードにフォーカスを設定します。
+   */
+  initialize() {
+    // ドキュメントカード要素を取得
+    this.cardElements = Array.from(document.querySelectorAll('.document-card'));
+    
+    if (this.cardElements.length === 0) {
+      console.warn('記事カードが見つかりません');
+      return;
+    }
+    
+    // 先頭カードに初期フォーカスを設定
+    this.currentFocusIndex = 0;
+    this.setFocus(0);
+  }
+  
+  /**
+   * スワイプ方向に応じてフォーカス移動
+   *
+   * @param {'next'|'prev'} direction - フォーカス移動方向（next: 次、prev: 前）
+   * @returns {boolean} フォーカス移動が成功した場合true、失敗した場合false
+   */
+  moveFocus(direction) {
+    if (this.cardElements.length === 0) {
+      return false;
+    }
+    
+    let newIndex;
+    if (direction === 'next') {
+      newIndex = this.currentFocusIndex + 1;
+    } else if (direction === 'prev') {
+      newIndex = this.currentFocusIndex - 1;
+    } else {
+      console.error(`Invalid direction: ${direction}`);
+      return false;
+    }
+    
+    // インデックスが範囲外の場合は移動失敗
+    if (newIndex < 0 || newIndex >= this.cardElements.length) {
+      return false;
+    }
+    
+    // フォーカスを移動
+    this.setFocus(newIndex);
+    return true;
+  }
+  
+  /**
+   * 指定インデックスのカードにフォーカスを設定
+   *
+   * @param {number} index - フォーカスを設定するカードのインデックス
+   */
+  setFocus(index) {
+    if (index < 0 || index >= this.cardElements.length) {
+      console.error(`Invalid index: ${index}`);
+      return;
+    }
+    
+    // 前のカードからフォーカスハイライトを削除
+    if (this.currentFocusIndex >= 0 && this.currentFocusIndex < this.cardElements.length) {
+      const previousCard = this.cardElements[this.currentFocusIndex];
+      if (previousCard) {
+        previousCard.classList.remove(this.FOCUS_HIGHLIGHT_CLASS);
+      }
+    }
+    
+    // 新しいカードにフォーカスハイライトを追加
+    const newCard = this.cardElements[index];
+    if (newCard) {
+      newCard.classList.add(this.FOCUS_HIGHLIGHT_CLASS);
+      
+      // カードをビューポート内にスクロール
+      this._scrollCardIntoView(newCard);
+    }
+    
+    // 現在のフォーカスインデックスを更新
+    this.currentFocusIndex = index;
+  }
+  
+  /**
+   * 現在フォーカスされているカードのインデックスを取得
+   *
+   * @returns {number} 現在のフォーカスインデックス
+   */
+  getCurrentFocusIndex() {
+    return this.currentFocusIndex;
+  }
+  
+  /**
+   * フォーカスカードをビューポート内にスクロール（内部用）
+   *
+   * @param {HTMLElement} cardElement - スクロール対象のカード要素
+   * @private
+   */
+  _scrollCardIntoView(cardElement) {
+    if (!cardElement) {
+      return;
+    }
+    
+    try {
+      cardElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    } catch (error) {
+      // scrollIntoViewがサポートされていない環境のフォールバック
+      try {
+        cardElement.scrollIntoView();
+      } catch (fallbackError) {
+        console.warn('scrollIntoViewの実行に失敗:', fallbackError);
+      }
+    }
+  }
+  
+  /**
+   * フォーカスされたカードをタップして詳細モーダルを開く
+   *
+   * 現在フォーカスされているカードをクリックしてモーダルを開きます。
+   */
+  openFocusedCard() {
+    if (this.currentFocusIndex < 0 || this.currentFocusIndex >= this.cardElements.length) {
+      console.warn('フォーカスされたカードが存在しません');
+      return;
+    }
+    
+    const focusedCard = this.cardElements[this.currentFocusIndex];
+    if (focusedCard) {
+      // カード内のリンク要素をクリック
+      const linkElement = focusedCard.querySelector('a');
+      if (linkElement) {
+        linkElement.click();
+      } else {
+        // リンクが見つからない場合、カード自体をクリック
+        focusedCard.click();
+      }
+    }
+  }
+}
+
 // グローバルスコープにViewportDetectorインスタンスを公開（テスト用）
 window.viewportDetector = new ViewportDetector();
 
