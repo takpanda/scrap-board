@@ -1,0 +1,12 @@
+{
+  "name": "scrap-board-tests",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "jsdom": "^22.0.0" 
+  }
+}

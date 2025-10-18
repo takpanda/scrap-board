@@ -20,7 +20,7 @@
   - スワイプ機能の有効化/無効化を通知するコールバック機構を実装
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 1.2 SwipeGestureDetectorを実装する
+- [x] 1.2 SwipeGestureDetectorを実装する
   - touchstartイベントで初期タッチ位置（startX、startY）とタイムスタンプを記録
   - touchmoveイベントで現在タッチ位置を取得し、スワイプ距離をリアルタイム計算
   - 水平方向の移動距離が垂直方向の移動距離の2倍以上かチェックし、スワイプ方向を判定
@@ -37,7 +37,7 @@
   - フィルタパラメータ（category、tag、query）もキャッシュに含め、リスト整合性を保証
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
-- [ ] 2.1 DocumentListCacheを実装する
+- [x] 2.1 DocumentListCacheを実装する
   - ドキュメント一覧ページの記事IDリスト（documentIds: number[]）をセッションストレージに保存
   - フィルタパラメータ（category、tag、query、sort）もキャッシュに含め、JSON形式でシリアライズ
   - 現在の記事IDとスワイプ方向（next/prev）から隣接記事IDを取得する機能を実装
