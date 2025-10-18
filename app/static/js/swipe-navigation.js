@@ -243,6 +243,161 @@ class SwipeGestureDetector {
   }
 }
 
+/**
+ * DocumentListCache
+ *
+ * ドキュメント一覧ページの記事IDリストをセッションストレージにキャッシュし、
+ * 現在の記事IDから隣接する記事IDを取得する機能を提供します。
+ */
+class DocumentListCache {
+  /**
+   * コンストラクタ
+   */
+  constructor() {
+    this.STORAGE_KEY = 'scrapboard:document_list';
+  }
+  
+  /**
+   * 記事IDリストをセッションストレージに保存
+   *
+   * @param {number[]} documentIds - 記事IDの配列
+   * @param {Object} filterParams - フィルタパラメータ（オプション）
+   * @param {string} filterParams.category - カテゴリフィルタ
+   * @param {string} filterParams.tag - タグフィルタ
+   * @param {string} filterParams.query - 検索クエリ
+   * @param {string} filterParams.sort - ソート順
+   * @throws {Error} 空配列、重複ID、非数値IDが含まれる場合
+   */
+  saveDocumentList(documentIds, filterParams = {}) {
+    // 検証: 空配列禁止
+    if (!Array.isArray(documentIds) || documentIds.length === 0) {
+      throw new Error('記事IDリストは空配列禁止です (Document ID list cannot be empty)');
+    }
+    
+    // 検証: 数値型チェック
+    for (const id of documentIds) {
+      if (typeof id !== 'number' || !Number.isInteger(id)) {
+        throw new Error(`記事IDは数値型である必要があります (Document ID must be a number): ${id}`);
+      }
+    }
+    
+    // 検証: 重複ID禁止
+    const uniqueIds = new Set(documentIds);
+    if (uniqueIds.size !== documentIds.length) {
+      throw new Error('記事IDリストに重複があります (Duplicate document IDs found)');
+    }
+    
+    // キャッシュオブジェクトを生成
+    const cacheData = {
+      documentIds: documentIds,
+      timestamp: Date.now(),
+      filterParams: filterParams
+    };
+    
+    // セッションストレージに保存
+    try {
+      sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(cacheData));
+    } catch (error) {
+      console.error('セッションストレージへの保存に失敗:', error);
+      throw new Error('Failed to save document list to session storage');
+    }
+  }
+  
+  /**
+   * 現在の記事IDから次/前の記事IDを取得
+   *
+   * @param {number} currentId - 現在の記事ID
+   * @param {'next'|'prev'} direction - 取得方向（next: 次、prev: 前）
+   * @returns {number|null} 隣接記事ID、存在しない場合はnull
+   */
+  getAdjacentDocumentId(currentId, direction) {
+    // キャッシュデータを取得
+    const cacheData = this._getCacheData();
+    if (!cacheData) {
+      return null;
+    }
+    
+    const { documentIds } = cacheData;
+    
+    // 現在の記事IDのインデックスを取得
+    const currentIndex = documentIds.indexOf(currentId);
+    
+    // 現在の記事IDがリスト内に存在しない場合
+    if (currentIndex === -1) {
+      return null;
+    }
+    
+    // 隣接記事のインデックスを計算
+    let adjacentIndex;
+    if (direction === 'next') {
+      adjacentIndex = currentIndex + 1;
+    } else if (direction === 'prev') {
+      adjacentIndex = currentIndex - 1;
+    } else {
+      throw new Error(`Invalid direction: ${direction}. Must be 'next' or 'prev'.`);
+    }
+    
+    // インデックスが範囲外の場合はnullを返す
+    if (adjacentIndex < 0 || adjacentIndex >= documentIds.length) {
+      return null;
+    }
+    
+    // 隣接記事IDを返す
+    return documentIds[adjacentIndex];
+  }
+  
+  /**
+   * キャッシュの存在確認
+   *
+   * @returns {boolean} キャッシュが存在する場合true、それ以外false
+   */
+  hasCachedList() {
+    const cacheData = this._getCacheData();
+    return cacheData !== null;
+  }
+  
+  /**
+   * キャッシュクリア
+   *
+   * セッションストレージから記事リストキャッシュを削除します。
+   */
+  clearCache() {
+    try {
+      sessionStorage.removeItem(this.STORAGE_KEY);
+    } catch (error) {
+      console.error('セッションストレージからの削除に失敗:', error);
+    }
+  }
+  
+  /**
+   * セッションストレージからキャッシュデータを取得（内部用）
+   *
+   * @returns {Object|null} キャッシュデータ、存在しない場合はnull
+   * @private
+   */
+  _getCacheData() {
+    try {
+      const cachedJson = sessionStorage.getItem(this.STORAGE_KEY);
+      if (!cachedJson) {
+        return null;
+      }
+      
+      const cacheData = JSON.parse(cachedJson);
+      
+      // キャッシュデータの妥当性チェック
+      if (!cacheData.documentIds || !Array.isArray(cacheData.documentIds)) {
+        console.warn('無効なキャッシュデータが検出されました');
+        return null;
+      }
+      
+      return cacheData;
+    } catch (error) {
+      console.error('セッションストレージからの読み込みに失敗:', error);
+      return null;
+    }
+  }
+}
+
 // グローバルスコープにViewportDetectorインスタンスを公開（テスト用）
 window.viewportDetector = new ViewportDetector();
 

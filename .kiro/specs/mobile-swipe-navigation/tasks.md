@@ -37,7 +37,7 @@
   - フィルタパラメータ（category、tag、query）もキャッシュに含め、リスト整合性を保証
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
-- [ ] 2.1 DocumentListCacheを実装する
+- [x] 2.1 DocumentListCacheを実装する
   - ドキュメント一覧ページの記事IDリスト（documentIds: number[]）をセッションストレージに保存
   - フィルタパラメータ（category、tag、query、sort）もキャッシュに含め、JSON形式でシリアライズ
   - 現在の記事IDとスワイプ方向（next/prev）から隣接記事IDを取得する機能を実装
