@@ -109,6 +109,26 @@
         max-height: none !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
+        /* Ensure there is enough bottom padding so the last lines are not hidden
+           under the modal footer (footer height + safe-area on devices like iPhone). */
+        padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    /* On small screens, make the modal footer sit absolutely at the bottom of the dialog
+       so it is always visible above the scrolling content. The scrollable area has
+       been given bottom padding above to avoid overlap. */
+    [data-modal-dialog] > .flex.items-center.justify-between {
+        position: absolute !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: env(safe-area-inset-bottom, 0px) !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        /* add a little extra bottom breathing room on devices with home indicator */
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem) !important;
+        z-index: 60 !important;
+        background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.95)) !important;
+        border-top: 1px solid rgba(15,23,42,0.06) !important;
     }
 
 
@@ -138,17 +158,55 @@
     pointer-events: auto !important;
 }
 
-/* Ensure dialog doesn't get cut off at very top on mobile */
-[data-modal-dialog] {
-    /* Remove extra margins so dialog can extend to near full viewport height. */
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-    /* Use the viewport height minus any safe areas to occupy the largest possible vertical space. */
-    max-height: calc(100vh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0)) !important;
-    height: auto !important;
-    /* Prevent the dialog itself from extending beyond the viewport; let inner area scroll. */
-    overflow: hidden !important;
-    position: relative !important;
+/* Portalized footer: when the footer element is moved to document.body, apply fixed styling */
+.modal-footer-portal {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 2147484000 !important; /* higher than overlay and most UI */
+    width: 100vw !important;
+    padding: 0.75rem 1rem !important;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.95)) !important;
+    border-top: 1px solid rgba(15,23,42,0.06) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+    backdrop-filter: blur(6px) !important;
+    transform: translateZ(0);
+}
+
+/* The portal root itself should not block pointer events; the portal footer will handle interactions */
+#modal-footer-portal-root {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    pointer-events: none !important;
+    z-index: 2147483001 !important; /* just above modal overlay */
+}
+
+#modal-footer-portal-root > .modal-footer-portal {
+    pointer-events: auto !important; /* allow interactions inside footer */
+}
+
+/* Ensure dialog doesn't get cut off at very top.
+   For mobile (small screens) we rely on the earlier `position: fixed` rules so the dialog
+   occupies the viewport and inner area scrolls. On wider screens (desktop/tablet)
+   the dialog should be positioned relative inside its container. Scope the relative
+   positioning and overflow:hidden to larger viewports only. */
+@media (min-width: 769px) {
+    [data-modal-dialog] {
+        /* Remove extra margins so dialog can extend to near full viewport height. */
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        /* Use the viewport height minus any safe areas to occupy the largest possible vertical space. */
+        max-height: calc(100vh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0)) !important;
+        height: auto !important;
+        /* Prevent the dialog itself from extending beyond the viewport; let inner area scroll. */
+        overflow: hidden !important;
+        position: relative !important;
+    }
 }
     [data-modal-dialog] h2 {
         font-size: 1rem;
@@ -187,6 +245,16 @@
         height: 2rem;
         width: 100%;
         pointer-events: none;
+    }
+
+    /* Ensure the footer inside the modal is visible and respects device safe area. */
+    [data-modal-dialog] > .flex.items-center.justify-between {
+        /* Add safe-area bottom padding so the footer content isn't obscured by the
+           system home indicator. Increase z-index so it visually sits above the
+           scrolling content. */
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem) !important;
+        z-index: 40 !important;
+        background: inherit !important; /* keep dialog background */
     }
 
     /* Ensure the preview isn't collapsed to zero height on very short viewports */

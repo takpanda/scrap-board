@@ -246,6 +246,43 @@
     if (firstFocusable) {
       firstFocusable.focus();
     }
+    // Portalize modal footer on open to ensure it's always visible on mobile
+    try {
+      const dialog = modalContainer.querySelector('[data-modal-dialog]');
+      const footer = dialog ? dialog.querySelector('[data-modal-footer]') : null;
+      if (footer && !footer._portalized) {
+        // remember original parent and next sibling so we can restore
+        footer._portalParent = footer.parentElement;
+        footer._portalNextSibling = footer.nextSibling;
+        // Ensure there's a dedicated portal root at end of body
+        let root = document.getElementById('modal-footer-portal-root');
+        if (!root) {
+          root = document.createElement('div');
+          root.id = 'modal-footer-portal-root';
+          (document.documentElement || document.body).appendChild(root);
+        }
+        // Move footer into portal root
+        root.appendChild(footer);
+        footer.classList.add('modal-footer-portal');
+        // Force very high inline z-index and enable pointer events
+        try {
+          footer.style.zIndex = '2147484000';
+          footer.style.pointerEvents = 'auto';
+        } catch (e) {}
+        // Attach close handler because portalized footer is outside modalContainer delegation
+        footer._portalCloseHandler = function(ev) {
+          const btn = ev.target && ev.target.closest('[data-modal-close]');
+          if (btn) {
+            ev.preventDefault();
+            closeModal();
+          }
+        };
+        footer.addEventListener('click', footer._portalCloseHandler, true);
+        footer._portalized = true;
+      }
+    } catch (e) {
+      console.warn('[modal] portalize footer failed', e);
+    }
     try { window.__modal_debug_events = window.__modal_debug_events || []; window.__modal_debug_events.push({ t: Date.now(), ev: 'openModal:end', classes: Array.from(modalContainer.classList) }); console.log('[modal:debug] openModal:end'); } catch (e) {}
   }
 
@@ -294,6 +331,35 @@
     try {
       setTimeout(function() {
         try {
+          // Before clearing innerHTML, restore any portalized footer back into dialog
+          try {
+            const portalFooter = document.body.querySelector('.modal-footer-portal');
+            if (portalFooter && portalFooter._portalized && portalFooter._portalParent) {
+              // insert before stored nextSibling or append if null
+              if (portalFooter._portalNextSibling && portalFooter._portalNextSibling.parentNode === portalFooter._portalParent) {
+                portalFooter._portalParent.insertBefore(portalFooter, portalFooter._portalNextSibling);
+              } else {
+                portalFooter._portalParent.appendChild(portalFooter);
+              }
+              // Remove portal root if empty
+              try {
+                const root = document.getElementById('modal-footer-portal-root');
+                if (root && root.children.length === 0) root.remove();
+              } catch (e) {}
+              portalFooter.classList.remove('modal-footer-portal');
+              // remove any inline zIndex/pointerEvents we added
+              try { portalFooter.style.zIndex = ''; portalFooter.style.pointerEvents = ''; portalFooter.style.transform = ''; portalFooter.style.width = ''; } catch (e) {}
+              if (portalFooter._portalCloseHandler) {
+                try { portalFooter.removeEventListener('click', portalFooter._portalCloseHandler, true); } catch (e) {}
+                delete portalFooter._portalCloseHandler;
+              }
+              delete portalFooter._portalized;
+              delete portalFooter._portalParent;
+              delete portalFooter._portalNextSibling;
+            }
+          } catch (e) {
+            console.warn('[modal] restore portal footer failed', e);
+          }
           modalContainer.innerHTML = '';
           try { window.__modal_debug_events.push({ t: Date.now(), ev: 'closeModal:cleared-innerHTML' }); console.log('[modal:debug] closeModal:cleared-innerHTML'); } catch (e) {}
         } catch (e) {
